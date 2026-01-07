@@ -11,28 +11,32 @@ struct EmpireTabView: View {
     ]
 
     var body: some View {
-        ZStack {
-            Group {
-                switch selectedTab {
-                case .home:
-                    HomeView()
-                case .meets:
-                    MeetsView(meets: meets)
-                case .cars:
-                    CarsView()
-                case .merch:
-                    MerchView()
-                case .profile:
-                    ProfileView()
-                }
-            }
-            .edgesIgnoringSafeArea(.all)
-
-            VStack {
-                Spacer()
-                LiquidGlassTabBar(selectedTab: $selectedTab)
-            }
+        TabView(selection: $selectedTab) {
+            HomeView()
+                .tabItem { Image(systemName: EmpireTab.home.icon) }
+                .tag(EmpireTab.home)
+            
+            MeetsView(meets: meets)
+                .tabItem { Image(systemName: EmpireTab.meets.icon) }
+                .tag(EmpireTab.meets)
+            
+            CarsView()
+                .tabItem { Image(systemName: EmpireTab.cars.icon) }
+                .tag(EmpireTab.cars)
+            
+            MerchView()
+                .tabItem { Image(systemName: EmpireTab.merch.icon) }
+                .tag(EmpireTab.merch)
+            
+            ProfileView()
+                .tabItem { Image(systemName: EmpireTab.profile.icon) }
+                .tag(EmpireTab.profile)
         }
+        .labelStyle(.iconOnly)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .toolbarColorScheme(.dark, for: .tabBar)
+        .tint(Color("EmpireMint"))
         .background(Color.black.edgesIgnoringSafeArea(.all))
         .searchable(text: $searchText)
     }
