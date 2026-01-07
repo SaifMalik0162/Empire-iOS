@@ -6,6 +6,71 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7092F00E2F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
+		7092F00F2F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
+		7092F0102F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
+		70A017032F0DF49000A084C2 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 70A017012F0DF49000A084C2 /* Info.plist */; };
+		70A017042F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
+		70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
+		70A017062F0DF49000A084C2 /* CoolRipple.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EE2F0DF49000A084C2 /* CoolRipple.swift */; };
+		70A017082F0DF49000A084C2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F42F0DF49000A084C2 /* HomeView.swift */; };
+		70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EF2F0DF49000A084C2 /* EmpireAppView.swift */; };
+		70A0170A2F0DF49000A084C2 /* ExpandedCarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */; };
+		70A0170B2F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F62F0DF49000A084C2 /* LiquidGlassTabBar.swift */; };
+		70A0170D2F0DF49000A084C2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F92F0DF49000A084C2 /* Models.swift */; };
+		70A0170E2F0DF49000A084C2 /* CarCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EC2F0DF49000A084C2 /* CarCardView.swift */; };
+		70A0170F2F0DF49000A084C2 /* CarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016ED2F0DF49000A084C2 /* CarsView.swift */; };
+		70A017102F0DF49000A084C2 /* EmpireApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016E92F0DF49000A084C2 /* EmpireApp.swift */; };
+		70A017112F0DF49000A084C2 /* EmpireTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F12F0DF49000A084C2 /* EmpireTabView.swift */; };
+		70A017122F0DF49000A084C2 /* GlassOptionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */; };
+		70A017132F0DF49000A084C2 /* ProfileStatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FA2F0DF49000A084C2 /* ProfileStatCard.swift */; };
+		70A017142F0DF49000A084C2 /* EmpireSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F02F0DF49000A084C2 /* EmpireSplashView.swift */; };
+		70A017152F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */; };
+		70A017162F0DF49000A084C2 /* MerchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F82F0DF49000A084C2 /* MerchView.swift */; };
+		70A017172F0DF49000A084C2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FB2F0DF49000A084C2 /* ProfileView.swift */; };
+		70A017182F0DF49000A084C2 /* StageChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FC2F0DF49000A084C2 /* StageChip.swift */; };
+		70A0171A2F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
+		70A0171B2F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
+		70A0171C2F0DF49000A084C2 /* CoolRipple.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EE2F0DF49000A084C2 /* CoolRipple.swift */; };
+		70A0171E2F0DF49000A084C2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F42F0DF49000A084C2 /* HomeView.swift */; };
+		70A0171F2F0DF49000A084C2 /* EmpireAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EF2F0DF49000A084C2 /* EmpireAppView.swift */; };
+		70A017202F0DF49000A084C2 /* ExpandedCarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */; };
+		70A017212F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F62F0DF49000A084C2 /* LiquidGlassTabBar.swift */; };
+		70A017232F0DF49000A084C2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F92F0DF49000A084C2 /* Models.swift */; };
+		70A017242F0DF49000A084C2 /* CarCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EC2F0DF49000A084C2 /* CarCardView.swift */; };
+		70A017252F0DF49000A084C2 /* CarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016ED2F0DF49000A084C2 /* CarsView.swift */; };
+		70A017262F0DF49000A084C2 /* EmpireApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016E92F0DF49000A084C2 /* EmpireApp.swift */; };
+		70A017272F0DF49000A084C2 /* EmpireTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F12F0DF49000A084C2 /* EmpireTabView.swift */; };
+		70A017282F0DF49000A084C2 /* GlassOptionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */; };
+		70A017292F0DF49000A084C2 /* ProfileStatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FA2F0DF49000A084C2 /* ProfileStatCard.swift */; };
+		70A0172A2F0DF49000A084C2 /* EmpireSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F02F0DF49000A084C2 /* EmpireSplashView.swift */; };
+		70A0172B2F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */; };
+		70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F82F0DF49000A084C2 /* MerchView.swift */; };
+		70A0172D2F0DF49000A084C2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FB2F0DF49000A084C2 /* ProfileView.swift */; };
+		70A0172E2F0DF49000A084C2 /* StageChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FC2F0DF49000A084C2 /* StageChip.swift */; };
+		70A0172F2F0DF49000A084C2 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 70A017012F0DF49000A084C2 /* Info.plist */; };
+		70A017302F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
+		70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
+		70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EE2F0DF49000A084C2 /* CoolRipple.swift */; };
+		70A017342F0DF49000A084C2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F42F0DF49000A084C2 /* HomeView.swift */; };
+		70A017352F0DF49000A084C2 /* EmpireAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EF2F0DF49000A084C2 /* EmpireAppView.swift */; };
+		70A017362F0DF49000A084C2 /* ExpandedCarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */; };
+		70A017372F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F62F0DF49000A084C2 /* LiquidGlassTabBar.swift */; };
+		70A017392F0DF49000A084C2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F92F0DF49000A084C2 /* Models.swift */; };
+		70A0173A2F0DF49000A084C2 /* CarCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EC2F0DF49000A084C2 /* CarCardView.swift */; };
+		70A0173B2F0DF49000A084C2 /* CarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016ED2F0DF49000A084C2 /* CarsView.swift */; };
+		70A0173C2F0DF49000A084C2 /* EmpireApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016E92F0DF49000A084C2 /* EmpireApp.swift */; };
+		70A0173D2F0DF49000A084C2 /* EmpireTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F12F0DF49000A084C2 /* EmpireTabView.swift */; };
+		70A0173E2F0DF49000A084C2 /* GlassOptionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */; };
+		70A0173F2F0DF49000A084C2 /* ProfileStatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FA2F0DF49000A084C2 /* ProfileStatCard.swift */; };
+		70A017402F0DF49000A084C2 /* EmpireSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F02F0DF49000A084C2 /* EmpireSplashView.swift */; };
+		70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */; };
+		70A017422F0DF49000A084C2 /* MerchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F82F0DF49000A084C2 /* MerchView.swift */; };
+		70A017432F0DF49000A084C2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FB2F0DF49000A084C2 /* ProfileView.swift */; };
+		70A017442F0DF49000A084C2 /* StageChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FC2F0DF49000A084C2 /* StageChip.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		70C60A822F0DAA7E003AE110 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,17 +89,33 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "empire 360.mp4"; sourceTree = "<group>"; };
+		70A016E92F0DF49000A084C2 /* EmpireApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireApp.swift; sourceTree = "<group>"; };
+		70A016EC2F0DF49000A084C2 /* CarCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarCardView.swift; sourceTree = "<group>"; };
+		70A016ED2F0DF49000A084C2 /* CarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarsView.swift; sourceTree = "<group>"; };
+		70A016EE2F0DF49000A084C2 /* CoolRipple.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoolRipple.swift; sourceTree = "<group>"; };
+		70A016EF2F0DF49000A084C2 /* EmpireAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireAppView.swift; sourceTree = "<group>"; };
+		70A016F02F0DF49000A084C2 /* EmpireSplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireSplashView.swift; sourceTree = "<group>"; };
+		70A016F12F0DF49000A084C2 /* EmpireTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireTabView.swift; sourceTree = "<group>"; };
+		70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandedCarView.swift; sourceTree = "<group>"; };
+		70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassOptionRow.swift; sourceTree = "<group>"; };
+		70A016F42F0DF49000A084C2 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		70A016F62F0DF49000A084C2 /* LiquidGlassTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassTabBar.swift; sourceTree = "<group>"; };
+		70A016F72F0DF49000A084C2 /* MeetsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetsView.swift; sourceTree = "<group>"; };
+		70A016F82F0DF49000A084C2 /* MerchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchView.swift; sourceTree = "<group>"; };
+		70A016F92F0DF49000A084C2 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		70A016FA2F0DF49000A084C2 /* ProfileStatCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStatCard.swift; sourceTree = "<group>"; };
+		70A016FB2F0DF49000A084C2 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		70A016FC2F0DF49000A084C2 /* StageChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StageChip.swift; sourceTree = "<group>"; };
+		70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectBlur.swift; sourceTree = "<group>"; };
+		70A017002F0DF49000A084C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		70A017012F0DF49000A084C2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		70C60A722F0DAA7C003AE110 /* Empire.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Empire.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A812F0DAA7E003AE110 /* EmpireTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A8B2F0DAA7E003AE110 /* EmpireUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		70C60A742F0DAA7C003AE110 /* Empire */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Empire;
-			sourceTree = "<group>";
-		};
 		70C60A842F0DAA7E003AE110 /* EmpireTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = EmpireTests;
@@ -72,10 +153,54 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		70A016EA2F0DF49000A084C2 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				70A016E92F0DF49000A084C2 /* EmpireApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		70A016FF2F0DF49000A084C2 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				70A016EC2F0DF49000A084C2 /* CarCardView.swift */,
+				70A016ED2F0DF49000A084C2 /* CarsView.swift */,
+				70A016EE2F0DF49000A084C2 /* CoolRipple.swift */,
+				70A016EF2F0DF49000A084C2 /* EmpireAppView.swift */,
+				70A016F02F0DF49000A084C2 /* EmpireSplashView.swift */,
+				70A016F12F0DF49000A084C2 /* EmpireTabView.swift */,
+				70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */,
+				70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */,
+				70A016F42F0DF49000A084C2 /* HomeView.swift */,
+				70A016F62F0DF49000A084C2 /* LiquidGlassTabBar.swift */,
+				70A016F72F0DF49000A084C2 /* MeetsView.swift */,
+				70A016F82F0DF49000A084C2 /* MerchView.swift */,
+				70A016F92F0DF49000A084C2 /* Models.swift */,
+				70A016FA2F0DF49000A084C2 /* ProfileStatCard.swift */,
+				70A016FB2F0DF49000A084C2 /* ProfileView.swift */,
+				70A016FC2F0DF49000A084C2 /* StageChip.swift */,
+				70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		70A017022F0DF49000A084C2 /* Empire */ = {
+			isa = PBXGroup;
+			children = (
+				70A016EA2F0DF49000A084C2 /* App */,
+				70A016FF2F0DF49000A084C2 /* UI */,
+				70A017002F0DF49000A084C2 /* Assets.xcassets */,
+				70A017012F0DF49000A084C2 /* Info.plist */,
+				7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */,
+			);
+			path = Empire;
+			sourceTree = "<group>";
+		};
 		70C60A692F0DAA7C003AE110 = {
 			isa = PBXGroup;
 			children = (
-				70C60A742F0DAA7C003AE110 /* Empire */,
+				70A017022F0DF49000A084C2 /* Empire */,
 				70C60A842F0DAA7E003AE110 /* EmpireTests */,
 				70C60A8E2F0DAA7E003AE110 /* EmpireUITests */,
 				70C60A732F0DAA7C003AE110 /* Products */,
@@ -106,9 +231,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				70C60A742F0DAA7C003AE110 /* Empire */,
 			);
 			name = Empire;
 			packageProductDependencies = (
@@ -212,6 +334,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7092F00F2F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
+				70A0171A2F0DF49000A084C2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,6 +343,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70A017032F0DF49000A084C2 /* Info.plist in Resources */,
+				7092F0102F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
+				70A017042F0DF49000A084C2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -226,6 +353,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70A0172F2F0DF49000A084C2 /* Info.plist in Resources */,
+				7092F00E2F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
+				70A017302F0DF49000A084C2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -236,6 +366,24 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70A0171B2F0DF49000A084C2 /* MeetsView.swift in Sources */,
+				70A0171C2F0DF49000A084C2 /* CoolRipple.swift in Sources */,
+				70A0171E2F0DF49000A084C2 /* HomeView.swift in Sources */,
+				70A0171F2F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
+				70A017202F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
+				70A017212F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
+				70A017232F0DF49000A084C2 /* Models.swift in Sources */,
+				70A017242F0DF49000A084C2 /* CarCardView.swift in Sources */,
+				70A017252F0DF49000A084C2 /* CarsView.swift in Sources */,
+				70A017262F0DF49000A084C2 /* EmpireApp.swift in Sources */,
+				70A017272F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
+				70A017282F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
+				70A017292F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
+				70A0172A2F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
+				70A0172B2F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
+				70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */,
+				70A0172D2F0DF49000A084C2 /* ProfileView.swift in Sources */,
+				70A0172E2F0DF49000A084C2 /* StageChip.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -243,6 +391,24 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */,
+				70A017062F0DF49000A084C2 /* CoolRipple.swift in Sources */,
+				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
+				70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
+				70A0170A2F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
+				70A0170B2F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
+				70A0170D2F0DF49000A084C2 /* Models.swift in Sources */,
+				70A0170E2F0DF49000A084C2 /* CarCardView.swift in Sources */,
+				70A0170F2F0DF49000A084C2 /* CarsView.swift in Sources */,
+				70A017102F0DF49000A084C2 /* EmpireApp.swift in Sources */,
+				70A017112F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
+				70A017122F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
+				70A017132F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
+				70A017142F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
+				70A017152F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
+				70A017162F0DF49000A084C2 /* MerchView.swift in Sources */,
+				70A017172F0DF49000A084C2 /* ProfileView.swift in Sources */,
+				70A017182F0DF49000A084C2 /* StageChip.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -250,6 +416,24 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */,
+				70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */,
+				70A017342F0DF49000A084C2 /* HomeView.swift in Sources */,
+				70A017352F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
+				70A017362F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
+				70A017372F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
+				70A017392F0DF49000A084C2 /* Models.swift in Sources */,
+				70A0173A2F0DF49000A084C2 /* CarCardView.swift in Sources */,
+				70A0173B2F0DF49000A084C2 /* CarsView.swift in Sources */,
+				70A0173C2F0DF49000A084C2 /* EmpireApp.swift in Sources */,
+				70A0173D2F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
+				70A0173E2F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
+				70A0173F2F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
+				70A017402F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
+				70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
+				70A017422F0DF49000A084C2 /* MerchView.swift in Sources */,
+				70A017432F0DF49000A084C2 /* ProfileView.swift in Sources */,
+				70A017442F0DF49000A084C2 /* StageChip.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -405,6 +589,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -437,6 +622,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
