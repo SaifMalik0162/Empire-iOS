@@ -3,6 +3,7 @@ import SwiftUI
 struct EmpireTabView: View {
     @State private var selectedTab: EmpireTab = .home
     @State private var searchText: String = ""
+    @State private var tabPulse: Bool = false
 
     @State private var meets: [Meet] = [
         Meet(title: "Empire Meet 1", city: "Toronto", date: Date()),
@@ -37,7 +38,41 @@ struct EmpireTabView: View {
         .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
         .tint(Color("EmpireMint"))
+        .onChange(of: selectedTab) { _ in
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                tabPulse = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                tabPulse = false
+            }
+        }
         .background(Color.black.edgesIgnoringSafeArea(.all))
         .searchable(text: $searchText)
+        .safeAreaInset(edge: .bottom) {
+            ZStack {
+                // Subtle accent glow hugging the tab bar
+                LinearGradient(
+                    colors: [
+                        Color("EmpireMint").opacity(0.08),
+                        Color.clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .blur(radius: 12)
+                .allowsHitTesting(false)
+            }
+            .frame(height: 44)
+            .accessibilityHidden(true)
+        }
+        .safeAreaInset(edge: .bottom) {
+            // Gentle selection pulse
+            CoolRipple(active: $tabPulse)
+                .scaleEffect(0.28)
+                .opacity(0.22)
+                .allowsHitTesting(false)
+                .frame(height: 72)
+                .accessibilityHidden(true)
+        }
     }
 }
