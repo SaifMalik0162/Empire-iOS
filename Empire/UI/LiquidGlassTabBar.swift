@@ -12,7 +12,6 @@ struct LiquidGlassTabBar: View {
     var body: some View {
         GeometryReader { geo in
             let totalWidth = CGFloat(EmpireTab.allCases.count) * tabWidth + CGFloat(EmpireTab.allCases.count - 1) * tabSpacing
-            let startX = (geo.size.width - totalWidth) / 2
 
             ZStack {
                 // Pill
@@ -93,3 +92,4 @@ struct LiquidGlassTabBar: View {
         selectedTab = EmpireTab.allCases[index]
     }
 }
+

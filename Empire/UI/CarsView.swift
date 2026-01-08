@@ -3,14 +3,14 @@ import SwiftUI
 struct CarsView: View {
     // MARK: - User's cars
     @State private var cars: [Car] = [
-        Car(name: "Honda Accord", description: "Stage 1 - Luh RS7", imageName: "car0", horsepower: 240, stage: 1)
+        Car(name: "Honda Accord", description: "honda_rs7 - Luh RS7", imageName: "car0", horsepower: 240, stage: 1)
     ]
 
     // MARK: - Community Cars
     @State private var communityCars: [Car] = [
-        Car(name: "Nissan GT-R", description: "Stage 2 - Track Edition", imageName: "car3", horsepower: 550, stage: 2),
-        Car(name: "BMW M3", description: "Stage 3 - Turbo", imageName: "car1", horsepower: 420, stage: 3),
-        Car(name: "Audi RS7", description: "Stage 1 - Full Tune", imageName: "car2", horsepower: 620, stage: 1)
+        Car(name: "Honda Prelude BB2", description: "@officialtobysemple — Clean BB2 build", imageName: "prelude_bb2", horsepower: 450, stage: 3),
+        Car(name: "Civic Si Coupe", description: "@fg2_corey — FG2 Si coupe", imageName: "civic_si_fg2", horsepower: 220, stage: 2),
+        Car(name: "1968 Mustang", description: "347 Stroker V8", imageName: "68_blaze", horsepower: 350, stage: 2)
     ]
 
     @State private var selectedCarIndex: Int? = nil
@@ -751,3 +751,4 @@ struct CarsView_Previews: PreviewProvider {
             .preferredColorScheme(.dark)
     }
 }
+

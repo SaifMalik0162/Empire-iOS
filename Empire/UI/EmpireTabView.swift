@@ -38,7 +38,7 @@ struct EmpireTabView: View {
         .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
         .tint(Color("EmpireMint"))
-        .onChange(of: selectedTab) { _ in
+        .onChange(of: selectedTab) { oldValue, newValue in
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 tabPulse = true
             }
