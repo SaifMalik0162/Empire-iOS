@@ -9,8 +9,10 @@ struct MeetsView: View {
             let size = proxy.size
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    Spacer(minLength: 100)
+                VStack(spacing: 22) {
+                    MeetsHeader()
+                        .padding(.top, 12)
+                        .padding(.horizontal, 18)
 
                     ForEach(meets) { meet in
                         LiquidGlassMeetCard(meet: meet)
@@ -59,6 +61,37 @@ struct MeetsView: View {
     }
 }
 
+private struct MeetsHeader: View {
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Meets")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("Find and join the next event")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            Spacer()
+            HStack(spacing: 10) {
+                HeaderChip(systemName: "calendar")
+                HeaderChip(systemName: "map")
+            }
+        }
+    }
+}
+
+private struct HeaderChip: View {
+    let systemName: String
+    var body: some View {
+        Circle()
+            .fill(.ultraThinMaterial)
+            .frame(width: 32, height: 32)
+            .overlay(Image(systemName: systemName).foregroundStyle(.white))
+            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+    }
+}
+
 private struct OffsetKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
@@ -68,32 +101,13 @@ private struct OffsetKey: PreferenceKey {
 private struct LiquidGlassMeetCard: View {
     let meet: Meet
     @State private var isPressed = false
-    @State private var shimmerPhase: CGFloat = 0
 
     var body: some View {
         ZStack {
-            // Base glass
+            // Base glass + strokes
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(.ultraThinMaterial)
                 .overlay(
-                    // Inner glow + refraction highlight
-                    RoundedRectangle(cornerRadius: 28)
-                        .strokeBorder(
-                            AngularGradient(
-                                gradient: Gradient(colors: [
-                                    Color.white.opacity(0.35),
-                                    Color("EmpireMint").opacity(0.6),
-                                    .clear,
-                                    Color.white.opacity(0.2)
-                                ]),
-                                center: .center
-                            ), lineWidth: 1.0
-                        )
-                        .blendMode(.screen)
-                        .opacity(0.9)
-                )
-                .background(
-                    // Edge specular highlight
                     RoundedRectangle(cornerRadius: 28)
                         .stroke(
                             LinearGradient(
@@ -102,20 +116,19 @@ private struct LiquidGlassMeetCard: View {
                                 endPoint: .bottomTrailing
                             ), lineWidth: 1
                         )
-                        .blur(radius: 0.5)
-                        .opacity(0.7)
+                        .blendMode(.screen)
                 )
                 .overlay(
                     // Animated shimmer sweep
                     ShimmerMask()
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                        .opacity(0.7)
+                        .opacity(0.55)
                         .blendMode(.screen)
                 )
-                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 25, x: 0, y: 16)
-                .shadow(color: .black.opacity(0.55), radius: 14, x: 0, y: 8)
+                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 24, x: 0, y: 14)
+                .shadow(color: .black.opacity(0.5), radius: 12, x: 0, y: 8)
 
-            // Card content
+            // Content
             HStack(spacing: 14) {
                 // Accent glass orb
                 ZStack {
@@ -178,7 +191,6 @@ private struct LiquidGlassMeetCard: View {
                 .opacity(0.7)
         )
         .overlay(
-            // Soft caustics
             RoundedRectangle(cornerRadius: 28)
                 .stroke(
                     LinearGradient(colors: [Color("EmpireMint").opacity(0.5), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2
@@ -190,14 +202,7 @@ private struct LiquidGlassMeetCard: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.78), value: isPressed)
         .onTapGesture {
             isPressed = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                isPressed = false
-            }
-        }
-        .onAppear {
-            withAnimation(.linear(duration: 2.8).repeatForever(autoreverses: false)) {
-                shimmerPhase = 1
-            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { isPressed = false }
         }
     }
 }
@@ -221,9 +226,7 @@ private struct ShimmerMask: View {
             .frame(width: width)
             .offset(x: -width + phase * (width * 2))
             .onAppear {
-                withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: false)) {
-                    phase = 1
-                }
+                withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: false)) { phase = 1 }
             }
         }
         .allowsHitTesting(false)
