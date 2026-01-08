@@ -16,6 +16,8 @@ struct CarsView: View {
     @State private var selectedCarIndex: Int? = nil
     @Namespace private var ns
     @State private var ripple: Bool = false
+    @State private var showLightbox: Bool = false
+    @State private var lightboxIndex: Int = 0
 
     var body: some View {
         ZStack {
@@ -60,6 +62,11 @@ struct CarsView: View {
 
             CoolRipple(active: $ripple)
                 .edgesIgnoringSafeArea(.all)
+        }
+        .fullScreenCover(isPresented: $showLightbox) {
+            CommunityLightbox(cars: communityCars, startIndex: lightboxIndex) {
+                showLightbox = false
+            }
         }
     }
 }
@@ -116,8 +123,8 @@ private extension CarsView {
                 ForEach(communityCars.indices, id: \.self) { idx in
                     GalleryTile(car: communityCars[idx])
                         .onTapGesture {
-                            // future: open detail/lightbox
-                            selectedCarIndex = nil
+                            lightboxIndex = idx
+                            showLightbox = true
                         }
                 }
             }
@@ -260,6 +267,19 @@ private struct StatCapsule: View {
     }
 }
 
+private struct TagChip: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(.ultraThinMaterial))
+            .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1))
+            .foregroundStyle(.white)
+    }
+}
+
 private struct GlassButton: View {
     let title: String
     var action: (() -> Void)? = nil
@@ -314,7 +334,7 @@ private struct GalleryTile: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // Image-first tile
+         
             ZStack(alignment: .bottomLeading) {
                 Image(car.imageName)
                     .resizable()
@@ -328,7 +348,7 @@ private struct GalleryTile: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     )
 
-                // Minimal metadata badges
+                // Metadata badges
                 HStack(spacing: 8) {
                     StatCapsule(label: "Stage", value: "\(car.stage)", tint: Color("EmpireMint"))
                     StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
@@ -353,7 +373,7 @@ private struct GalleryTile: View {
     }
 }
 
-// MARK: - Expanded Card (Pokemon-style)
+// MARK: - Expanded Card
 private struct CarExpandedCardInline: View {
     let car: Car
     var ns: Namespace.ID
@@ -379,7 +399,7 @@ private struct CarExpandedCardInline: View {
                 .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y: 18)
                 .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
 
-            // embedded full-card image (faint, fully clipped with mask)
+            // embedded full-card image
             GeometryReader { proxy in
                 let size = proxy.size
                 ZStack {
@@ -434,7 +454,7 @@ private struct CarExpandedCardInline: View {
                     StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
-                // Stat meters positioned higher on the card
+                // Stat meters
                 VStack(spacing: 10) {
                     StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
                     StatRow(name: "Stage", value: Double(car.stage), max: 3, accent: .purple)
@@ -454,10 +474,10 @@ private struct CarExpandedCardInline: View {
                         )
                 )
 
-                // Spacer pushes buttons to the bottom area of the card
+                // Spacer
                 Spacer(minLength: 6)
 
-                // Action buttons lowered
+                // Action buttons
                 VStack(spacing: 12) {
                     HStack(spacing: 12) {
                         GlassButton(title: "Mods") { hapticTap() }
@@ -544,6 +564,181 @@ private struct StatRow: View {
 private func hapticTap() {
     let generator = UIImpactFeedbackGenerator(style: .light)
     generator.impactOccurred()
+}
+
+private struct CommunityLightbox: View {
+    let cars: [Car]
+    let startIndex: Int
+    var onClose: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var index: Int
+    @State private var liked: Set<UUID> = []
+    @State private var showHeartBurst: Bool = false
+    @State private var heartScale: CGFloat = 0.6
+    @State private var heartOpacity: CGFloat = 0.0
+
+    init(cars: [Car], startIndex: Int, onClose: @escaping () -> Void) {
+        self.cars = cars
+        self.startIndex = startIndex
+        self.onClose = onClose
+        _index = State(initialValue: startIndex)
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            TabView(selection: $index) {
+                ForEach(cars.indices, id: \.self) { i in
+                    GeometryReader { proxy in
+                        let size = proxy.size
+                        ZStack(alignment: .bottom) {
+                            Image(cars[i].imageName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: size.width, maxHeight: size.height)
+                                .tag(i)
+                                .transition(.opacity)
+                            // Add double tap gesture and content shape on ZStack
+                                .contentShape(Rectangle())
+                                .onTapGesture(count: 2) {
+                                    let gen = UIImpactFeedbackGenerator(style: .light)
+                                    gen.impactOccurred()
+                                    toggleLike()
+                                    showHeartBurst = true
+                                    heartScale = 0.6
+                                    heartOpacity = 0.0
+                                    withAnimation(.spring(response: 0.28, dampingFraction: 0.65)) {
+                                        heartScale = 1.1
+                                        heartOpacity = 1.0
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                                        withAnimation(.easeOut(duration: 0.25)) {
+                                            heartScale = 0.9
+                                            heartOpacity = 0.0
+                                        }
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                            showHeartBurst = false
+                                        }
+                                    }
+                                }
+
+                            if showHeartBurst {
+                                Image(systemName: "heart.fill")
+                                    .font(.system(size: 96))
+                                    .foregroundStyle(Color("EmpireMint"))
+                                    .shadow(color: Color("EmpireMint").opacity(0.6), radius: 12)
+                                    .scaleEffect(heartScale)
+                                    .opacity(heartOpacity)
+                                    .transition(.scale.combined(with: .opacity))
+                                    .zIndex(2)
+                            }
+
+                            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
+                                .frame(height: 220)
+                                .ignoresSafeArea(edges: .bottom)
+
+                            // Bottom metadata overlay
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(cars[i].name)
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                Text(cars[i].description)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.85))
+                                    .lineLimit(2)
+                                HStack(spacing: 10) {
+                                    StatCapsule(label: "Stage", value: "\(cars[i].stage)", tint: Color("EmpireMint"))
+                                    StatCapsule(label: "HP", value: "\(cars[i].horsepower)", tint: .cyan)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 28)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .tag(i)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            // Top controls
+            VStack {
+                HStack {
+                    Button {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        onClose()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(Circle().fill(.ultraThinMaterial))
+                            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    }
+                    Spacer()
+                    HStack(spacing: 10) {
+                        Button {
+                            let gen = UIImpactFeedbackGenerator(style: .light)
+                            gen.impactOccurred()
+                            toggleLike()
+                        } label: {
+                            Image(systemName: isLiked ? "heart.fill" : "heart")
+                                .foregroundStyle(isLiked ? Color("EmpireMint") : .white)
+                                .padding(10)
+                                .background(Circle().fill(.ultraThinMaterial))
+                                .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                        }
+                        if let url = URL(string: "https://example.com/cars/\(cars[safe: index]?.id.uuidString ?? "")") {
+                            ShareLink(item: url) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundStyle(.white)
+                                    .padding(10)
+                                    .background(Circle().fill(.ultraThinMaterial))
+                                    .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                            }
+                        } else {
+                            Button { } label: {
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundStyle(.white)
+                                    .padding(10)
+                                    .background(Circle().fill(.ultraThinMaterial))
+                                    .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                Spacer()
+            }
+        }
+        .statusBarHidden(true)
+    }
+
+    private var isLiked: Bool {
+        guard cars.indices.contains(index) else { return false }
+        return liked.contains(cars[index].id)
+    }
+
+    private func toggleLike() {
+        guard cars.indices.contains(index) else { return }
+        let id = cars[index].id
+        if liked.contains(id) { liked.remove(id) } else { liked.insert(id) }
+    }
+
+    private func shareCurrent() {
+        // Placeholder share action
+        // Integrate later
+    }
+}
+
+extension Collection {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
 }
 
 // MARK: - Preview
