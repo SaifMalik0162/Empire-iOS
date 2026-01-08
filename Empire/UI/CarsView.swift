@@ -22,12 +22,11 @@ struct CarsView: View {
             background
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 40) {
+                VStack(spacing: 24) {
                     userCarousel
                     communitySection
-                    Spacer(minLength: 60)
                 }
-                .padding(.vertical, 20)
+                .padding(.vertical, 12)
             }
 
             // Expanded card overlays above
@@ -95,30 +94,34 @@ private extension CarsView {
             }
             .padding(.horizontal, 20)
         }
-        .frame(height: 400)
+        .frame(height: 360)
     }
 
     var communitySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Community Cars")
-                .font(.title3.bold())
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(communityCars.indices, id: \.self) { idx in
-                        LiquidGlassCarCard(car: communityCars[idx], ns: ns)
-                            .frame(width: 180, height: 220)
-                            .onTapGesture {
-                                // future: present community detail
-                                selectedCarIndex = nil
-                            }
-                    }
-                }
-                .padding(.horizontal, 20)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Community Gallery")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
+                Spacer()
+                Text("See All")
+                    .font(.caption)
+                    .foregroundColor(Color("EmpireMint").opacity(0.9))
             }
-            .frame(height: 240)
+            .padding(.horizontal, 20)
+
+            LazyVGrid(columns: [
+                GridItem(.adaptive(minimum: 150), spacing: 12)
+            ], spacing: 12) {
+                ForEach(communityCars.indices, id: \.self) { idx in
+                    GalleryTile(car: communityCars[idx])
+                        .onTapGesture {
+                            // future: open detail/lightbox
+                            selectedCarIndex = nil
+                        }
+                }
+            }
+            .padding(.horizontal, 20)
         }
     }
 }
@@ -254,6 +257,99 @@ private struct StatCapsule: View {
         .overlay(
             Capsule().stroke(tint.opacity(0.6), lineWidth: 1)
         )
+    }
+}
+
+private struct GlassButton: View {
+    let title: String
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        Button(action: { action?() }) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule().fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                )
+                .foregroundStyle(.white)
+        }
+        .buttonStyle(.plain)
+        .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, x: 0, y: 4)
+    }
+}
+
+private struct HoloShimmerMask: View {
+    @State private var phase: CGFloat = 0
+    var body: some View {
+        LinearGradient(
+            gradient: Gradient(stops: [
+                .init(color: .clear, location: 0.0),
+                .init(color: .white.opacity(0.3), location: 0.45),
+                .init(color: .clear, location: 0.9)
+            ]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .scaleEffect(x: 1.8)
+        .offset(x: -120 + phase * 240)
+        .onAppear {
+            withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
+                phase = 1
+            }
+        }
+        .blendMode(.screen)
+        .opacity(0.6)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct GalleryTile: View {
+    let car: Car
+    @State private var liked: Bool = false
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            // Image-first tile
+            ZStack(alignment: .bottomLeading) {
+                Image(car.imageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 180)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay(
+                        LinearGradient(colors: [.clear, .black.opacity(0.45)], startPoint: .top, endPoint: .bottom)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    )
+
+                // Minimal metadata badges
+                HStack(spacing: 8) {
+                    StatCapsule(label: "Stage", value: "\(car.stage)", tint: Color("EmpireMint"))
+                    StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                }
+                .padding(10)
+            }
+
+            // Like button
+            Button(action: { liked.toggle() }) {
+                Image(systemName: liked ? "heart.fill" : "heart")
+                    .foregroundStyle(liked ? Color("EmpireMint") : .white)
+                    .padding(8)
+                    .background(
+                        Circle().fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
+            }
+            .padding(10)
+        }
     }
 }
 
@@ -445,54 +541,6 @@ private struct StatRow: View {
     }
 }
 
-private struct GlassButton: View {
-    let title: String
-    var action: (() -> Void)? = nil
-
-    var body: some View {
-        Button(action: { action?() }) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule().fill(.ultraThinMaterial)
-                )
-                .overlay(
-                    Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                )
-                .foregroundStyle(.white)
-        }
-        .buttonStyle(.plain)
-        .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, x: 0, y: 4)
-    }
-}
-
-private struct HoloShimmerMask: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.3), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.8)
-        .offset(x: -120 + phase * 240)
-        .onAppear {
-            withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
-                phase = 1
-            }
-        }
-        .blendMode(.screen)
-        .opacity(0.6)
-        .allowsHitTesting(false)
-    }
-}
-
 private func hapticTap() {
     let generator = UIImpactFeedbackGenerator(style: .light)
     generator.impactOccurred()
@@ -505,4 +553,3 @@ struct CarsView_Previews: PreviewProvider {
             .preferredColorScheme(.dark)
     }
 }
-
