@@ -18,6 +18,8 @@ struct CarsView: View {
     @State private var ripple: Bool = false
     @State private var showLightbox: Bool = false
     @State private var lightboxIndex: Int = 0
+    
+    @State private var selectedCommunityIndex: Int? = nil
 
     var body: some View {
         ZStack {
@@ -51,6 +53,34 @@ struct CarsView: View {
                     generator.impactOccurred()
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
                         selectedCarIndex = nil
+                    }
+                }
+                .zIndex(1)
+                .frame(maxWidth: 480)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 30)
+                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
+            }
+            
+            if let selected = selectedCommunityIndex, communityCars.indices.contains(selected) {
+                // Dim background
+                Rectangle()
+                    .fill(Color.black.opacity(0.45))
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture {
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.impactOccurred()
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                            selectedCommunityIndex = nil
+                        }
+                    }
+
+                LiteCommunityExpandedCard(car: communityCars[selected]) {
+                    let generator = UIImpactFeedbackGenerator(style: .rigid)
+                    generator.impactOccurred()
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                        selectedCommunityIndex = nil
                     }
                 }
                 .zIndex(1)
@@ -123,6 +153,9 @@ private extension CarsView {
                 ForEach(communityCars.indices, id: \.self) { idx in
                     GalleryTile(car: communityCars[idx])
                         .onTapGesture {
+                            selectedCommunityIndex = idx
+                        }
+                        .onLongPressGesture(minimumDuration: 0.35) {
                             lightboxIndex = idx
                             showLightbox = true
                         }
@@ -379,6 +412,9 @@ private struct CarExpandedCardInline: View {
     var ns: Namespace.ID
     var onClose: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var tilt: CGSize = .zero
+
     var body: some View {
         ZStack {
             // Card base with glass and shimmer
@@ -395,22 +431,25 @@ private struct CarExpandedCardInline: View {
                         )
                         .blendMode(.screen)
                 )
-                .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)))
+                .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(reduceMotion ? 0 : 1))
                 .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y: 18)
                 .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
+                .rotation3DEffect(.degrees(Double(tilt.width) * 0.06), axis: (x: 0, y: 1, z: 0))
+                .rotation3DEffect(.degrees(Double(-tilt.height) * 0.06), axis: (x: 1, y: 0, z: 0))
 
-            // embedded full-card image
+            // Embedded full-card image with parallax
             GeometryReader { proxy in
                 let size = proxy.size
                 ZStack {
                     Image(car.imageName)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
+                        .frame(width: size.width + (reduceMotion ? 0 : tilt.width * 0.4), height: size.height)
                         .opacity(0.5)
                         .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
                         .accessibilityHidden(true)
                         .clipped()
+                        .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 : tilt.height * 0.04)
 
                     LinearGradient(
                         colors: [
@@ -422,17 +461,12 @@ private struct CarExpandedCardInline: View {
                         endPoint: .bottom
                     )
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .mask(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .mask(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .allowsHitTesting(false)
             }
 
             // Foreground content
             VStack(spacing: 16) {
-                // Title & subtitle
                 VStack(spacing: 6) {
                     Text(car.name)
                         .font(.system(.title3, design: .rounded).weight(.semibold))
@@ -448,13 +482,11 @@ private struct CarExpandedCardInline: View {
                 }
                 .padding(.top, 8)
 
-                // Compact badges
                 HStack(spacing: 10) {
                     StatCapsule(label: "Stage", value: "\(car.stage)", tint: Color("EmpireMint"))
                     StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
-                // Stat meters
                 VStack(spacing: 10) {
                     StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
                     StatRow(name: "Stage", value: Double(car.stage), max: 3, accent: .purple)
@@ -474,10 +506,8 @@ private struct CarExpandedCardInline: View {
                         )
                 )
 
-                // Spacer
                 Spacer(minLength: 6)
 
-                // Action buttons
                 VStack(spacing: 12) {
                     HStack(spacing: 12) {
                         GlassButton(title: "Mods") { hapticTap() }
@@ -493,6 +523,25 @@ private struct CarExpandedCardInline: View {
             }
             .padding(20)
         }
+        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    let w = max(-40, min(40, value.translation.width))
+                    let h = max(-40, min(40, value.translation.height))
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                        tilt = CGSize(width: w, height: h)
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                        tilt = .zero
+                    }
+                }
+        )
+        #if os(iOS)
+        .hoverEffect(.lift)
+        #endif
     }
 }
 
@@ -552,7 +601,13 @@ private struct StatRow: View {
         }
     }
 
-    private var normalized: Double { max == 0 ? 0 : min(value / max, 1) }
+    private var normalized: Double {
+        if name == "Stage" {
+            let clamped = Swift.max(0, Swift.min(Int(value), 3))
+            return Double(clamped) / 3.0
+        }
+        return max == 0 ? 0 : Swift.min(value / max, 1)
+    }
     private var barWidth: CGFloat { CGFloat(normalized) * 220 }
     private var displayValue: String {
         if name == "Stage" { return "\(Int(value))" }
@@ -741,6 +796,142 @@ private struct CommunityLightbox: View {
 extension Collection {
     subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil
+    }
+}
+
+// MARK: - Lite Community Expanded Card
+private struct LiteCommunityExpandedCard: View {
+    let car: Car
+    var onClose: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var tilt: CGSize = .zero
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                        .blendMode(.screen)
+                )
+                .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(reduceMotion ? 0 : 1))
+                .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y: 18)
+
+            GeometryReader { proxy in
+                let size = proxy.size
+                ZStack {
+                    Image(car.imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: size.width + (reduceMotion ? 0 : tilt.width * 0.4), height: size.height)
+                        .opacity(0.5)
+                        .accessibilityHidden(true)
+                        .clipped()
+                        .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 : tilt.height * 0.04)
+
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.0),
+                            Color.black.opacity(0.12),
+                            Color.black.opacity(0.32)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+                .mask(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .allowsHitTesting(false)
+            }
+
+            VStack(spacing: 14) {
+                // Top bar with builder handle placeholder
+                HStack {
+                    Badge(text: "Community", color: Color("EmpireMint"))
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+
+                VStack(spacing: 6) {
+                    Text(car.name)
+                        .font(.system(.title3, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.white)
+                        .shadow(radius: 6)
+                    Text(car.description)
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                }
+                .padding(.top, 4)
+
+                HStack(spacing: 10) {
+                    StatCapsule(label: "Stage", value: "\(car.stage)", tint: Color("EmpireMint"))
+                    StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                }
+
+                VStack(spacing: 10) {
+                    StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
+                    StatRow(name: "Stage", value: Double(car.stage), max: 3, accent: .purple)
+                }
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.25), .white.opacity(0.05)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                )
+
+                Spacer(minLength: 8)
+
+                // Simplified community action row
+                HStack(spacing: 12) {
+                    GlassButton(title: "Follow") { hapticTap() }
+                    GlassButton(title: "Save") { hapticTap() }
+                    GlassButton(title: "Share") { hapticTap() }
+                }
+
+                GlassButton(title: "Close") {
+                    onClose()
+                }
+                .padding(.top, 2)
+            }
+            .padding(20)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    let w = Swift.max(-40, Swift.min(40, value.translation.width))
+                    let h = Swift.max(-40, Swift.min(40, value.translation.height))
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                        tilt = CGSize(width: w, height: h)
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                        tilt = .zero
+                    }
+                }
+        )
+        #if os(iOS)
+        .hoverEffect(.lift)
+        #endif
     }
 }
 
