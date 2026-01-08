@@ -576,7 +576,7 @@ private struct CommunityLightbox: View {
     @State private var liked: Set<UUID> = []
     @State private var showHeartBurst: Bool = false
     @State private var heartScale: CGFloat = 0.6
-    @State private var heartOpacity: CGFloat = 0.0
+    @State private var heartOpacity: Double = 0.0
 
     init(cars: [Car], startIndex: Int, onClose: @escaping () -> Void) {
         self.cars = cars
@@ -600,7 +600,7 @@ private struct CommunityLightbox: View {
                                 .frame(maxWidth: size.width, maxHeight: size.height)
                                 .tag(i)
                                 .transition(.opacity)
-                            // Add double tap gesture and content shape on ZStack
+                            // Double tap gesture
                                 .contentShape(Rectangle())
                                 .onTapGesture(count: 2) {
                                     let gen = UIImpactFeedbackGenerator(style: .light)
@@ -623,17 +623,6 @@ private struct CommunityLightbox: View {
                                         }
                                     }
                                 }
-
-                            if showHeartBurst {
-                                Image(systemName: "heart.fill")
-                                    .font(.system(size: 96))
-                                    .foregroundStyle(Color("EmpireMint"))
-                                    .shadow(color: Color("EmpireMint").opacity(0.6), radius: 12)
-                                    .scaleEffect(heartScale)
-                                    .opacity(heartOpacity)
-                                    .transition(.scale.combined(with: .opacity))
-                                    .zIndex(2)
-                            }
 
                             LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
                                 .frame(height: 220)
@@ -662,6 +651,20 @@ private struct CommunityLightbox: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+
+            // Heart burst overlay
+            if showHeartBurst {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 96))
+                    .foregroundStyle(Color("EmpireMint"))
+                    .shadow(color: Color("EmpireMint").opacity(0.6), radius: 12)
+                    .scaleEffect(heartScale)
+                    .opacity(heartOpacity)
+                    .transition(.scale.combined(with: .opacity))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .ignoresSafeArea()
+                    .zIndex(3)
+            }
 
             // Top controls
             VStack {
