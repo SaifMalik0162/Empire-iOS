@@ -4,7 +4,7 @@ import SwiftUI
 struct EmpireApp: App {
     var body: some Scene {
         WindowGroup {
-            EmpireSplashView()
+            LoginView()
                 .preferredColorScheme(.dark)
         }
     }

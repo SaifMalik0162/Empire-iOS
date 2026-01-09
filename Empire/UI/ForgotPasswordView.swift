@@ -9,24 +9,30 @@ struct ForgotPasswordView: View {
     @State private var animateGradient = false
     
     private var animatedGradient: LinearGradient {
-        LinearGradient(
-            gradient: Gradient(colors: animateGradient ?
-                                [Color.purple.opacity(0.7), Color.blue.opacity(0.8), Color.pink.opacity(0.7)] :
-                                [Color.blue.opacity(0.8), Color.pink.opacity(0.7), Color.purple.opacity(0.7)]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing)
+        EmpireTheme.mintDarkGradient(start: animateGradient ? .topLeading : .bottomTrailing,
+                                     end: animateGradient ? .bottomTrailing : .topLeading)
     }
     
     var body: some View {
         ZStack {
-            animatedGradient
-                .animation(.easeInOut(duration: 4).repeatForever(autoreverses: true), value: animateGradient)
-                .ignoresSafeArea()
-                .onAppear {
-                    animateGradient.toggle()
-                }
+            ZStack {
+                EmpireTheme.mintTealGradient(start: animateGradient ? .topLeading : .bottomTrailing,
+                                             end: animateGradient ? .bottomTrailing : .topLeading)
+                EmpireTheme.mintTealGradient(start: animateGradient ? .bottomLeading : .topTrailing,
+                                             end: animateGradient ? .topTrailing : .bottomLeading)
+                    .opacity(0.45)
+                    .blendMode(.plusLighter)
+            }
+            .blur(radius: 8)
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
+            .onAppear {
+                animateGradient = true
+            }
             
             VStack(spacing: 24) {
+                EmpireLogoView(size: 150, style: .tinted(EmpireTheme.mintCore), shimmer: true, parallaxAmount: 0)
+                
                 VStack(spacing: 8) {
                     Text("Reset your password")
                         .font(.largeTitle.bold())
@@ -46,12 +52,12 @@ struct ForgotPasswordView: View {
                         .autocapitalization(.none)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(.ultraThinMaterial)
                         )
-                        .shadow(color: Color.white.opacity(0.15), radius: 8, x: 0, y: 4)
+                        .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
+                        .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
                     
                     if showValidation && email.isEmpty {
                         Text("Please enter your email.")
@@ -82,15 +88,10 @@ struct ForgotPasswordView: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Color.white.opacity(0.4), lineWidth: 1.5)
-                            )
+                            .fill(Color.accentColor)
                     )
                     .foregroundStyle(.white)
-                    .shadow(color: Color.white.opacity(0.25), radius: 10, x: 0, y: 4)
+                    .empireMintShadow(radius: 10, x: 0, y: 5, opacity: 0.6)
                 }
                 .disabled(isSending)
                 
@@ -105,12 +106,12 @@ struct ForgotPasswordView: View {
             }
             .padding(30)
             .frame(maxWidth: 420)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+            .background(
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .fill(.ultraThinMaterial)
             )
-            .shadow(color: Color.white.opacity(0.1), radius: 20, x: 0, y: 20)
+            .empireMintGlassStroke(cornerRadius: 32, lineWidth: 1.5)
+            .shadow(color: EmpireTheme.mintCore.opacity(0.3), radius: 20, x: 0, y: 10)
             .padding(.horizontal, 24)
             
             VStack {
@@ -137,3 +138,4 @@ struct ForgotPasswordView: View {
     ForgotPasswordView()
         .preferredColorScheme(.dark)
 }
+

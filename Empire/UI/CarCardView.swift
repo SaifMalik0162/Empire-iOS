@@ -35,6 +35,8 @@ struct CarCardView: View {
             }
             .padding(16)
         }
+        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: Color.black.opacity(0.6), radius: 8, x: 0, y: 6)
+        .highPriorityGesture(TapGesture(count: 2).onEnded { /* no-op for now; parent can intercept */ })
     }
 }

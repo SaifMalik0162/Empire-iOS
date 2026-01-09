@@ -11,7 +11,7 @@ public struct EmpireLogoView: View {
     private let shimmer: Bool
     private let parallaxAmount: CGFloat
 
-    public init(size: CGFloat = 200, style: Style = .tinted(EmpireTheme.mintCore), shimmer: Bool = true, parallaxAmount: CGFloat = 4) {
+    public init(size: CGFloat = 200, style: Style = .tinted(.accentColor), shimmer: Bool = true, parallaxAmount: CGFloat = 4) {
         self.size = size
         self.style = style
         self.shimmer = shimmer
@@ -19,29 +19,37 @@ public struct EmpireLogoView: View {
     }
 
     public var body: some View {
-        let base = Image("empire_tp")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+        let image: Image = Image("empire_tp")
 
-        let styled: some View = Group {
+        let view: AnyView = {
             switch style {
             case .tinted(let color):
-                base
-                    .renderingMode(.template)
-                    .foregroundColor(color)
+                return AnyView(
+                    image
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundColor(color)
+                        .frame(width: size, height: size)
+                        .shadow(color: color.opacity(0.25), radius: 20, x: 0, y: 8)
+                )
             case .original:
-                base
+                return AnyView(
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: size, height: size)
+                        .shadow(color: Color.black.opacity(0.25), radius: 20, x: 0, y: 8)
+                )
             }
-        }
-        .shadow(color: EmpireTheme.mintCore.opacity(0.25), radius: 20, x: 0, y: 8)
+        }()
 
         if shimmer {
-            styled
+            view
                 .empireShimmer(angle: .degrees(18), speed: 0.8, opacity: 0.25)
                 .empireParallax(amount: parallaxAmount)
         } else {
-            styled
+            view
         }
     }
 }

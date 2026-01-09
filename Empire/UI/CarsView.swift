@@ -20,6 +20,7 @@ struct CarsView: View {
     @State private var lightboxIndex: Int = 0
     
     @State private var selectedCommunityIndex: Int? = nil
+    @State private var likedCommunity: Set<UUID> = []
 
     var body: some View {
         ZStack {
@@ -76,7 +77,14 @@ struct CarsView: View {
                         }
                     }
 
-                LiteCommunityExpandedCard(car: communityCars[selected]) {
+                LiteCommunityExpandedCard(
+                    car: communityCars[selected],
+                    isLiked: likedCommunity.contains(communityCars[selected].id),
+                    onLikeChanged: { liked in
+                        let id = communityCars[selected].id
+                        if liked { likedCommunity.insert(id) } else { likedCommunity.remove(id) }
+                    }
+                ) {
                     let generator = UIImpactFeedbackGenerator(style: .rigid)
                     generator.impactOccurred()
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
@@ -151,14 +159,21 @@ private extension CarsView {
                 GridItem(.adaptive(minimum: 150), spacing: 12)
             ], spacing: 12) {
                 ForEach(communityCars.indices, id: \.self) { idx in
-                    GalleryTile(car: communityCars[idx])
-                        .onTapGesture {
-                            selectedCommunityIndex = idx
+                    GalleryTile(
+                        car: communityCars[idx],
+                        isLiked: likedCommunity.contains(communityCars[idx].id),
+                        onToggleLike: {
+                            let id = communityCars[idx].id
+                            if likedCommunity.contains(id) { likedCommunity.remove(id) } else { likedCommunity.insert(id) }
                         }
-                        .onLongPressGesture(minimumDuration: 0.35) {
-                            lightboxIndex = idx
-                            showLightbox = true
-                        }
+                    )
+                    .onTapGesture {
+                        selectedCommunityIndex = idx
+                    }
+                    .onLongPressGesture(minimumDuration: 0.35) {
+                        lightboxIndex = idx
+                        showLightbox = true
+                    }
                 }
             }
             .padding(.horizontal, 20)
@@ -363,7 +378,8 @@ private struct HoloShimmerMask: View {
 
 private struct GalleryTile: View {
     let car: Car
-    @State private var liked: Bool = false
+    let isLiked: Bool
+    let onToggleLike: () -> Void
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -379,7 +395,9 @@ private struct GalleryTile: View {
                     .overlay(
                         LinearGradient(colors: [.clear, .black.opacity(0.45)], startPoint: .top, endPoint: .bottom)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .allowsHitTesting(false)
                     )
+                    .contentShape(Rectangle())
 
                 // Metadata badges
                 HStack(spacing: 8) {
@@ -390,9 +408,9 @@ private struct GalleryTile: View {
             }
 
             // Like button
-            Button(action: { liked.toggle() }) {
-                Image(systemName: liked ? "heart.fill" : "heart")
-                    .foregroundStyle(liked ? Color("EmpireMint") : .white)
+            Button(action: { onToggleLike() }) {
+                Image(systemName: isLiked ? "heart.fill" : "heart")
+                    .foregroundStyle(isLiked ? Color("EmpireMint") : .white)
                     .padding(8)
                     .background(
                         Circle().fill(.ultraThinMaterial)
@@ -403,6 +421,7 @@ private struct GalleryTile: View {
             }
             .padding(10)
         }
+        .contentShape(Rectangle())
     }
 }
 
@@ -802,10 +821,23 @@ extension Collection {
 // MARK: - Lite Community Expanded Card
 private struct LiteCommunityExpandedCard: View {
     let car: Car
+    var isLiked: Bool
+    var onLikeChanged: (Bool) -> Void
     var onClose: () -> Void
+
+    @State private var liked: Bool
+    @State private var showHeartBurst: Bool = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tilt: CGSize = .zero
+
+    init(car: Car, isLiked: Bool, onLikeChanged: @escaping (Bool) -> Void, onClose: @escaping () -> Void) {
+        self.car = car
+        self.isLiked = isLiked
+        self.onLikeChanged = onLikeChanged
+        self.onClose = onClose
+        _liked = State(initialValue: isLiked)
+    }
 
     var body: some View {
         ZStack {
@@ -912,6 +944,17 @@ private struct LiteCommunityExpandedCard: View {
                 .padding(.top, 2)
             }
             .padding(20)
+
+            // Heart burst overlay on like
+            if showHeartBurst {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 96))
+                    .foregroundStyle(Color("EmpireMint"))
+                    .shadow(color: Color("EmpireMint").opacity(0.6), radius: 12)
+                    .transition(.scale.combined(with: .opacity))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .allowsHitTesting(false)
+            }
         }
         .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .gesture(
@@ -928,6 +971,25 @@ private struct LiteCommunityExpandedCard: View {
                         tilt = .zero
                     }
                 }
+        )
+        .highPriorityGesture(
+            TapGesture(count: 2).onEnded {
+                let gen = UIImpactFeedbackGenerator(style: .light)
+                gen.impactOccurred()
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.65)) {
+                    liked.toggle()
+                }
+                onLikeChanged(liked)
+                showHeartBurst = true
+                var workItem: DispatchWorkItem?
+                workItem = DispatchWorkItem {
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        showHeartBurst = false
+                    }
+                }
+                // Hide after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.55, execute: workItem!)
+            }
         )
         #if os(iOS)
         .hoverEffect(.lift)

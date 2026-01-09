@@ -5,32 +5,36 @@ struct LoginView: View {
     @State private var password: String = ""
     @State private var showPassword: Bool = false
     @State private var showSignUp = false
+    @State private var showForgotPassword = false
+    @State private var showMainApp: Bool = false
     
     @State private var animateGradient = false
     
     var body: some View {
         ZStack {
-            animatedBackground
-                .ignoresSafeArea()
+            ZStack {
+                EmpireTheme.mintTealGradient(start: animateGradient ? .topLeading : .bottomTrailing,
+                                             end: animateGradient ? .bottomTrailing : .topLeading)
+                EmpireTheme.mintTealGradient(start: animateGradient ? .bottomLeading : .topTrailing,
+                                             end: animateGradient ? .topTrailing : .bottomLeading)
+                    .opacity(0.45)
+                    .blendMode(.plusLighter)
+            }
+            .blur(radius: 8)
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
+            .onAppear {
+                animateGradient = true
+            }
             
             VStack(spacing: 24) {
                 
-                // App Icon with circular glass backdrop
+                // Logo
                 ZStack {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: 96, height: 96)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.accentColor.opacity(0.3), lineWidth: 1.5)
-                        )
-                        .shadow(color: Color.accentColor.opacity(0.15), radius: 10, x: 0, y: 4)
-                    Image("AppIcon")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 52, height: 52)
+                    EmpireLogoView(size: 220, style: .tinted(EmpireTheme.mintCore), shimmer: true, parallaxAmount: 0)
                 }
                 .padding(.bottom, 12)
+                .padding(.top, 12)
                 
                 VStack(spacing: 16) {
                     // Email TextField
@@ -42,12 +46,9 @@ struct LoginView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .fill(.ultraThinMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .stroke(Color.accentColor.opacity(0.25), lineWidth: 1.25)
-                                )
                         )
-                        .shadow(color: Color.accentColor.opacity(0.1), radius: 6, x: 0, y: 4)
+                        .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
+                        .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
                     
                     // Password field with show/hide toggle
                     ZStack(alignment: .trailing) {
@@ -64,12 +65,9 @@ struct LoginView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .fill(.ultraThinMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .stroke(Color.accentColor.opacity(0.25), lineWidth: 1.25)
-                                )
                         )
-                        .shadow(color: Color.accentColor.opacity(0.1), radius: 6, x: 0, y: 4)
+                        .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
+                        .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
                         
                         Button {
                             withAnimation(.easeInOut(duration: 0.3)) {
@@ -77,16 +75,26 @@ struct LoginView: View {
                             }
                         } label: {
                             Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                .foregroundColor(Color.accentColor.opacity(0.7))
+                                .foregroundColor(EmpireTheme.mintCore.opacity(0.7))
                                 .padding(.trailing, 16)
                         }
                         .buttonStyle(.plain)
+                    }
+                    
+                    HStack {
+                        Spacer()
+                        Button("Forgot Password?") {
+                            showForgotPassword = true
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(EmpireTheme.mintCore.opacity(0.85))
+                        .font(.footnote)
                     }
                 }
                 
                 // Log In Button
                 Button {
-                    // No action yet
+                    showMainApp = true
                 } label: {
                     Text("Log In")
                         .fontWeight(.semibold)
@@ -94,25 +102,30 @@ struct LoginView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.accentColor)
-                                .shadow(color: Color.accentColor.opacity(0.6), radius: 10, x: 0, y: 5)
+                                .fill(EmpireTheme.mintCore)
                         )
+                        .empireMintShadow(radius: 10, x: 0, y: 5, opacity: 0.6)
                         .foregroundColor(.white)
                 }
+#if DEBUG
+                .disabled(false)
+                .opacity(1)
+#else
                 .disabled(email.isEmpty || password.count < 6)
                 .opacity(email.isEmpty || password.count < 6 ? 0.5 : 1)
+#endif
                 .animation(.easeInOut(duration: 0.2), value: email.isEmpty || password.count < 6)
                 
                 // Divider with "or"
                 HStack {
                     Divider()
-                        .background(Color.accentColor.opacity(0.4))
+                        .background(EmpireTheme.mintCore.opacity(0.4))
                     Text("or")
-                        .foregroundColor(Color.accentColor.opacity(0.6))
+                        .foregroundColor(EmpireTheme.mintCore.opacity(0.6))
                         .font(.footnote)
                         .fontWeight(.medium)
                     Divider()
-                        .background(Color.accentColor.opacity(0.4))
+                        .background(EmpireTheme.mintCore.opacity(0.4))
                 }
                 .padding(.vertical, 8)
                 
@@ -126,14 +139,14 @@ struct LoginView: View {
                         Text("Sign in with Apple")
                             .fontWeight(.medium)
                     }
-                    .foregroundColor(Color.accentColor)
+                    .foregroundColor(EmpireTheme.mintCore)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.accentColor.opacity(0.7), lineWidth: 1.5)
+                            .stroke(EmpireTheme.mintCore.opacity(0.7), lineWidth: 1.5)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: Color.accentColor.opacity(0.15), radius: 6, x: 0, y: 3)
+                            .shadow(color: EmpireTheme.mintCore.opacity(0.15), radius: 6, x: 0, y: 3)
                     )
                 }
                 .buttonStyle(.plain)
@@ -143,13 +156,13 @@ struct LoginView: View {
                 // Footer HStack
                 HStack(spacing: 4) {
                     Text("Don’t have an account?")
-                        .foregroundColor(Color.accentColor.opacity(0.7))
+                        .foregroundColor(EmpireTheme.mintCore.opacity(0.7))
                         .font(.footnote)
                     Button("Sign Up") {
                         showSignUp = true
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(Color.accentColor)
+                    .foregroundColor(EmpireTheme.mintCore)
                 }
                 .padding(.bottom, 10)
                 
@@ -159,34 +172,30 @@ struct LoginView: View {
             .background(
                 RoundedRectangle(cornerRadius: 32, style: .continuous)
                     .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 32, style: .continuous)
-                            .stroke(Color.accentColor.opacity(0.25), lineWidth: 1.5)
-                    )
-                    .shadow(color: Color.accentColor.opacity(0.3), radius: 20, x: 0, y: 10)
             )
+            .empireMintGlassStroke(cornerRadius: 32, lineWidth: 1.5)
+            .shadow(color: EmpireTheme.mintCore.opacity(0.3), radius: 20, x: 0, y: 10)
             .padding(.horizontal, 24)
         }
         .sheet(isPresented: $showSignUp) {
             SignUpView()
         }
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordView()
+        }
+        .fullScreenCover(isPresented: $showMainApp) {
+            EmpireTabView()
+                .preferredColorScheme(.dark)
+        }
     }
     
     private var animatedBackground: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.2, green: 0.5, blue: 0.9),
-                Color(red: 0.1, green: 0.3, blue: 0.7),
-                Color(red: 0.0, green: 0.4, blue: 0.9),
-                Color(red: 0.2, green: 0.5, blue: 0.9)
-            ],
-            startPoint: animateGradient ? .topLeading : .bottomTrailing,
-            endPoint: animateGradient ? .bottomTrailing : .topLeading
-        )
-        .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
-        .onAppear {
-            animateGradient = true
-        }
+        EmpireTheme.mintDarkGradient(start: animateGradient ? .topLeading : .bottomTrailing,
+                                 end: animateGradient ? .bottomTrailing : .topLeading)
+            .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
+            .onAppear {
+                animateGradient = true
+            }
     }
 }
 
@@ -196,3 +205,4 @@ struct LoginView_Previews: PreviewProvider {
             .preferredColorScheme(.dark)
     }
 }
+
