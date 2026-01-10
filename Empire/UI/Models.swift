@@ -40,9 +40,16 @@ struct Car: Identifiable {
 }
 
 // MARK: - Merch Item
+enum MerchCategory: String, CaseIterable, Codable, Equatable, Hashable {
+    case apparel = "Apparel"
+    case accessories = "Accessories"
+    case banners = "Banners"
+}
+
 struct MerchItem: Identifiable {
     let id = UUID()
     let name: String
     let price: String
     let imageName: String
+    let category: MerchCategory
 }
