@@ -101,6 +101,7 @@ private struct DashboardHeader: View {
     @Binding var query: String
     @Binding var showFilters: Bool
     @Binding var selectedCategory: MerchCategory?
+    @EnvironmentObject private var cart: Cart
     @State private var isEditing: Bool = false
 
     var body: some View {
@@ -129,12 +130,27 @@ private struct DashboardHeader: View {
                     NavigationLink {
                         CartView()
                     } label: {
-                        Image(systemName: "cart")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(10)
-                            .background(Circle().fill(.ultraThinMaterial))
-                            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "cart")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(10)
+                                .background(Circle().fill(.ultraThinMaterial))
+                                .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                            
+                            // Badge
+                            let totalQty = cart.items.reduce(0) { $0 + $1.quantity }
+                            if totalQty > 0 {
+                                Text("\(totalQty)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(Color("EmpireMint"))
+                                    .clipShape(Capsule())
+                                    .offset(x: 6, y: -6)
+                            }
+                        }
                     }
                 }
                 .buttonStyle(.plain)
@@ -227,94 +243,74 @@ struct MarketplaceItemCard: View {
     @State private var isPressed: Bool = false
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .frame(width: width, height: height)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .stroke(
-                            LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                           startPoint: .topLeading, endPoint: .bottomTrailing),
-                            lineWidth: 1
+        NavigationLink {
+            ProductDetailView(item: item, related: [])
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .frame(width: width, height: height)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(
+                                LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                                               startPoint: .topLeading, endPoint: .bottomTrailing),
+                                lineWidth: 1
+                            )
+                            .blendMode(.screen)
+                    )
+                    .shadow(color: Color("EmpireMint").opacity(0.2), radius: 10, x: 0, y: 4)
+
+                VStack(spacing: 10) {
+                    ZStack {
+                        Image(item.imageName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: width - 24, height: height * 0.56)
+                            .cornerRadius(18)
+                            .opacity(0.85)
+
+                        LinearGradient(
+                            colors: [Color.black.opacity(0.0), Color.black.opacity(0.45)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .cornerRadius(18)
+
+                        LinearGradient(
+                            gradient: Gradient(stops: [
+                                .init(color: .clear, location: 0.0),
+                                .init(color: .white.opacity(0.18), location: 0.5),
+                                .init(color: .clear, location: 1.0)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
                         .blendMode(.screen)
-                )
-                .shadow(color: Color("EmpireMint").opacity(0.2), radius: 10, x: 0, y: 4)
+                        .opacity(0.22)
+                        .blur(radius: 8)
+                        .rotationEffect(.degrees(16))
+                        .modifier(CompactShine())
+                    }
+                    .shadow(color: Color("EmpireMint").opacity(0.35), radius: 6, x: 0, y: 3)
 
-            VStack(spacing: 10) {
-                ZStack {
-                    Image(item.imageName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: width - 24, height: height * 0.56)
-                        .cornerRadius(18)
-                        .opacity(0.85)
+                    VStack(spacing: 2) {
+                        Text(item.name)
+                            .font(.subheadline.bold())
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.9)
 
-                    LinearGradient(
-                        colors: [Color.black.opacity(0.0), Color.black.opacity(0.45)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .cornerRadius(18)
-
-                    // subtle shine
-                    LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: .clear, location: 0.0),
-                            .init(color: .white.opacity(0.18), location: 0.5),
-                            .init(color: .clear, location: 1.0)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .blendMode(.screen)
-                    .opacity(0.22)
-                    .blur(radius: 8)
-                    .rotationEffect(.degrees(16))
-                    .modifier(CompactShine())
+                        Text(item.price)
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.75))
+                    }
                 }
-                .shadow(color: Color("EmpireMint").opacity(0.35), radius: 6, x: 0, y: 3)
-
-                VStack(spacing: 2) {
-                    Text(item.name)
-                        .font(.subheadline.bold())
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.9)
-
-                    Text(item.price)
-                        .font(.caption2)
-                        .foregroundColor(.white.opacity(0.75))
-                }
-
-                Button {
-                    let gen = UIImpactFeedbackGenerator(style: .light)
-                    gen.impactOccurred()
-                } label: {
-                    Text("Buy Now")
-                        .font(.caption.bold())
-                        .foregroundColor(.white)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 18)
-                        .background(
-                            LinearGradient(
-                                colors: [Color("EmpireMint").opacity(0.85), Color("EmpireMint").opacity(0.55)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .cornerRadius(14)
-                        .shadow(color: Color("EmpireMint").opacity(0.4), radius: 5, x: 0, y: 3)
-                        .scaleEffect(isPressed ? 0.95 : 1)
-                        .onLongPressGesture(minimumDuration: 0.1, pressing: { pressing in
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { isPressed = pressing }
-                        }, perform: {})
-                }
+                .padding(12)
             }
-            .padding(12)
         }
+        .buttonStyle(.plain)
     }
 }
 
