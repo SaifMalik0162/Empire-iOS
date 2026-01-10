@@ -47,7 +47,6 @@ struct EmpireTabView: View {
             }
         }
         .background(Color.black.edgesIgnoringSafeArea(.all))
-        .searchable(text: $searchText)
         .safeAreaInset(edge: .bottom) {
             ZStack {
                 // Subtle accent glow hugging the tab bar
@@ -76,3 +75,4 @@ struct EmpireTabView: View {
         }
     }
 }
+
