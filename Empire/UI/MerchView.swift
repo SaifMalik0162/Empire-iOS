@@ -27,6 +27,8 @@ struct MerchView: View {
     @State private var query: String = ""
     @State private var showFilters: Bool = false
     @State private var selectedCategory: MerchCategory? = nil
+    @State private var showToast: Bool = false
+    @State private var toastTitle: String? = nil
 
     var body: some View {
         NavigationStack {
