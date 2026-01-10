@@ -122,18 +122,20 @@ private struct DashboardHeader: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                 )
-
+                
                 Button {
-                    let gen = UIImpactFeedbackGenerator(style: .light)
-                    gen.impactOccurred()
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { showFilters.toggle() }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 } label: {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(10)
-                        .background(Circle().fill(.ultraThinMaterial))
-                        .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    NavigationLink {
+                        CartView()
+                    } label: {
+                        Image(systemName: "cart")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(Circle().fill(.ultraThinMaterial))
+                            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    }
                 }
                 .buttonStyle(.plain)
             }
