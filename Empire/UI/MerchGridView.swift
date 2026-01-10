@@ -81,7 +81,9 @@ private struct MerchGridCard: View {
                             .lineLimit(1)
                     }
 
-                    Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred() }) {
+                    Button(action: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }) {
                         Text("Buy Now")
                             .font(.caption.bold())
                             .foregroundColor(.white)

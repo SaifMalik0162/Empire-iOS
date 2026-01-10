@@ -92,10 +92,10 @@ struct ProfileView: View {
                         ForEach(Array(featuredCards.enumerated()), id: \.offset) { idx, card in
                             GeometryReader { geo in
                                 let midX = geo.frame(in: .global).midX
-                                let screenMid = UIScreen.main.bounds.width / 2
+                                let screenMid = geo.size.width / 2
                                 Color.clear
                                     .onAppear { if abs(midX - screenMid) < 120 { featuredIndex = idx } }
-                                    .onChange(of: midX) { _ in if abs(midX - screenMid) < 120 { featuredIndex = idx } }
+                                    .onChange(of: midX) { oldValue, newValue in if abs(newValue - screenMid) < 120 { featuredIndex = idx } }
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                                         .fill(.ultraThinMaterial)

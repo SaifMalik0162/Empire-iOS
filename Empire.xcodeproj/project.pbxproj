@@ -112,9 +112,24 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		704E4BBC2F11EE2D00AB0A5D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchGridView.swift; sourceTree = "<group>"; };
 		704E4B912F11E5A800AB0A5D /* MerchListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchListView.swift; sourceTree = "<group>"; };
+		704E4BA32F11EE2C00AB0A5D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		704E4BA52F11EE2C00AB0A5D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "empire 360.mp4"; sourceTree = "<group>"; };
 		70A016E92F0DF49000A084C2 /* EmpireApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireApp.swift; sourceTree = "<group>"; };
 		70A016EC2F0DF49000A084C2 /* CarCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarCardView.swift; sourceTree = "<group>"; };
@@ -185,6 +200,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		704E4BA22F11EE2C00AB0A5D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				704E4BA32F11EE2C00AB0A5D /* WidgetKit.framework */,
+				704E4BA52F11EE2C00AB0A5D /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		70A016EA2F0DF49000A084C2 /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -243,6 +267,7 @@
 				70A017022F0DF49000A084C2 /* Empire */,
 				70C60A842F0DAA7E003AE110 /* EmpireTests */,
 				70C60A8E2F0DAA7E003AE110 /* EmpireUITests */,
+				704E4BA22F11EE2C00AB0A5D /* Frameworks */,
 				70C60A732F0DAA7C003AE110 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -267,6 +292,7 @@
 				70C60A6E2F0DAA7C003AE110 /* Sources */,
 				70C60A6F2F0DAA7C003AE110 /* Frameworks */,
 				70C60A702F0DAA7C003AE110 /* Resources */,
+				704E4BBC2F11EE2D00AB0A5D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -570,7 +596,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -628,7 +654,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -644,12 +670,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Empire/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Empire Connect";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -660,7 +688,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.empireconnect;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -679,12 +707,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Empire/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Empire Connect";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -695,7 +725,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.empireconnect;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -716,7 +746,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.EmpireTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -738,7 +768,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.EmpireTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -759,6 +789,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.EmpireUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -779,6 +810,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.EmpireUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
