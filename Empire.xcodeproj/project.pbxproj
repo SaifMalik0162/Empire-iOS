@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8B2F12EEB30082F480 /* Cart.swift */; };
+		7020AB8E2F12EEBB0082F480 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */; };
+		7020AB902F12EECA0082F480 /* CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8F2F12EECA0082F480 /* CartView.swift */; };
+		7020AB912F12EEFD0082F480 /* CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8F2F12EECA0082F480 /* CartView.swift */; };
+		7020AB922F12EEFD0082F480 /* Cart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8B2F12EEB30082F480 /* Cart.swift */; };
+		7020AB932F12EEFD0082F480 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */; };
+		7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */; };
+		7020AB952F12EEFD0082F480 /* CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8F2F12EECA0082F480 /* CartView.swift */; };
+		7020AB962F12EEFD0082F480 /* Cart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8B2F12EEB30082F480 /* Cart.swift */; };
 		704E4B8E2F11E5A000AB0A5D /* MerchGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */; };
 		704E4B8F2F11E5A000AB0A5D /* MerchGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */; };
 		704E4B902F11E5A000AB0A5D /* MerchGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */; };
@@ -126,6 +135,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7020AB8B2F12EEB30082F480 /* Cart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cart.swift; sourceTree = "<group>"; };
+		7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
+		7020AB8F2F12EECA0082F480 /* CartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartView.swift; sourceTree = "<group>"; };
 		704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchGridView.swift; sourceTree = "<group>"; };
 		704E4B912F11E5A800AB0A5D /* MerchListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchListView.swift; sourceTree = "<group>"; };
 		704E4BA32F11EE2C00AB0A5D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -245,6 +257,9 @@
 				70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */,
 				70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */,
 				704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */,
+				7020AB8B2F12EEB30082F480 /* Cart.swift */,
+				7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */,
+				7020AB8F2F12EECA0082F480 /* CartView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -433,6 +448,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				70A0171B2F0DF49000A084C2 /* MeetsView.swift in Sources */,
+				7020AB912F12EEFD0082F480 /* CartView.swift in Sources */,
+				7020AB922F12EEFD0082F480 /* Cart.swift in Sources */,
+				7020AB932F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
 				70B0CF6A2F106908003FCD20 /* EmpireTheme.swift in Sources */,
 				70B0CF672F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
 				70A0171C2F0DF49000A084C2 /* CoolRipple.swift in Sources */,
@@ -465,9 +483,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7020AB902F12EECA0082F480 /* CartView.swift in Sources */,
 				70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */,
 				70A017062F0DF49000A084C2 /* CoolRipple.swift in Sources */,
 				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
+				7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */,
 				70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
 				70A0170A2F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
 				70A0170B2F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
@@ -491,6 +511,7 @@
 				704E4B8E2F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				70B0CF582F10646D003FCD20 /* LoginView.swift in Sources */,
 				70A017182F0DF49000A084C2 /* StageChip.swift in Sources */,
+				7020AB8E2F12EEBB0082F480 /* ProductDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -501,6 +522,9 @@
 				70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */,
 				70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */,
 				704E4B902F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
+				7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
+				7020AB952F12EEFD0082F480 /* CartView.swift in Sources */,
+				7020AB962F12EEFD0082F480 /* Cart.swift in Sources */,
 				70A017342F0DF49000A084C2 /* HomeView.swift in Sources */,
 				70A2E4072F10ABDA004B950D /* EmpireLogoView.swift in Sources */,
 				70A017352F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
