@@ -138,7 +138,7 @@ private struct SummaryRow: View {
         HStack {
             Text(label)
             Spacer()
-            Text(value.formatted(.currency(code: "USD")))
+            Text(value.formatted(.currency(code: "CAD")))
                 .font(bold ? .headline : .body)
         }
         .foregroundStyle(.white)
