@@ -102,6 +102,9 @@
 		70B0CF6D2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */; };
 		70B0CF6E2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */; };
 		70B0CF6F2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */; };
+		BE39CA682F131B1600695AAA /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE39CA672F131B1300695AAA /* AuthViewModel.swift */; };
+		BE39CA692F131B1600695AAA /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE39CA672F131B1300695AAA /* AuthViewModel.swift */; };
+		BE39CA6A2F131B1600695AAA /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE39CA672F131B1300695AAA /* AuthViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -172,7 +175,55 @@
 		70C60A722F0DAA7C003AE110 /* Empire.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Empire.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A812F0DAA7E003AE110 /* EmpireTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A8B2F0DAA7E003AE110 /* EmpireUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BE39CA672F131B1300695AAA /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BE39CA512F130F9F00695AAA /* Exceptions for "Services" folder in "Empire" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				APIService.swift,
+				NetworkManager.swift,
+			);
+			target = 70C60A712F0DAA7C003AE110 /* Empire */;
+		};
+		BE39CA552F130FB900695AAA /* Exceptions for "Models" folder in "Empire" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BackendModels.swift,
+			);
+			target = 70C60A712F0DAA7C003AE110 /* Empire */;
+		};
+		BE39CA562F130FB900695AAA /* Exceptions for "Models" folder in "EmpireUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BackendModels.swift,
+			);
+			target = 70C60A8A2F0DAA7E003AE110 /* EmpireUITests */;
+		};
+		BE39CA592F130FC300695AAA /* Exceptions for "Configs" folder in "Empire" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				APIConfig.swift,
+			);
+			target = 70C60A712F0DAA7C003AE110 /* Empire */;
+		};
+		BE39CA5A2F130FC300695AAA /* Exceptions for "Configs" folder in "EmpireUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				APIConfig.swift,
+			);
+			target = 70C60A8A2F0DAA7E003AE110 /* EmpireUITests */;
+		};
+		BE39CA5C2F130FCF00695AAA /* Exceptions for "Services" folder in "EmpireUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				APIService.swift,
+				NetworkManager.swift,
+			);
+			target = 70C60A8A2F0DAA7E003AE110 /* EmpireUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		70C60A842F0DAA7E003AE110 /* EmpireTests */ = {
@@ -183,6 +234,33 @@
 		70C60A8E2F0DAA7E003AE110 /* EmpireUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = EmpireUITests;
+			sourceTree = "<group>";
+		};
+		BE39CA422F130B1C00695AAA /* Services */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BE39CA512F130F9F00695AAA /* Exceptions for "Services" folder in "Empire" target */,
+				BE39CA5C2F130FCF00695AAA /* Exceptions for "Services" folder in "EmpireUITests" target */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		BE39CA482F130B9000695AAA /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BE39CA552F130FB900695AAA /* Exceptions for "Models" folder in "Empire" target */,
+				BE39CA562F130FB900695AAA /* Exceptions for "Models" folder in "EmpireUITests" target */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BE39CA4C2F130BC100695AAA /* Configs */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BE39CA592F130FC300695AAA /* Exceptions for "Configs" folder in "Empire" target */,
+				BE39CA5A2F130FC300695AAA /* Exceptions for "Configs" folder in "EmpireUITests" target */,
+			);
+			path = Configs;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -267,6 +345,7 @@
 		70A017022F0DF49000A084C2 /* Empire */ = {
 			isa = PBXGroup;
 			children = (
+				BE39CA662F131AF400695AAA /* ViewModels */,
 				70A016EA2F0DF49000A084C2 /* App */,
 				70A016FF2F0DF49000A084C2 /* UI */,
 				70A017002F0DF49000A084C2 /* Assets.xcassets */,
@@ -279,6 +358,9 @@
 		70C60A692F0DAA7C003AE110 = {
 			isa = PBXGroup;
 			children = (
+				BE39CA4C2F130BC100695AAA /* Configs */,
+				BE39CA482F130B9000695AAA /* Models */,
+				BE39CA422F130B1C00695AAA /* Services */,
 				70A017022F0DF49000A084C2 /* Empire */,
 				70C60A842F0DAA7E003AE110 /* EmpireTests */,
 				70C60A8E2F0DAA7E003AE110 /* EmpireUITests */,
@@ -295,6 +377,14 @@
 				70C60A8B2F0DAA7E003AE110 /* EmpireUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		BE39CA662F131AF400695AAA /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				BE39CA672F131B1300695AAA /* AuthViewModel.swift */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -335,6 +425,9 @@
 			);
 			fileSystemSynchronizedGroups = (
 				70C60A842F0DAA7E003AE110 /* EmpireTests */,
+				BE39CA422F130B1C00695AAA /* Services */,
+				BE39CA482F130B9000695AAA /* Models */,
+				BE39CA4C2F130BC100695AAA /* Configs */,
 			);
 			name = EmpireTests;
 			packageProductDependencies = (
@@ -469,6 +562,7 @@
 				70A017282F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
 				704E4B8F2F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				70A017292F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
+				BE39CA692F131B1600695AAA /* AuthViewModel.swift in Sources */,
 				70A0172A2F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				70A0172B2F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */,
@@ -491,6 +585,7 @@
 				70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
 				70A0170A2F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
 				70A0170B2F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
+				BE39CA682F131B1600695AAA /* AuthViewModel.swift in Sources */,
 				704E4B932F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
 				70A0170D2F0DF49000A084C2 /* Models.swift in Sources */,
 				70A0170E2F0DF49000A084C2 /* CarCardView.swift in Sources */,
@@ -525,6 +620,7 @@
 				7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
 				7020AB952F12EEFD0082F480 /* CartView.swift in Sources */,
 				7020AB962F12EEFD0082F480 /* Cart.swift in Sources */,
+				BE39CA6A2F131B1600695AAA /* AuthViewModel.swift in Sources */,
 				70A017342F0DF49000A084C2 /* HomeView.swift in Sources */,
 				70A2E4072F10ABDA004B950D /* EmpireLogoView.swift in Sources */,
 				70A017352F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
@@ -695,7 +791,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 18;
-				DEVELOPMENT_TEAM = MLF346W74P;
+				DEVELOPMENT_TEAM = VUY86K4M22;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Empire/Info.plist;
@@ -713,7 +809,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.empireconnect;
+				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.empireconnec;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -732,7 +828,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 18;
-				DEVELOPMENT_TEAM = MLF346W74P;
+				DEVELOPMENT_TEAM = VUY86K4M22;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Empire/Info.plist;
@@ -750,7 +846,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.empireconnect;
+				PRODUCT_BUNDLE_IDENTIFIER = com.empireautoclub.empireconnec;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

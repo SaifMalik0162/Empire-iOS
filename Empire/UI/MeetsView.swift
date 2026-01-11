@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct MeetsView: View {
-    let meets: [Meet]
+    @State private var meets:  [Meet] = []
     @State private var scrollOffset: CGFloat = 0
+    
+    // ✅ NEW: Loading states
+    @State private var isLoadingMeets = false
+    @State private var meetsError: String?
 
     var body: some View {
         GeometryReader { proxy in
@@ -14,19 +18,29 @@ struct MeetsView: View {
                         .padding(.top, 12)
                         .padding(.horizontal, 18)
 
-                    ForEach(meets) { meet in
-                        LiquidGlassMeetCard(meet: meet)
-                            .padding(.horizontal, 18)
-                            .shadow(color: Color("EmpireMint").opacity(0.25), radius: 20, x: 0, y: 14)
-                            .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 6)
-                            .modifier(Parallax(y: scrollOffset, strength: 18))
+                    // ✅ UPDATED: Loading, empty, or meets
+                    if isLoadingMeets {
+                        ProgressView("Loading meets...")
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 60)
+                    } else if meets.isEmpty {
+                        emptyMeetsView
+                    } else {
+                        ForEach(meets) { meet in
+                            LiquidGlassMeetCard(meet: meet)
+                                .padding(.horizontal, 18)
+                                . shadow(color: Color("EmpireMint").opacity(0.25), radius: 20, x: 0, y:  14)
+                                .shadow(color: . black.opacity(0.45), radius: 16, x: 0, y:  6)
+                                .modifier(Parallax(y: scrollOffset, strength: 18))
+                        }
                     }
 
                     Spacer(minLength: 80)
                 }
                 .background(
                     GeometryReader { geo in
-                        Rectangle().fill(.clear)
+                        Rectangle().fill(. clear)
                             .preference(key: OffsetKey.self, value: -geo.frame(in: .named("scroll")).minY)
                     }
                 )
@@ -37,7 +51,6 @@ struct MeetsView: View {
             .coordinateSpace(name: "scroll")
             .background(
                 ZStack {
-                    // Layered dynamic blobs for depth
                     Blob(color: Color("EmpireMint").opacity(0.25), size: size, x: 0.2, y: 0.1, blur: 120)
                     Blob(color: Color.cyan.opacity(0.18), size: size, x: 0.85, y: 0.05, blur: 140)
                     Blob(color: Color.purple.opacity(0.12), size: size, x: 0.15, y: 0.9, blur: 180)
@@ -45,18 +58,73 @@ struct MeetsView: View {
                     LinearGradient(
                         colors: [Color.black, Color.black.opacity(0.96), Color.black.opacity(0.9)],
                         startPoint: .top,
-                        endPoint: .bottom
+                        endPoint: . bottom
                     )
                     .ignoresSafeArea()
 
-                    // Subtle glass overlay noise
                     Rectangle()
-                        .fill(.ultraThinMaterial)
+                        .fill(. ultraThinMaterial)
                         .opacity(0.35)
                         .blendMode(.plusLighter)
                         .ignoresSafeArea()
                 }
             )
+        }
+        .onAppear {
+            loadMeets()
+        }
+    }
+    
+    // ✅ NEW: Empty state
+    private var emptyMeetsView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "map.fill")
+                .font(. system(size: 60))
+                .foregroundColor(Color("EmpireMint").opacity(0.5))
+            
+            Text("No upcoming meets")
+                .font(.headline)
+                .foregroundColor(. white)
+            
+            Text("Check back soon for new events")
+                .font(.caption)
+                .foregroundColor(. white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(. vertical, 60)
+    }
+    
+    // ✅ NEW: Load meets from backend
+    private func loadMeets() {
+        isLoadingMeets = true
+        meetsError = nil
+        
+        Task {
+            do {
+                print("🔄 Loading meets...")
+                let backendMeets = try await APIService.shared.getAllMeets()
+                print("✅ Loaded \(backendMeets.count) meets from backend")
+                
+                await MainActor.run {
+                    meets = backendMeets.map { backendMeet in
+                        let formatter = ISO8601DateFormatter()
+                        let date = formatter.date(from: backendMeet.meetDate) ?? Date()
+                        
+                        return Meet(
+                            title: backendMeet.title,
+                            city: backendMeet.location,
+                            date: date
+                        )
+                    }
+                    isLoadingMeets = false
+                }
+            } catch {
+                await MainActor.run {
+                    print("❌ Error loading meets:  \(error)")
+                    meetsError = "Failed to load meets"
+                    isLoadingMeets = false
+                }
+            }
         }
     }
 }
@@ -70,7 +138,7 @@ private struct MeetsHeader: View {
                     .foregroundStyle(.white)
                 Text("Find and join the next event")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(. white.opacity(0.7))
             }
             Spacer()
             HStack(spacing: 10) {
@@ -85,7 +153,7 @@ private struct HeaderChip: View {
     let systemName: String
     var body: some View {
         Circle()
-            .fill(.ultraThinMaterial)
+            .fill(. ultraThinMaterial)
             .frame(width: 32, height: 32)
             .overlay(Image(systemName: systemName).foregroundStyle(.white))
             .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
@@ -93,44 +161,39 @@ private struct HeaderChip: View {
 }
 
 private struct OffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    static var defaultValue:  CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
-// MARK: - LiquidGlassMeetCard
 private struct LiquidGlassMeetCard: View {
-    let meet: Meet
+    let meet:  Meet
     @State private var isPressed = false
 
     var body: some View {
         ZStack {
-            // Base glass + strokes
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(. ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 28)
                         .stroke(
                             LinearGradient(
                                 colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                startPoint: .topLeading,
+                                startPoint:  .topLeading,
                                 endPoint: .bottomTrailing
                             ), lineWidth: 1
                         )
                         .blendMode(.screen)
                 )
                 .overlay(
-                    // Animated shimmer sweep
                     ShimmerMask()
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .opacity(0.55)
                         .blendMode(.screen)
                 )
-                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 24, x: 0, y: 14)
-                .shadow(color: .black.opacity(0.5), radius: 12, x: 0, y: 8)
+                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 24, x: 0, y:  14)
+                .shadow(color: .black.opacity(0.5), radius: 12, x: 0, y:  8)
 
-            // Content
             HStack(spacing: 14) {
-                // Accent glass orb
                 ZStack {
                     Circle()
                         .fill(
@@ -141,19 +204,19 @@ private struct LiquidGlassMeetCard: View {
                             Circle()
                                 .stroke(LinearGradient(colors: [Color.white.opacity(0.8), Color.white.opacity(0.1)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
                         )
-                        .shadow(color: Color("EmpireMint").opacity(0.4), radius: 10, x: 0, y: 6)
+                        .shadow(color: Color("EmpireMint").opacity(0.4), radius: 10, x: 0, y:  6)
 
                     Circle()
-                        .strokeBorder(.white.opacity(0.15), lineWidth: 1)
+                        .strokeBorder(. white.opacity(0.15), lineWidth: 1)
                         .blur(radius: 2)
                         .frame(width: 54, height: 54)
                         .blendMode(.plusLighter)
                 }
-                .padding(.leading, 4)
+                . padding(.leading, 4)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(meet.title)
-                        .font(.system(.title3, design: .rounded).weight(.semibold))
+                        .font(.system(. title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
                         .shadow(color: Color("EmpireMint").opacity(0.7), radius: 2)
                         .lineLimit(1)
@@ -166,15 +229,15 @@ private struct LiquidGlassMeetCard: View {
                             .opacity(0.9)
                         Text("\(meet.city) · \(meet.dateString)")
                             .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.75))
+                            .foregroundStyle(. white.opacity(0.75))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            . minimumScaleFactor(0.8)
                     }
                 }
                 Spacer(minLength: 12)
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                Image(systemName: "chevron. right")
+                    .font(. system(size: 14, weight: .semibold))
                     .foregroundStyle(Color("EmpireMint"))
                     .shadow(color: Color("EmpireMint").opacity(0.6), radius: 2)
                     .padding(.trailing, 4)
@@ -209,24 +272,24 @@ private struct LiquidGlassMeetCard: View {
 
 // MARK: - Effects
 private struct ShimmerMask: View {
-    @State private var phase: CGFloat = 0
+    @State private var phase:  CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
             let width = geo.size.width
             LinearGradient(
                 gradient: Gradient(stops: [
-                    .init(color: .clear, location: 0.0),
+                    .init(color: . clear, location: 0.0),
                     .init(color: Color.white.opacity(0.35), location: 0.45),
-                    .init(color: .clear, location: 0.9)
+                    .init(color: . clear, location: 0.9)
                 ]),
                 startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                endPoint:  .bottomTrailing
             )
             .frame(width: width)
             .offset(x: -width + phase * (width * 2))
             .onAppear {
-                withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: false)) { phase = 1 }
+                withAnimation(.linear(duration: 3.2).repeatForever(autoreverses:  false)) { phase = 1 }
             }
         }
         .allowsHitTesting(false)
@@ -234,16 +297,16 @@ private struct ShimmerMask: View {
 }
 
 private struct Parallax: ViewModifier {
-    let y: CGFloat
+    let y:  CGFloat
     let strength: CGFloat
 
     func body(content: Content) -> some View {
-        let offset = (y / 200).clamped(to: -1...1) * strength
+        let offset = (y / 200.0).clamped(to: -1.0...1.0) * strength
         content.offset(y: offset)
     }
 }
 
-private extension Comparable where Self: Strideable, Self.Stride: SignedNumeric {
+private extension Comparable where Self:  Strideable, Self.Stride: SignedNumeric {
     func clamped(to range: ClosedRange<Self>) -> Self {
         min(max(self, range.lowerBound), range.upperBound)
     }
@@ -251,7 +314,7 @@ private extension Comparable where Self: Strideable, Self.Stride: SignedNumeric 
 
 private struct Blob: View {
     let color: Color
-    let size: CGSize
+    let size:  CGSize
     let x: CGFloat
     let y: CGFloat
     let blur: CGFloat
@@ -272,11 +335,7 @@ private struct Blob: View {
 // MARK: - Preview
 struct MeetsView_Previews: PreviewProvider {
     static var previews: some View {
-        MeetsView(meets: [
-            Meet(title: "Winter Cruise", city: "Toronto", date: Date()),
-            Meet(title: "Stage 2 Meetup", city: "Vancouver", date: Date().addingTimeInterval(86400 * 5)),
-            Meet(title: "Track Day", city: "Montreal", date: Date().addingTimeInterval(86400 * 10))
-        ])
-        .preferredColorScheme(.dark)
+        MeetsView()
+            .preferredColorScheme(.dark)
     }
 }

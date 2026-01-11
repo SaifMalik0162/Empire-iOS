@@ -2,13 +2,24 @@ import SwiftUI
 
 @main
 struct EmpireApp: App {
-    @StateObject private var cart = Cart()
+    @StateObject private var authViewModel = AuthViewModel()
+    @StateObject private var cart = Cart()  // ✅ Use existing Cart
     
-    var body: some Scene {
+    var body:  some Scene {
         WindowGroup {
-            LoginView()
-                .environmentObject(cart)
-                .preferredColorScheme(.dark)
+            if authViewModel.isLoading {
+                EmpireSplashView()
+                    .preferredColorScheme(.dark)
+            } else if authViewModel.isAuthenticated {
+                EmpireTabView()
+                    .preferredColorScheme(.dark)
+                    .environmentObject(authViewModel)
+                    .environmentObject(cart)  // ✅ Pass existing Cart
+            } else {
+                LoginView()
+                    .preferredColorScheme(.dark)
+                    .environmentObject(authViewModel)
+            }
         }
     }
 }
