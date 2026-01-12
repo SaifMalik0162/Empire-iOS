@@ -1,9 +1,16 @@
 import SwiftUI
+import Combine
 
 struct EmpireTabView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var cart: Cart
+    @Environment(\.dismiss) private var dismiss
+
     @State private var selectedTab: EmpireTab = .home
     @State private var searchText: String = ""
     @State private var tabPulse: Bool = false
+
+    @State private var dismissObserver: AnyCancellable?
 
     @State private var meets: [Meet] = [
         Meet(title: "Empire Meet 1", city: "Toronto", date: Date()),
@@ -17,7 +24,7 @@ struct EmpireTabView: View {
                 .tabItem { Image(systemName: EmpireTab.home.icon) }
                 .tag(EmpireTab.home)
             
-            MeetsView(meets: meets)
+            MeetsView()
                 .tabItem { Image(systemName: EmpireTab.meets.icon) }
                 .tag(EmpireTab.meets)
             
@@ -73,6 +80,16 @@ struct EmpireTabView: View {
                 .frame(height: 72)
                 .accessibilityHidden(true)
         }
+        .onAppear {
+            dismissObserver = NotificationCenter.default.publisher(for: .empireRequestDismiss)
+                .receive(on: RunLoop.main)
+                .sink { _ in
+                    dismiss()
+                }
+        }
+        .onDisappear {
+            dismissObserver?.cancel()
+            dismissObserver = nil
+        }
     }
 }
-

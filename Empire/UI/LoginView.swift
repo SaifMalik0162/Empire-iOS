@@ -7,6 +7,12 @@ struct LoginView: View {
     @State private var showSignUp = false
     @State private var showForgotPassword = false
     @State private var showMainApp: Bool = false
+
+    @EnvironmentObject var authViewModel: AuthViewModel
+
+    // Backend integration
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     
     @State private var animateGradient = false
     
@@ -90,11 +96,20 @@ struct LoginView: View {
                         .foregroundColor(EmpireTheme.mintCore.opacity(0.85))
                         .font(.footnote)
                     }
+                    
+                    // Error message
+                    if let error = errorMessage {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 4)
+                            .transition(.opacity)
+                    }
                 }
                 
                 // Log In Button
                 Button {
-                    showMainApp = true
+                    performLogin()
                 } label: {
                     Text("Log In")
                         .fontWeight(.semibold)
@@ -107,14 +122,9 @@ struct LoginView: View {
                         .empireMintShadow(radius: 10, x: 0, y: 5, opacity: 0.6)
                         .foregroundColor(.white)
                 }
-#if DEBUG
-                .disabled(false)
-                .opacity(1)
-#else
-                .disabled(email.isEmpty || password.count < 6)
-                .opacity(email.isEmpty || password.count < 6 ? 0.5 : 1)
-#endif
-                .animation(.easeInOut(duration: 0.2), value: email.isEmpty || password.count < 6)
+                .disabled(isLoading || email.isEmpty || password.count < 6)
+                .opacity((isLoading || email.isEmpty || password.count < 6) ? 0.5 : 1)
+                .animation(.easeInOut(duration: 0.2), value: isLoading || email.isEmpty || password.count < 6)
                 
                 // Divider with "or"
                 HStack {
@@ -186,6 +196,44 @@ struct LoginView: View {
         .fullScreenCover(isPresented: $showMainApp) {
             EmpireTabView()
                 .preferredColorScheme(.dark)
+        }
+    }
+    
+    // Backend login function with AuthViewModel
+    private func performLogin() {
+        isLoading = true
+        errorMessage = nil
+        
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        Task {
+            do {
+                try await authViewModel.login(email: email, password: password)
+                
+                await MainActor.run {
+                    isLoading = false
+                    // No need to navigate - EmpireApp will automatically switch to main app
+                    let successGenerator = UINotificationFeedbackGenerator()
+                    successGenerator.notificationOccurred(.success)
+                }
+            } catch let error as NetworkError {
+                await MainActor.run {
+                    errorMessage = error.errorDescription
+                    isLoading = false
+                    
+                    let errorGenerator = UINotificationFeedbackGenerator()
+                    errorGenerator.notificationOccurred(.error)
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "An unexpected error occurred"
+                    isLoading = false
+                    
+                    let errorGenerator = UINotificationFeedbackGenerator()
+                    errorGenerator.notificationOccurred(.error)
+                }
+            }
         }
     }
     

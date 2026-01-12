@@ -104,6 +104,16 @@ private struct DashboardHeader: View {
     @EnvironmentObject private var cart: Cart
     @State private var isEditing: Bool = false
 
+    #if DEBUG
+    @State private var fallbackCart = Cart()
+    private var safeCart: Cart {
+        // Use fallback in DEBUG if EnvironmentObject is missing to avoid preview/runtime crashes in isolation
+        (Mirror(reflecting: _cart).children.isEmpty) ? fallbackCart : cart
+    }
+    #else
+    private var safeCart: Cart { cart }
+    #endif
+
     var body: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
@@ -139,7 +149,7 @@ private struct DashboardHeader: View {
                                 .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
                             
                             // Badge
-                            let totalQty = cart.items.reduce(0) { $0 + $1.quantity }
+                            let totalQty = safeCart.items.reduce(0) { $0 + $1.quantity }
                             if totalQty > 0 {
                                 Text("\(totalQty)")
                                     .font(.system(size: 10, weight: .bold))
@@ -417,5 +427,6 @@ struct MerchView_Previews: PreviewProvider {
     static var previews: some View {
         MerchView()
             .preferredColorScheme(.dark)
+            .environmentObject(Cart())
     }
 }

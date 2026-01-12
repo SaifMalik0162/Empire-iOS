@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct MeetsView: View {
-    let meets: [Meet]
+    @State private var meets: [Meet] = []
+    @State private var isLoadingMeets = false
+    @State private var meetsError: String?
     @State private var scrollOffset: CGFloat = 0
 
     var body: some View {
@@ -14,12 +16,22 @@ struct MeetsView: View {
                         .padding(.top, 12)
                         .padding(.horizontal, 18)
 
-                    ForEach(meets) { meet in
-                        LiquidGlassMeetCard(meet: meet)
-                            .padding(.horizontal, 18)
-                            .shadow(color: Color("EmpireMint").opacity(0.25), radius: 20, x: 0, y: 14)
-                            .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 6)
-                            .modifier(Parallax(y: scrollOffset, strength: 18))
+                    // Loading, empty, or meets
+                    if isLoadingMeets {
+                        ProgressView("Loading meets...")
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 60)
+                    } else if meets.isEmpty {
+                        emptyMeetsView
+                    } else {
+                        ForEach(meets) { meet in
+                            LiquidGlassMeetCard(meet: meet)
+                                .padding(.horizontal, 18)
+                                .shadow(color: Color("EmpireMint").opacity(0.25), radius: 20, x: 0, y: 14)
+                                .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 6)
+                                .modifier(Parallax(y: scrollOffset, strength: 18))
+                        }
                     }
 
                     Spacer(minLength: 80)
@@ -32,6 +44,9 @@ struct MeetsView: View {
                 )
                 .onPreferenceChange(OffsetKey.self) { value in
                     scrollOffset = value
+                }
+                .onAppear {
+                    loadMeets()
                 }
             }
             .coordinateSpace(name: "scroll")
@@ -57,6 +72,60 @@ struct MeetsView: View {
                         .ignoresSafeArea()
                 }
             )
+        }
+    }
+}
+
+extension MeetsView {
+    // Empty state
+    private var emptyMeetsView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "map.fill")
+                .font(.system(size: 60))
+                .foregroundColor(Color("EmpireMint").opacity(0.5))
+            
+            Text("No upcoming meets")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            Text("Check back soon for new events")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+    
+    // Load meets from backend
+    private func loadMeets() {
+        isLoadingMeets = true
+        meetsError = nil
+        
+        Task {
+            do {
+                print("🔄 Loading meets...")
+                let backendMeets = try await APIService.shared.getAllMeets()
+                print("✅ Loaded \(backendMeets.count) meets from backend")
+                
+                await MainActor.run {
+                    let formatter = ISO8601DateFormatter()
+                    meets = backendMeets.map { backendMeet in
+                        let date = formatter.date(from: backendMeet.meetDate) ?? Date()
+                        return Meet(
+                            title: backendMeet.title,
+                            city: backendMeet.location,
+                            date: date
+                        )
+                    }
+                    isLoadingMeets = false
+                }
+            } catch {
+                await MainActor.run {
+                    print("❌ Error loading meets:  \(error)")
+                    meetsError = "Failed to load meets"
+                    isLoadingMeets = false
+                }
+            }
         }
     }
 }
@@ -272,11 +341,7 @@ private struct Blob: View {
 // MARK: - Preview
 struct MeetsView_Previews: PreviewProvider {
     static var previews: some View {
-        MeetsView(meets: [
-            Meet(title: "Winter Cruise", city: "Toronto", date: Date()),
-            Meet(title: "Stage 2 Meetup", city: "Vancouver", date: Date().addingTimeInterval(86400 * 5)),
-            Meet(title: "Track Day", city: "Montreal", date: Date().addingTimeInterval(86400 * 10))
-        ])
-        .preferredColorScheme(.dark)
+        MeetsView()
+            .preferredColorScheme(.dark)
     }
 }
