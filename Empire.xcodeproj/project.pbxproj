@@ -203,6 +203,9 @@
 		70C60A722F0DAA7C003AE110 /* Empire.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Empire.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A812F0DAA7E003AE110 /* EmpireTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A8B2F0DAA7E003AE110 /* EmpireUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		70E28F662F15C9980025AAAC /* README.md */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = README.md; sourceTree = "<group>"; };
+		70E28F6A2F15C9C90025AAAC /* CONTRIBUTING.md */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CONTRIBUTING.md; sourceTree = "<group>"; };
+		70E28F6C2F15CADC0025AAAC /* empire_tp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = empire_tp.png; sourceTree = "<group>"; };
 		70E699D52F1496ED001304D6 /* VehicleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleEditorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -348,6 +351,8 @@
 		70C60A692F0DAA7C003AE110 = {
 			isa = PBXGroup;
 			children = (
+				70E28F6A2F15C9C90025AAAC /* CONTRIBUTING.md */,
+				70E28F662F15C9980025AAAC /* README.md */,
 				7042518E2F13397100322849 /* Configs */,
 				704251902F13397100322849 /* Models */,
 				704251932F13397100322849 /* Services */,
@@ -356,6 +361,7 @@
 				70C60A8E2F0DAA7E003AE110 /* EmpireUITests */,
 				704E4BA22F11EE2C00AB0A5D /* Frameworks */,
 				70C60A732F0DAA7C003AE110 /* Products */,
+				70E28F6C2F15CADC0025AAAC /* empire_tp.png */,
 			);
 			sourceTree = "<group>";
 		};
