@@ -1,11 +1,13 @@
 import SwiftUI
+import UIKit
 
 struct CarsView: View {
     // MARK: - User's cars
-    @State private var cars: [Car] = [
-        Car(name: "Honda Accord", description: "honda_rs7 - Luh RS7", imageName: "car0", horsepower: 240, stage: 1)
-    ]
-
+    @StateObject private var userVehiclesVM = UserVehiclesViewModel()
+    @State private var showAddVehicle: Bool = false
+    @State private var editingIndex: Int? = nil
+    @State private var showVehicleEditor: Bool = false
+    
     // MARK: - Community Cars
     @State private var communityCars: [Car] = [
         Car(name: "Honda Prelude BB2", description: "@officialtobysemple — Clean BB2 build", imageName: "prelude_bb2", horsepower: 450, stage: 3),
@@ -28,14 +30,36 @@ struct CarsView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 24) {
-                    userCarousel
+                    if userVehiclesVM.vehicles.isEmpty {
+                        Button {
+                            if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
+                                editingIndex = idx
+                                showVehicleEditor = true
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Add your first vehicle")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(Color("EmpireMint"))
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white.opacity(0.06))
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 20)
+                    } else {
+                        userCarousel
+                    }
                     communitySection
                 }
                 .padding(.vertical, 12)
             }
 
             // Expanded card overlays above
-            if let selected = selectedCarIndex, cars.indices.contains(selected) {
+            if let selected = selectedCarIndex, userVehiclesVM.vehicles.indices.contains(selected) {
                 // Dim background
                 Rectangle()
                     .fill(Color.black.opacity(0.45))
@@ -49,7 +73,7 @@ struct CarsView: View {
                         }
                     }
 
-                CarExpandedCardInline(car: cars[selected], ns: ns) {
+                CarExpandedCardInline(car: userVehiclesVM.vehicles[selected], ns: ns) {
                     let generator = UIImpactFeedbackGenerator(style: .rigid)
                     generator.impactOccurred()
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
@@ -106,6 +130,19 @@ struct CarsView: View {
                 showLightbox = false
             }
         }
+        .sheet(isPresented: $showVehicleEditor) {
+            if let idx = editingIndex, userVehiclesVM.vehicles.indices.contains(idx) {
+                VehicleEditorView(car: $userVehiclesVM.vehicles[idx]) { updated in
+                    userVehiclesVM.updateVehicle(at: idx, with: updated)
+                }
+                .preferredColorScheme(.dark)
+            } else {
+                Text("No vehicle to edit").padding().preferredColorScheme(.dark)
+            }
+        }
+        .onAppear {
+            Task { await userVehiclesVM.loadVehicles() }
+        }
     }
 }
 
@@ -121,20 +158,24 @@ private extension CarsView {
     var userCarousel: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 24) {
-                ForEach(cars.indices, id: \.self) { idx in
-                    LiquidGlassCarCard(car: cars[idx], ns: ns)
-                        .frame(width: selectedCarIndex == idx ? 300 : 220,
-                               height: selectedCarIndex == idx ? 380 : 250)
-                        .scaleEffect(selectedCarIndex == idx ? 1.04 : 1)
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-                                selectedCarIndex = selectedCarIndex == idx ? nil : idx
-                                ripple = true
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                ripple = false
-                            }
+                ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
+                    JiggleWrapper {
+                        LiquidGlassCarCard(car: userVehiclesVM.vehicles[idx], ns: ns)
+                            .frame(width: selectedCarIndex == idx ? 300 : 220,
+                                   height: selectedCarIndex == idx ? 380 : 250)
+                            .scaleEffect(selectedCarIndex == idx ? 1.04 : 1)
+                    } onLongPress: {
+                        editingIndex = idx
+                        showVehicleEditor = true
+                    } onTap: {
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                            selectedCarIndex = selectedCarIndex == idx ? nil : idx
+                            ripple = true
                         }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            ripple = false
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 20)
@@ -204,13 +245,20 @@ private struct LiquidGlassCarCard: View {
             GeometryReader { proxy in
                 let size = proxy.size
                 ZStack {
-                    Image(car.imageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
-                        .opacity(0.55)
-                        .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
-                        .clipped()
+                    Group {
+                        if let data = loadSavedPhotoData(for: car.id), let uiImage = UIImage(data: data) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                        } else {
+                            Image(car.imageName)
+                                .resizable()
+                        }
+                    }
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size.width, height: size.height)
+                    .opacity(0.55)
+                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
+                    .clipped()
 
                     LinearGradient(
                         colors: [
@@ -256,12 +304,61 @@ private struct LiquidGlassCarCard: View {
                     .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    StatCapsule(label: "Stage", value: "\(car.stage)", tint: Color("EmpireMint"))
-                    StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                    HStack(spacing: 6) {
+                        if car.isJailbreak {
+                            StatCapsule(label: "Jailbreak", value: "", tint: .purple)
+                        } else if car.stage == 0 {
+                            StatCapsule(label: "Stock", value: "", tint: .gray)
+                        } else {
+                            StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
+                        }
+                        StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                    }
                 }
             }
             .padding(14)
         }
+    }
+}
+
+private func stageTint(for stage: Int) -> Color {
+    switch stage {
+    case 1: return Color("EmpireMint")
+    case 2: return .yellow
+    case 3: return .red
+    default: return .gray
+    }
+}
+
+private struct JiggleWrapper<Content: View>: View {
+    @State private var isJiggling: Bool = false
+    @State private var isPressed: Bool = false
+    let content: () -> Content
+    let onLongPress: () -> Void
+    let onTap: () -> Void
+
+    var body: some View {
+        content()
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .rotationEffect(.degrees(isJiggling ? 1.8 : 0), anchor: .center)
+            .animation(isJiggling ? .easeInOut(duration: 0.09).repeatForever(autoreverses: true) : .default, value: isJiggling)
+            .simultaneousGesture(TapGesture().onEnded { onTap() })
+            .gesture(
+                LongPressGesture(minimumDuration: 0.2)
+                    .onChanged { _ in
+                        let gen = UIImpactFeedbackGenerator(style: .medium)
+                        gen.impactOccurred()
+                        withAnimation(.spring(response: 0.18, dampingFraction: 0.85)) { isPressed = true }
+                        isJiggling = true
+                    }
+                    .onEnded { _ in
+                        onLongPress()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            withAnimation(.spring(response: 0.22, dampingFraction: 0.88)) { isPressed = false }
+                            isJiggling = false
+                        }
+                    }
+            )
     }
 }
 
@@ -401,7 +498,13 @@ private struct GalleryTile: View {
 
                 // Metadata badges
                 HStack(spacing: 8) {
-                    StatCapsule(label: "Stage", value: "\(car.stage)", tint: Color("EmpireMint"))
+                    if car.isJailbreak {
+                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
+                    } else if car.stage == 0 {
+                        StatCapsule(label: "Stock", value: "", tint: .gray)
+                    } else {
+                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
+                    }
                     StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
                 }
                 .padding(10)
@@ -460,15 +563,22 @@ private struct CarExpandedCardInline: View {
             GeometryReader { proxy in
                 let size = proxy.size
                 ZStack {
-                    Image(car.imageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: size.width + (reduceMotion ? 0 : tilt.width * 0.4), height: size.height)
-                        .opacity(0.5)
-                        .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
-                        .accessibilityHidden(true)
-                        .clipped()
-                        .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 : tilt.height * 0.04)
+                    Group {
+                        if let data = loadSavedPhotoData(for: car.id), let uiImage = UIImage(data: data) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                        } else {
+                            Image(car.imageName)
+                                .resizable()
+                        }
+                    }
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size.width + (reduceMotion ? 0 : tilt.width * 0.4), height: size.height)
+                    .opacity(0.5)
+                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
+                    .accessibilityHidden(true)
+                    .clipped()
+                    .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 : tilt.height * 0.04)
 
                     LinearGradient(
                         colors: [
@@ -502,13 +612,19 @@ private struct CarExpandedCardInline: View {
                 .padding(.top, 8)
 
                 HStack(spacing: 10) {
-                    StatCapsule(label: "Stage", value: "\(car.stage)", tint: Color("EmpireMint"))
+                    if car.isJailbreak {
+                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
+                    } else if car.stage == 0 {
+                        StatCapsule(label: "Stock", value: "", tint: .gray)
+                    } else {
+                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
+                    }
                     StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
                 VStack(spacing: 10) {
                     StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
-                    StatRow(name: "Stage", value: Double(car.stage), max: 3, accent: .purple)
+                    StatRow(name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"), value: Double(car.isJailbreak ? 1 : car.stage), max: car.isJailbreak ? 1 : 3, accent: car.isJailbreak ? .purple : stageTint(for: car.stage))
                 }
                 .padding(14)
                 .background(
@@ -712,7 +828,13 @@ private struct CommunityLightbox: View {
                                     .foregroundStyle(.white.opacity(0.85))
                                     .lineLimit(2)
                                 HStack(spacing: 10) {
-                                    StatCapsule(label: "Stage", value: "\(cars[i].stage)", tint: Color("EmpireMint"))
+                                    if cars[i].isJailbreak {
+                                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
+                                    } else if cars[i].stage == 0 {
+                                        StatCapsule(label: "Stock", value: "", tint: .gray)
+                                    } else {
+                                        StatCapsule(label: "Stage", value: "\(cars[i].stage)", tint: stageTint(for: cars[i].stage))
+                                    }
                                     StatCapsule(label: "HP", value: "\(cars[i].horsepower)", tint: .cyan)
                                 }
                             }
@@ -906,13 +1028,19 @@ private struct LiteCommunityExpandedCard: View {
                 .padding(.top, 4)
 
                 HStack(spacing: 10) {
-                    StatCapsule(label: "Stage", value: "\(car.stage)", tint: Color("EmpireMint"))
+                    if car.isJailbreak {
+                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
+                    } else if car.stage == 0 {
+                        StatCapsule(label: "Stock", value: "", tint: .gray)
+                    } else {
+                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
+                    }
                     StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
                 VStack(spacing: 10) {
                     StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
-                    StatRow(name: "Stage", value: Double(car.stage), max: 3, accent: .purple)
+                    StatRow(name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"), value: Double(car.isJailbreak ? 1 : car.stage), max: car.isJailbreak ? 1 : 3, accent: car.isJailbreak ? .purple : stageTint(for: car.stage))
                 }
                 .padding(14)
                 .background(
@@ -1003,5 +1131,12 @@ struct CarsView_Previews: PreviewProvider {
         CarsView()
             .preferredColorScheme(.dark)
     }
+}
+
+
+// MARK: - Saved Photo Loader (per-user, per-car)
+private func loadSavedPhotoData(for id: UUID) -> Data? {
+    let userKey = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
+    return UserDefaults.standard.data(forKey: "saved_car_photo_\(userKey)_\(id.uuidString)")
 }
 

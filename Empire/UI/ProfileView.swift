@@ -1,27 +1,62 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
-    @State private var username: String = "Saif Malik"
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @Environment(\.dismiss) private var dismissView
+    @State private var showSettings = false
+    @State private var animateGradient = false
+    
+    @State private var username: String = ""
     @State private var profileImage: String = "profilePic"
     @State private var badges: [String] = ["badge0", "badge1", "badge2"]
     
     @State private var featuredCards: [String] = ["VIP Perk", "Recent Buy", "Rewards"]
     
-    @State private var stats: [(String, Int)] = [
-        ("Meets", 12),
-        ("Cars", 1),
-        ("Merch", 5)
-    ]
+    @State private var showAddVehicle: Bool = false
+    @StateObject private var vehiclesVM = UserVehiclesViewModel()
     
-    @State private var vehicles: [Car] = [
-        Car(name: "Honda Accord", description: "Luh RS7", imageName: "car0", horsepower: 240, stage: 1)
-    ]
+    // Computed stats placeholder (to be wired to backend later)
+    private var computedStats: [(String, Int)] {
+        let meetsCount = 0 // TODO: replace with actual meets count from backend/profile
+        let carsCount = vehiclesVM.vehicles.count
+        let merchCount = 0 // TODO: replace with purchases count later
+        return [("Meets", meetsCount), ("Cars", carsCount), ("Merch", merchCount)]
+    }
     
     @State private var selectedVehicleIndex = 0
     @State private var featuredIndex: Int = 0
+    @State private var isJiggling: Bool = false
+    
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var selectedImageData: Data? = nil
+    
+    @State private var avatarURL: URL? = nil
+    
+    private var displayName: String {
+        if let u = authViewModel.currentUser {
+            if !u.username.isEmpty {
+                return u.username
+            }
+            if !u.email.isEmpty {
+                return u.email
+            }
+        }
+        return username
+    }
+    
+    private func performLogoutNow() {
+        print("[ProfileView] 🔘 Logout button tapped")
+        print("[ProfileView] Before logout: isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
+        authViewModel.logout()
+        print("[ProfileView] After logout call returned: isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
+    }
     
     var body: some View {
         ScrollView(showsIndicators: false) {
+            Color.clear.frame(width: 0, height: 0).onAppear {
+                print("[ProfileView] body recomputed")
+            }
             VStack(spacing: 22) {
                 
                 // MARK: - Profile Header
@@ -53,19 +88,61 @@ struct ProfileView: View {
                                 )
                                 .shadow(color: Color("EmpireMint").opacity(0.5), radius: 8)
 
-                            Image(profileImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 92, height: 92)
-                                .clipShape(Circle())
+                            Group {
+                                if let data = selectedImageData, let uiImage = UIImage(data: data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                } else if let url = avatarURL {
+                                    AsyncImage(url: url) { phase in
+                                        switch phase {
+                                        case .empty:
+                                            ProgressView().tint(Color("EmpireMint"))
+                                        case .success(let image):
+                                            image.resizable().scaledToFill()
+                                        case .failure:
+                                            Image(profileImage).resizable().scaledToFill()
+                                        @unknown default:
+                                            Image(profileImage).resizable().scaledToFill()
+                                        }
+                                    }
+                                } else {
+                                    Image(profileImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                }
+                            }
+                            .frame(width: 92, height: 92)
+                            .clipShape(Circle())
+                            .overlay(
+                                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                    Rectangle().fill(Color.clear)
+                                }
+                                .labelsHidden()
+                                .allowsHitTesting(false)
+                            )
+                        }
+                        .onChange(of: selectedPhotoItem) { oldValue, newValue in
+                            guard let item = newValue else { return }
+                            Task {
+                                if let data = try? await item.loadTransferable(type: Data.self) {
+                                    await MainActor.run { 
+                                        selectedImageData = data 
+                                    }
+                                    // TODO: When API is available, upload avatar to backend here using selectedImageData
+                                    // Example:
+                                    // try await APIService.shared.uploadAvatar(data: data)
+                                }
+                            }
                         }
 
-                        Text(username)
+                        Text(displayName)
                             .font(.title3.bold())
                             .foregroundColor(.white)
                         Text("@saifm")
                             .font(.caption)
                             .foregroundColor(.white.opacity(0.65))
+                        
 
                         HStack(spacing: 10) {
                             ProfileChip(systemName: "bell")
@@ -75,12 +152,16 @@ struct ProfileView: View {
                         .padding(.top, 4)
                     }
                     .padding(18)
+                    .onAppear {
+                        // Initialize avatar URL if your BackendUser provides one later
+                        // Example: if let urlString = authViewModel.currentUser?.avatarURL { avatarURL = URL(string: urlString) }
+                    }
                 }
                 .padding(.horizontal, 16)
                 
                 // MARK: - Stats
                 HStack(spacing: 12) {
-                    ForEach(stats, id: \.0) { stat in
+                    ForEach(computedStats, id: \.0) { stat in
                         ProfileStatCard(title: stat.0, value: "\(stat.1)")
                     }
                 }
@@ -92,10 +173,10 @@ struct ProfileView: View {
                         ForEach(Array(featuredCards.enumerated()), id: \.offset) { idx, card in
                             GeometryReader { geo in
                                 let midX = geo.frame(in: .global).midX
-                                let screenMid = UIScreen.main.bounds.width / 2
+                                let screenMid = geo.size.width / 2
                                 Color.clear
                                     .onAppear { if abs(midX - screenMid) < 120 { featuredIndex = idx } }
-                                    .onChange(of: midX) { _ in if abs(midX - screenMid) < 120 { featuredIndex = idx } }
+                                    .onChange(of: midX) { oldValue, newValue in if abs(newValue - screenMid) < 120 { featuredIndex = idx } }
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                                         .fill(.ultraThinMaterial)
@@ -168,57 +249,98 @@ struct ProfileView: View {
                             }
                             
                             HStack(spacing: 14) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(.ultraThinMaterial)
-                                        .frame(width: 120, height: 84)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                                                .blendMode(.screen)
+                                if vehiclesVM.vehicles.isEmpty {
+                                    Button {
+                                        showAddVehicle = true
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "plus.circle.fill")
+                                            Text("Add your first vehicle")
+                                        }
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(Color("EmpireMint"))
+                                        .padding(.vertical, 10)
+                                        .frame(maxWidth: .infinity)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                .fill(Color.white.opacity(0.06))
                                         )
-                                        .clipped()
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(.ultraThinMaterial)
+                                            .frame(width: 120, height: 84)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 16)
+                                                    .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                                                    .blendMode(.screen)
+                                            )
+                                            .clipped()
 
-                                    Image(vehicles[selectedVehicleIndex].imageName)
-                                        .resizable()
-                                        .scaledToFill()
+                                        Image(vehiclesVM.vehicles[selectedVehicleIndex].imageName)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 120, height: 84)
+                                            .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                                        LinearGradient(
+                                            colors: [Color.black.opacity(0.0), Color.black.opacity(0.25)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
                                         .frame(width: 120, height: 84)
                                         .clipShape(RoundedRectangle(cornerRadius: 16))
 
-                                    LinearGradient(
-                                        colors: [Color.black.opacity(0.0), Color.black.opacity(0.25)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                    .frame(width: 120, height: 84)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-
-                                    LinearGradient(
-                                        gradient: Gradient(stops: [
-                                            .init(color: .clear, location: 0.0),
-                                            .init(color: .white.opacity(0.18), location: 0.5),
-                                            .init(color: .clear, location: 1.0)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                    .blendMode(.screen)
-                                    .opacity(0.18)
-                                    .blur(radius: 6)
-                                    .rotationEffect(.degrees(16))
-                                    .frame(width: 120, height: 84)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                        LinearGradient(
+                                            gradient: Gradient(stops: [
+                                                .init(color: .clear, location: 0.0),
+                                                .init(color: .white.opacity(0.18), location: 0.5),
+                                                .init(color: .clear, location: 1.0)
+                                            ]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                        .blendMode(.screen)
+                                        .opacity(0.18)
+                                        .blur(radius: 6)
+                                        .rotationEffect(.degrees(16))
+                                        .frame(width: 120, height: 84)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    }
+                                    .rotationEffect(.degrees(isJiggling ? 1.8 : 0), anchor: .center)
+                                    .scaleEffect(isJiggling ? 0.98 : 1.0)
+                                    .animation(isJiggling ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true) : .default, value: isJiggling)
+                                    .onLongPressGesture(minimumDuration: 0.35) {
+                                        let gen = UIImpactFeedbackGenerator(style: .medium)
+                                        gen.impactOccurred()
+                                        isJiggling = true
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                                            isJiggling = false
+                                        }
+                                        // Present editor if desired in future; for now just jiggle to indicate edit affordance
+                                    }
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(vehiclesVM.vehicles[selectedVehicleIndex].name)
+                                            .foregroundColor(.white)
+                                            .bold()
+                                        if vehiclesVM.vehicles[selectedVehicleIndex].isJailbreak {
+                                            Text("Jailbreak")
+                                                .font(.caption2.weight(.semibold))
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Capsule().fill(Color.purple.opacity(0.18)))
+                                                .overlay(Capsule().stroke(Color.purple.opacity(0.6), lineWidth: 1))
+                                                .foregroundStyle(.white)
+                                        }
+                                        
+                                        Text(vehiclesVM.vehicles[selectedVehicleIndex].description)
+                                            .font(.caption2)
+                                            .foregroundColor(.white.opacity(0.7))
+                                    }
+                                    Spacer()
                                 }
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(vehicles[selectedVehicleIndex].name)
-                                        .foregroundColor(.white)
-                                        .bold()
-                                    
-                                    Text(vehicles[selectedVehicleIndex].description)
-                                        .font(.caption2)
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-                                Spacer()
                             }
                         }
                             .padding(14)
@@ -227,16 +349,52 @@ struct ProfileView: View {
                 
                 // MARK: - Settings
                 VStack(spacing: 14) {
-                    GlassOptionRow(icon: "gearshape.fill", title: "Settings")
+                    Button { showSettings = true } label: { GlassOptionRow(icon: "gearshape.fill", title: "Settings") }
+                        .buttonStyle(.plain)
                     GlassOptionRow(icon: "questionmark.circle.fill", title: "Help & Support")
-                    GlassOptionRow(icon: "arrow.right.square.fill", title: "Log Out", destructive: true)
+                    Button {
+                        print("[ProfileView] Haptic + about to call performLogoutNow()")
+                        let gen = UIImpactFeedbackGenerator(style: .medium)
+                        gen.impactOccurred()
+                        performLogoutNow()
+                    }
+                    label: {
+                        GlassOptionRow(icon: "arrow.right.square.fill", title: "Log Out", destructive: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .allowsHitTesting(true)
+                    .padding(.vertical, 4)
+                    .zIndex(1)
                 }
                 .padding(.horizontal, 16)
+            }
+            .onChange(of: authViewModel.isAuthenticated) { oldValue, newValue in
+                print("[ProfileView] onChange isAuthenticated: old=\(oldValue) -> new=\(newValue)")
+            }
+            .onAppear {
+                print("[ProfileView] onAppear")
+                print("[ProfileView] has AuthVM instanceID: \(authViewModel.instanceID)")
+                print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
+            }
+            .task {
+                print("[ProfileView] .task appeared")
             }
             .padding(.top, 16)
             .safeAreaInset(edge: .bottom) {
                 Color.clear
                     .frame(height: 108)
+            }
+            .sheet(isPresented: $showSettings) {
+                Text("Settings coming soon").padding().preferredColorScheme(.dark)
+            }
+            .sheet(isPresented: $showAddVehicle) {
+                EmpireAddVehicleView(vm: vehiclesVM)
+                    .preferredColorScheme(.dark)
+            }
+            .onAppear {
+                Task { await vehiclesVM.loadVehicles() }
             }
             .background(
                 ZStack {
@@ -302,3 +460,4 @@ private struct ProfileChip: View {
             .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
     }
 }
+
