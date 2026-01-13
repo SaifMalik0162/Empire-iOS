@@ -205,7 +205,7 @@
 		70C60A8B2F0DAA7E003AE110 /* EmpireUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E28F662F15C9980025AAAC /* README.md */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = README.md; sourceTree = "<group>"; };
 		70E28F6A2F15C9C90025AAAC /* CONTRIBUTING.md */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CONTRIBUTING.md; sourceTree = "<group>"; };
-		70E28F6C2F15CADC0025AAAC /* empire_tp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = empire_tp.png; sourceTree = "<group>"; };
+		70E28F6D2F15CDF80025AAAC /* empire-connect-banner.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "empire-connect-banner.png"; sourceTree = "<group>"; };
 		70E699D52F1496ED001304D6 /* VehicleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleEditorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -361,7 +361,7 @@
 				70C60A8E2F0DAA7E003AE110 /* EmpireUITests */,
 				704E4BA22F11EE2C00AB0A5D /* Frameworks */,
 				70C60A732F0DAA7C003AE110 /* Products */,
-				70E28F6C2F15CADC0025AAAC /* empire_tp.png */,
+				70E28F6D2F15CDF80025AAAC /* empire-connect-banner.png */,
 			);
 			sourceTree = "<group>";
 		};

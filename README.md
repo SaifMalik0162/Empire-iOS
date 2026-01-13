@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="empire_tp.png" alt="Empire Connect Banner" style="width: 100%; max-width: 900px;"/>
+  <img src="empire-connect-banner.png" alt="Empire Connect Banner" style="width: 100%; max-width: 900px;"/>
 </p>
 
 ---
