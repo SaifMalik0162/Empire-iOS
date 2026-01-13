@@ -27,20 +27,28 @@ struct ExpandedCarView: View {
                 .opacity(appear ? 1.0 : 0.0)
                 .animation(.spring(response: 0.45, dampingFraction: 0.82), value: appear)
                 .padding(.horizontal, 20)
+            
+            if showSpecs {
+                PopupCard {
+                    SpecsListView(specs: car.specs)
+                } onClose: {
+                    showSpecs = false
+                }
+            }
+            
+            if showMods {
+                PopupCard {
+                    ModsListView(mods: car.mods)
+                } onClose: {
+                    showMods = false
+                }
+            }
         }
         .onAppear {
             appear = true
             savedPhotoData = Self.loadSavedPhotoData(for: car.id, userKey: userStorageKey)
         }
         .onDisappear { appear = false }
-        .sheet(isPresented: $showSpecs) {
-            SpecsListView(specs: car.specs)
-                .preferredColorScheme(.dark)
-        }
-        .sheet(isPresented: $showMods) {
-            ModsListView(mods: car.mods)
-                .preferredColorScheme(.dark)
-        }
     }
 }
 
@@ -587,6 +595,58 @@ struct ExpandedCarView_Previews: PreviewProvider {
     static var previews: some View {
         ExpandedCarView(car: Car(name: "Preview Car", description: "Stage 2 - Tuned", imageName: "car1", horsepower: 420, stage: 2))
             .preferredColorScheme(.dark)
+    }
+}
+
+private struct PopupCard<Content: View>: View {
+    @ViewBuilder var content: Content
+    var onClose: () -> Void
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+                .transition(.opacity)
+            VStack(spacing: 12) {
+                VStack(spacing: 0) {
+                    content
+                        .padding(14)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+                .shadow(color: Color("EmpireMint").opacity(0.25), radius: 18, x: 0, y: 10)
+                .frame(maxWidth: 520)
+                Button(action: onClose) {
+                    Text("Close")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule().fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+            .padding(.horizontal, 24)
+        }
+        .transition(.opacity)
     }
 }
 
