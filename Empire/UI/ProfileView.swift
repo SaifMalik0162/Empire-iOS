@@ -5,6 +5,7 @@ struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.dismiss) private var dismissView
     @State private var showSettings = false
+    @State private var showManageAccount: Bool = false
     @State private var animateGradient = false
     
     @State private var username: String = ""
@@ -143,13 +144,6 @@ struct ProfileView: View {
                             .font(.caption)
                             .foregroundColor(.white.opacity(0.65))
                         
-
-                        HStack(spacing: 10) {
-                            ProfileChip(systemName: "bell")
-                            ProfileChip(systemName: "gearshape")
-                            ProfileChip(systemName: "ellipsis")
-                        }
-                        .padding(.top, 4)
                     }
                     .padding(18)
                     .onAppear {
@@ -387,7 +381,14 @@ struct ProfileView: View {
                     .frame(height: 108)
             }
             .sheet(isPresented: $showSettings) {
-                Text("Settings coming soon").padding().preferredColorScheme(.dark)
+                SettingsView()
+                    .environmentObject(authViewModel)
+                    .preferredColorScheme(.dark)
+            }
+            .sheet(isPresented: $showManageAccount) {
+                ManageAccountView()
+                    .environmentObject(authViewModel)
+                    .preferredColorScheme(.dark)
             }
             .sheet(isPresented: $showAddVehicle) {
                 EmpireAddVehicleView(vm: vehiclesVM)
