@@ -16,7 +16,7 @@ final class UserVehiclesViewModel: ObservableObject {
 
     @MainActor
     @discardableResult
-    func addPlaceholderVehicleAndReturnIndex() async -> Int?  {
+    func addPlaceholderVehicleAndReturnIndex() async -> Int? {
         #if DEBUG
         do {
             guard let userIdString = UserDefaults.standard.string(forKey: "currentUserId"),
@@ -28,23 +28,23 @@ final class UserVehiclesViewModel: ObservableObject {
             print("🚗 Creating car for user ID: \(userId)")
             
             let backendCar = try await APIService.shared.createCar(
-                make: "Your",
-                model: "Car",
-                year: 2024,
-                color: nil,
-                horsepower: 0,
+                make: "",
+                model:  "New Car",
+                year:  2024,
+                color:  nil,
+                horsepower:  0,
                 stage: "1",
                 userId: userId
             )
             
             let newCar = Car(
                 backendId: backendCar.id,
-                name: "\(backendCar.make) \(backendCar.model)",
+                name: backendCar.model.isEmpty ?  "New Car" : backendCar.model,
                 description: "Tap to edit details",
-                imageName: backendCar.imageUrl ??  "car_placeholder",
+                imageName: backendCar.imageUrl ?? "car_placeholder",
                 horsepower: backendCar.horsepower ?? 0,
-                stage: Int(backendCar.stage ??  "1") ?? 1,
-                specs:  [],
+                stage: Int(backendCar.stage ?? "1") ?? 1,
+                specs: [],
                 mods: []
             )
             
@@ -55,7 +55,7 @@ final class UserVehiclesViewModel: ObservableObject {
         } catch {
             print("❌ Failed to create car on backend:  \(error)")
             let placeholder = Car(
-                name: "Your Car",
+                name: "New Car",
                 description: "Tap to edit details",
                 imageName: "car_placeholder",
                 horsepower: 0,
@@ -82,13 +82,13 @@ final class UserVehiclesViewModel: ObservableObject {
             vehicles = backendCars.map { backendCar in
                 Car(
                     backendId: backendCar.id,
-                    name: "\(backendCar.make) \(backendCar.model)",
-                    description: "\(backendCar.year) · \(backendCar.color ??  "No color")",
+                    name: backendCar.model.isEmpty ? "New Car" : backendCar.model,
+                    description: "\(backendCar.year) · \(backendCar.color ?? "No color")",
                     imageName: backendCar.imageUrl ?? "car_placeholder",
                     horsepower: backendCar.horsepower ?? 0,
-                    stage: Int(backendCar.stage ??  "0") ?? 0,
-                    specs: [],
-                    mods:  []
+                    stage: Int(backendCar.stage ?? "0") ?? 0,
+                    specs:  [],
+                    mods: []
                 )
             }
             
@@ -110,7 +110,7 @@ final class UserVehiclesViewModel: ObservableObject {
             guard let userIdString = UserDefaults.standard.string(forKey: "currentUserId"),
                   let userId = Int(userIdString) else {
                 print("❌ No user ID found")
-                let placeholder = Car(name: "Your Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
+                let placeholder = Car(name: "New Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
                 vehicles.append(placeholder)
                 persistVehicles()
                 return
@@ -119,20 +119,20 @@ final class UserVehiclesViewModel: ObservableObject {
             print("🚗 Creating car for user ID: \(userId)")
             
             let backendCar = try await APIService.shared.createCar(
-                make: "Your",
-                model: "Car",
-                year:  2024,
-                color:  nil,
-                horsepower:  0,
+                make: "",
+                model: "New Car",
+                year: 2024,
+                color: nil,
+                horsepower: 0,
                 stage: "1",
                 userId: userId
             )
             
             let newCar = Car(
                 backendId: backendCar.id,
-                name: "\(backendCar.make) \(backendCar.model)",
+                name: backendCar.model.isEmpty ? "New Car" : backendCar.model,
                 description: "Tap to edit details",
-                imageName:  backendCar.imageUrl ??  "car_placeholder",
+                imageName: backendCar.imageUrl ?? "car_placeholder",
                 horsepower: backendCar.horsepower ?? 0,
                 stage: Int(backendCar.stage ?? "1") ?? 1,
                 specs: [],
@@ -144,7 +144,7 @@ final class UserVehiclesViewModel: ObservableObject {
             
         } catch {
             print("❌ Failed to create car on backend: \(error)")
-            let placeholder = Car(name: "Your Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower:  0, stage: 1)
+            let placeholder = Car(name: "New Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
             vehicles.append(placeholder)
             persistVehicles()
         }
@@ -183,24 +183,24 @@ final class UserVehiclesViewModel: ObservableObject {
             return
         }
         
-        let parts = updated.name.split(separator: " ", maxSplits: 1)
-        let make = parts.first.map(String.init) ?? "Unknown"
-        let model = parts.count > 1 ? String(parts[1]) : "Car"
+        // ✅ FIXED: Store full name in model field, leave make empty
+        let make = ""
+        let model = updated.name
         
         let descParts = updated.description.split(separator: "·")
         let yearString = descParts.first?.trimmingCharacters(in:  .whitespaces) ?? "2024"
         let year = Int(yearString) ?? 2024
-        let color = descParts.count > 1 ? descParts[1].trimmingCharacters(in:  .whitespaces) : nil
+        let color = descParts.count > 1 ? descParts[1].trimmingCharacters(in: .whitespaces) : nil
         
         do {
             let backendCar = try await APIService.shared.updateCar(
                 id: backendId,
                 make: make,
                 model: model,
-                year:  year,
+                year: year,
                 color: color,
                 horsepower: updated.horsepower,
-                stage:  String(updated.stage)
+                stage: String(updated.stage)
             )
             print("✅ Updated car \(backendId) on backend")
             
