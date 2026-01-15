@@ -20,6 +20,11 @@ private func loadAnySavedCarPhotoData() -> Data? {
 }
 
 struct HomeView: View {
+    // MARK: - Meets Data
+    @State private var meets: [Meet] = []
+    @State private var isLoadingMeets = false
+    @State private var meetsError: String? = nil
+
     // MARK: - Data Sources
     private let featuredMerch: [MerchItem] = [
         MerchItem(name: "Street Royalty Hoodie", price: "$80", imageName: "street_royalty_hoodie", category: .apparel),
@@ -57,7 +62,7 @@ struct HomeView: View {
 
                             // MARK: - Upcoming Meets (Compact & Sleek)
                             GlassCard(height: nil) {
-                                VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 12) {
                                     HStack {
                                         Text("Upcoming Meets")
                                             .font(.headline)
@@ -72,28 +77,75 @@ struct HomeView: View {
                                         }
                                     }
 
-                                    VStack(spacing: 6) {
-                                        ForEach(0..<2) { meet in
-                                            HStack {
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text("Empire Meet \(meet + 1)")
-                                                        .font(.subheadline)
-                                                        .foregroundColor(.white)
-                                                    Text("City · Date")
-                                                        .font(.caption2)
-                                                        .foregroundColor(.white.opacity(0.6))
+                                    if isLoadingMeets {
+                                        HStack(spacing: 10) {
+                                            ProgressView().tint(Color("EmpireMint"))
+                                            Text("Loading...")
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.7))
+                                        }
+                                        .padding(.vertical, 8)
+                                    } else if let err = meetsError {
+                                        Text(err)
+                                            .font(.caption)
+                                            .foregroundColor(.red.opacity(0.8))
+                                    } else if meets.isEmpty {
+                                        Text("No upcoming meets")
+                                            .font(.caption)
+                                            .foregroundColor(.white.opacity(0.7))
+                                    } else {
+                                        VStack(spacing: 10) {
+                                            ForEach(Array(meets.prefix(2))) { meet in
+                                                HStack(spacing: 12) {
+                                                    // Accent orb
+                                                    ZStack {
+                                                        Circle()
+                                                            .fill(
+                                                                RadialGradient(colors: [Color("EmpireMint").opacity(0.9), .clear], center: .center, startRadius: 2, endRadius: 26)
+                                                            )
+                                                            .frame(width: 42, height: 42)
+                                                            .overlay(
+                                                                Circle()
+                                                                    .stroke(LinearGradient(colors: [Color.white.opacity(0.8), Color.white.opacity(0.1)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
+                                                            )
+                                                            .shadow(color: Color("EmpireMint").opacity(0.35), radius: 8, x: 0, y: 4)
+                                                    }
+
+                                                    VStack(alignment: .leading, spacing: 4) {
+                                                        Text(meet.title)
+                                                            .font(.subheadline.weight(.semibold))
+                                                            .foregroundColor(.white)
+                                                            .lineLimit(1)
+                                                        HStack(spacing: 6) {
+                                                            Image(systemName: "mappin.and.ellipse")
+                                                                .imageScale(.small)
+                                                                .foregroundStyle(Color("EmpireMint").opacity(0.9))
+                                                            Text("\(meet.city) · \(meet.dateString)")
+                                                                .font(.caption2)
+                                                                .foregroundColor(.white.opacity(0.7))
+                                                                .lineLimit(1)
+                                                        }
+                                                    }
+                                                    Spacer()
+                                                    Image(systemName: "chevron.right")
+                                                        .foregroundColor(Color("EmpireMint").opacity(0.9))
                                                 }
-                                                Spacer()
-                                                Image(systemName: "chevron.right")
-                                                    .foregroundColor(.white.opacity(0.6))
+                                                .padding(10)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                        .fill(Color.white.opacity(0.04))
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 14)
+                                                                .stroke(LinearGradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                                                        )
+                                                )
                                             }
-                                            Divider().background(Color.white.opacity(0.1))
                                         }
                                     }
                                 }
                                 .padding(14)
+                                .onAppear { loadHomeMeets() }
                             }
-                            .padding(.horizontal, 16)
 
                             // MARK: - Featured Cars Carousel
                             HStack {
@@ -318,6 +370,30 @@ struct HomeView: View {
                         }
                         .padding(.bottom, 20)
                     }
+                }
+            }
+        }
+    }
+
+    private func loadHomeMeets() {
+        if isLoadingMeets { return }
+        isLoadingMeets = true
+        meetsError = nil
+        Task {
+            do {
+                let backendMeets = try await APIService.shared.getAllMeets()
+                await MainActor.run {
+                    let formatter = ISO8601DateFormatter()
+                    meets = backendMeets.map { backendMeet in
+                        let date = formatter.date(from: backendMeet.meetDate) ?? Date()
+                        return Meet(title: backendMeet.title, city: backendMeet.location, date: date)
+                    }
+                    isLoadingMeets = false
+                }
+            } catch {
+                await MainActor.run {
+                    meetsError = "Failed to load meets"
+                    isLoadingMeets = false
                 }
             }
         }
