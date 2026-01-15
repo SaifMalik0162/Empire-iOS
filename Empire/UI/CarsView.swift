@@ -29,11 +29,11 @@ struct CarsView: View {
         ZStack {
             background
 
-            ScrollView(. vertical, showsIndicators: false) {
-                VStack(spacing:  24) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 24) {
                     if userVehiclesVM.vehicles.isEmpty {
                         Button {
-                            Task {
+                            Task {  // ← WRAP IN TASK
                                 if let idx = await userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
                                     editingIndex = idx
                                     showVehicleEditor = true
@@ -41,7 +41,7 @@ struct CarsView: View {
                             }
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: "plus.circle.fill")
+                                Image(systemName: "plus. circle.fill")
                                 Text("Add your first vehicle")
                             }
                             .font(.caption.weight(.semibold))
@@ -51,14 +51,17 @@ struct CarsView: View {
                                 RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white.opacity(0.06))
                             )
                         }
-                        .buttonStyle(. plain)
+                        . buttonStyle(. plain)
                         .padding(.horizontal, 20)
                     } else {
                         userCarousel
                     }
                     communitySection
                 }
-                .padding(. vertical, 12)
+                .padding(.vertical, 12)
+            }
+            .refreshable {
+                await userVehiclesVM.loadVehicles()
             }
 
             // Expanded card overlays above

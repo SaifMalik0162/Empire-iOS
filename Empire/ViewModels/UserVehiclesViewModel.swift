@@ -5,7 +5,7 @@ import Combine
 final class UserVehiclesViewModel: ObservableObject {
     @Published var vehicles: [Car] = []
 
-    private var userKey:  String { UserDefaults.standard.string(forKey: "currentUserId") ?? "default" }
+    private var userKey: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "default" }
     private var vehiclesKey: String { "saved_user_vehicles_\(userKey)" }
 
     private func persistVehicles() {
@@ -16,7 +16,7 @@ final class UserVehiclesViewModel: ObservableObject {
 
     @MainActor
     @discardableResult
-    func addPlaceholderVehicleAndReturnIndex() async -> Int? {
+    func addPlaceholderVehicleAndReturnIndex() async -> Int?  {
         #if DEBUG
         do {
             guard let userIdString = UserDefaults.standard.string(forKey: "currentUserId"),
@@ -28,34 +28,38 @@ final class UserVehiclesViewModel: ObservableObject {
             print("🚗 Creating car for user ID: \(userId)")
             
             let backendCar = try await APIService.shared.createCar(
-                make: "",
-                model:  "New Car",
-                year:  2024,
-                color:  nil,
-                horsepower:  0,
+                make:  "Your",      // ← FIXED: Real value!
+                model: "Car",      // ← FIXED: Simple default
+                year: 2024,
+                color: nil,
+                horsepower: 0,
                 stage: "1",
                 userId: userId
             )
             
+            print("✅ Backend returned car with ID: \(backendCar.id)")
+            
             let newCar = Car(
                 backendId: backendCar.id,
-                name: backendCar.model.isEmpty ?  "New Car" : backendCar.model,
+                name: "\(backendCar.make) \(backendCar.model)",  // ← FIXED: Use both!
                 description: "Tap to edit details",
-                imageName: backendCar.imageUrl ?? "car_placeholder",
+                imageName:  backendCar.imageUrl ??  "car_placeholder",
                 horsepower: backendCar.horsepower ?? 0,
                 stage: Int(backendCar.stage ?? "1") ?? 1,
                 specs: [],
                 mods: []
             )
             
+            print("✅ Created local car with backendId: \(newCar.backendId ??  -1)")
+            
             vehicles.append(newCar)
             persistVehicles()
             return vehicles.indices.last
             
         } catch {
-            print("❌ Failed to create car on backend:  \(error)")
+            print("❌ Failed to create car on backend: \(error)")
             let placeholder = Car(
-                name: "New Car",
+                name: "Your Car",
                 description: "Tap to edit details",
                 imageName: "car_placeholder",
                 horsepower: 0,
@@ -81,13 +85,13 @@ final class UserVehiclesViewModel: ObservableObject {
             
             vehicles = backendCars.map { backendCar in
                 Car(
-                    backendId: backendCar.id,
-                    name: backendCar.model.isEmpty ? "New Car" : backendCar.model,
-                    description: "\(backendCar.year) · \(backendCar.color ?? "No color")",
+                    backendId:  backendCar.id,
+                    name: "\(backendCar.make) \(backendCar.model)",  // ← FIXED: Use both!
+                    description: "\(backendCar.year) · \(backendCar.color ??  "No color")",
                     imageName: backendCar.imageUrl ?? "car_placeholder",
                     horsepower: backendCar.horsepower ?? 0,
                     stage: Int(backendCar.stage ?? "0") ?? 0,
-                    specs:  [],
+                    specs: [],
                     mods: []
                 )
             }
@@ -110,7 +114,7 @@ final class UserVehiclesViewModel: ObservableObject {
             guard let userIdString = UserDefaults.standard.string(forKey: "currentUserId"),
                   let userId = Int(userIdString) else {
                 print("❌ No user ID found")
-                let placeholder = Car(name: "New Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
+                let placeholder = Car(name: "Your Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
                 vehicles.append(placeholder)
                 persistVehicles()
                 return
@@ -119,8 +123,8 @@ final class UserVehiclesViewModel: ObservableObject {
             print("🚗 Creating car for user ID: \(userId)")
             
             let backendCar = try await APIService.shared.createCar(
-                make: "",
-                model: "New Car",
+                make: "Your",      // ← FIXED: Real value!
+                model: "Car",      // ← FIXED: Simple default
                 year: 2024,
                 color: nil,
                 horsepower: 0,
@@ -130,13 +134,13 @@ final class UserVehiclesViewModel: ObservableObject {
             
             let newCar = Car(
                 backendId: backendCar.id,
-                name: backendCar.model.isEmpty ? "New Car" : backendCar.model,
+                name: "\(backendCar.make) \(backendCar.model)",  // ← FIXED: Use both!
                 description: "Tap to edit details",
                 imageName: backendCar.imageUrl ?? "car_placeholder",
                 horsepower: backendCar.horsepower ?? 0,
                 stage: Int(backendCar.stage ?? "1") ?? 1,
                 specs: [],
-                mods: []
+                mods:  []
             )
             
             vehicles.append(newCar)
@@ -144,7 +148,7 @@ final class UserVehiclesViewModel: ObservableObject {
             
         } catch {
             print("❌ Failed to create car on backend: \(error)")
-            let placeholder = Car(name: "New Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
+            let placeholder = Car(name: "Your Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
             vehicles.append(placeholder)
             persistVehicles()
         }
@@ -183,14 +187,32 @@ final class UserVehiclesViewModel: ObservableObject {
             return
         }
         
-        // ✅ FIXED: Store full name in model field, leave make empty
-        let make = ""
-        let model = updated.name
+        print("🔄 Updating car \(backendId) on backend...")
+        print("📝 Car data: name=\(updated.name), hp=\(updated.horsepower), stage=\(updated.stage)")
         
+        // ✅ FIXED: Parse make and model from name
+        let parts = updated.name.split(separator: " ", maxSplits: 1)
+        let make:  String
+        let model: String
+        
+        if parts.count >= 2 {
+            make = String(parts[0])
+            model = String(parts[1])
+        } else if parts.count == 1 {
+            make = String(parts[0])
+            model = "Car"
+        } else {
+            make = "Your"
+            model = "Car"
+        }
+        
+        // Parse year from description (format: "2024 · Color")
         let descParts = updated.description.split(separator: "·")
-        let yearString = descParts.first?.trimmingCharacters(in:  .whitespaces) ?? "2024"
+        let yearString = descParts.first?.trimmingCharacters(in: .whitespaces) ?? "2024"
         let year = Int(yearString) ?? 2024
-        let color = descParts.count > 1 ? descParts[1].trimmingCharacters(in: .whitespaces) : nil
+        let color = descParts.count > 1 ? descParts[1].trimmingCharacters(in: . whitespaces) : nil
+        
+        print("🔍 Parsed:  make=\(make), model=\(model), year=\(year), color=\(color ?? "nil")")
         
         do {
             let backendCar = try await APIService.shared.updateCar(

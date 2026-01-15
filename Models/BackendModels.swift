@@ -1,5 +1,5 @@
 //
-//  BackendModels.swift
+//  BackendModels. swift
 //  Empire
 //
 //  Created by Vishwa Sivakumar on 2026-01-10.
@@ -13,8 +13,8 @@ struct LoginRequest: Codable {
     let password: String
 }
 
-struct RegisterRequest:  Codable {
-    let email:  String
+struct RegisterRequest: Codable {
+    let email: String
     let password: String
     let username: String
 }
@@ -26,7 +26,7 @@ struct AuthResponse: Codable {
     let message: String?
 }
 
-struct BackendUser: Codable {
+struct BackendUser:  Codable {
     let id: Int
     let email: String
     let username: String
@@ -60,7 +60,7 @@ struct CarsResponse: Codable {
     let cars: [BackendCar]
 }
 
-struct CarCreateResponse: Codable {
+struct CarCreateResponse: Codable {  // ← MAKE SURE THIS EXISTS
     let success: Bool
     let message: String
     let data: BackendCar

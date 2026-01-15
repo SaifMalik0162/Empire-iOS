@@ -58,11 +58,12 @@ class APIService {
     // MARK: - Cars
     func getAllCars() async throws -> [BackendCar] {
         let response: CarsResponse = try await networkManager.request(
-            endpoint: APIConfig.Endpoints.cars
+            endpoint: APIConfig.Endpoints.cars,
+            requiresAuth: true  // ← ADDED AUTH
         )
         return response.cars
     }
-    
+
     func createCar(make: String, model: String, year: Int, color: String?, horsepower: Int?, stage: String?, userId: Int) async throws -> BackendCar {
         struct CreateCarRequest: Encodable {
             let make: String
@@ -76,15 +77,20 @@ class APIService {
         
         let request = CreateCarRequest(
             make: make,
-            model: model,
+            model:  model,
             year: year,
-            color:  color,
-            horsepower:  horsepower,
-            stage:  stage,
-            user_id:  userId
+            color: color,
+            horsepower: horsepower,
+            stage: stage,
+            user_id: userId
         )
         
-        let response: CarCreateResponse = try await networkManager.request(
+        // ADD DEBUG LOGGING
+        if APIConfig.enableNetworkLogging {
+            print("📦 Creating car with: make=\(make), model=\(model), year=\(year), userId=\(userId)")
+        }
+        
+        let response:  CarCreateResponse = try await networkManager.request(
             endpoint: APIConfig.Endpoints.cars,
             method: .post,
             body: request
@@ -92,10 +98,10 @@ class APIService {
         
         return response.data
     }
-    
+
     func updateCar(id: Int, make: String, model: String, year: Int, color: String?, horsepower: Int?, stage: String?) async throws -> BackendCar {
         struct UpdateCarRequest:  Encodable {
-            let make: String
+            let make:  String
             let model: String
             let year: Int
             let color: String?
@@ -116,25 +122,24 @@ class APIService {
             endpoint: "\(APIConfig.Endpoints.cars)/\(id)",
             method: .put,
             body: request,
-            requiresAuth: true  // ← BACKEND REQUIRES AUTH
+            requiresAuth: true
         )
         
         return response.data
     }
-    
+
     func deleteCar(id: Int) async throws {
         struct DeleteResponse: Codable {
             let success: Bool
-            let message: String
+            let message:  String
         }
         
-        let _: DeleteResponse = try await networkManager.request(
+        let _:  DeleteResponse = try await networkManager.request(
             endpoint: "\(APIConfig.Endpoints.cars)/\(id)",
             method: .delete,
-            requiresAuth: true  // ← BACKEND REQUIRES AUTH
+            requiresAuth: true
         )
     }
-
     // MARK: - Meets
     func getAllMeets() async throws -> [BackendMeet] {
         let response: MeetsResponse = try await networkManager.request(
