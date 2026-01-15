@@ -7,6 +7,7 @@ struct CarsView: View {
     @State private var showAddVehicle: Bool = false
     @State private var editingIndex: Int? = nil
     @State private var showVehicleEditor: Bool = false
+    @State private var userKey: String = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
     
     // MARK: - Community Cars
     @State private var communityCars: [Car] = [
@@ -136,12 +137,41 @@ struct CarsView: View {
                     userVehiclesVM.updateVehicle(at: idx, with: updated)
                 }
                 .preferredColorScheme(.dark)
+            } else if let first = userVehiclesVM.vehicles.indices.first {
+                // Fallback to first vehicle if the saved index became invalid
+                VehicleEditorView(car: $userVehiclesVM.vehicles[first]) { updated in
+                    userVehiclesVM.updateVehicle(at: first, with: updated)
+                }
+                .preferredColorScheme(.dark)
+                .onAppear { editingIndex = first }
             } else {
-                Text("No vehicle to edit").padding().preferredColorScheme(.dark)
+                // No vehicles exist; create a placeholder and open editor
+                VStack(spacing: 12) {
+                    ProgressView().tint(Color("EmpireMint"))
+                    Text("Creating a vehicle...")
+                        .foregroundColor(.white)
+                        .font(.footnote)
+                }
+                .padding()
+                .preferredColorScheme(.dark)
+                .task {
+                    if let newIdx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
+                        await MainActor.run {
+                            editingIndex = newIdx
+                        }
+                    }
+                }
             }
         }
         .onAppear {
             Task { await userVehiclesVM.loadVehicles() }
+            userKey = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
+            if let idx = editingIndex, !userVehiclesVM.vehicles.indices.contains(idx) {
+                editingIndex = nil
+            }
+            if let sel = selectedCarIndex, !userVehiclesVM.vehicles.indices.contains(sel) {
+                selectedCarIndex = nil
+            }
         }
     }
 }
@@ -149,10 +179,14 @@ struct CarsView: View {
 // MARK: - Sections
 private extension CarsView {
     var background: some View {
-        LinearGradient(colors: [Color.black, Color.black.opacity(0.95)],
-                       startPoint: .top,
-                       endPoint: .bottom)
-            .ignoresSafeArea()
+        ZStack {
+            LinearGradient(colors: [Color.black, Color.black.opacity(0.95)],
+                           startPoint: .top,
+                           endPoint: .bottom)
+                .ignoresSafeArea()
+            RadialGradient(colors: [Color("EmpireMint").opacity(0.18), .clear], center: .top, startRadius: 20, endRadius: 300)
+                .ignoresSafeArea()
+        }
     }
 
     var userCarousel: some View {
@@ -174,6 +208,9 @@ private extension CarsView {
                         }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             ripple = false
+                        }
+                        if let sel = selectedCarIndex, !userVehiclesVM.vehicles.indices.contains(sel) {
+                            selectedCarIndex = nil
                         }
                     }
                 }
@@ -1136,7 +1173,15 @@ struct CarsView_Previews: PreviewProvider {
 
 // MARK: - Saved Photo Loader (per-user, per-car)
 private func loadSavedPhotoData(for id: UUID) -> Data? {
-    let userKey = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
-    return UserDefaults.standard.data(forKey: "saved_car_photo_\(userKey)_\(id.uuidString)")
+    let currentUserId = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
+    // Primary per-user key used by VehicleEditorView
+    if let data = UserDefaults.standard.data(forKey: "saved_car_photo_\(currentUserId)_\(id.uuidString)") {
+        return data
+    }
+    // Legacy fallback without user scoping
+    if let legacy = UserDefaults.standard.data(forKey: "saved_car_photo_\(id.uuidString)") {
+        return legacy
+    }
+    return nil
 }
 

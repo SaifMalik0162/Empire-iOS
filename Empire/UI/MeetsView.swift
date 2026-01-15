@@ -64,6 +64,9 @@ struct MeetsView: View {
                     )
                     .ignoresSafeArea()
 
+                    RadialGradient(colors: [Color("EmpireMint").opacity(0.18), .clear], center: .top, startRadius: 20, endRadius: 300)
+                        .ignoresSafeArea()
+
                     // Subtle glass overlay noise
                     Rectangle()
                         .fill(.ultraThinMaterial)

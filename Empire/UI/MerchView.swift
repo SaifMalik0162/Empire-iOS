@@ -37,6 +37,9 @@ struct MerchView: View {
                 LinearGradient(colors: [Color.black, Color.black.opacity(0.95)],
                                startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
+                
+                RadialGradient(colors: [Color("EmpireMint").opacity(0.18), .clear], center: .top, startRadius: 20, endRadius: 300)
+                    .ignoresSafeArea()
 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 20) {
