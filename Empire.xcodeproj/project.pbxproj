@@ -43,6 +43,9 @@
 		704E4B922F11E5AB00AB0A5D /* MerchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B912F11E5A800AB0A5D /* MerchListView.swift */; };
 		704E4B932F11E5AB00AB0A5D /* MerchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B912F11E5A800AB0A5D /* MerchListView.swift */; };
 		704E4B942F11E5AB00AB0A5D /* MerchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B912F11E5A800AB0A5D /* MerchListView.swift */; };
+		7080848C2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
+		7080848D2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
+		7080848E2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
 		7092F00E2F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
 		7092F00F2F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
 		7092F0102F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
@@ -179,6 +182,7 @@
 		704E4B912F11E5A800AB0A5D /* MerchListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchListView.swift; sourceTree = "<group>"; };
 		704E4BA32F11EE2C00AB0A5D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		704E4BA52F11EE2C00AB0A5D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		7080848B2F197D1B0035A23E /* HelpSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpSupportView.swift; sourceTree = "<group>"; };
 		7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "empire 360.mp4"; sourceTree = "<group>"; };
 		70A016E92F0DF49000A084C2 /* EmpireApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireApp.swift; sourceTree = "<group>"; };
 		70A016EC2F0DF49000A084C2 /* CarCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarCardView.swift; sourceTree = "<group>"; };
@@ -342,6 +346,7 @@
 				7020AB8B2F12EEB30082F480 /* Cart.swift */,
 				7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */,
 				7020AB8F2F12EECA0082F480 /* CartView.swift */,
+				7080848B2F197D1B0035A23E /* HelpSupportView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -570,6 +575,7 @@
 				70A0172A2F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				70A0172B2F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */,
+				7080848C2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
 				70B0CF622F1064D0003FCD20 /* SignUpView.swift in Sources */,
 				70B0CF572F10646D003FCD20 /* LoginView.swift in Sources */,
 				70A0172D2F0DF49000A084C2 /* ProfileView.swift in Sources */,
@@ -606,6 +612,7 @@
 				70A017102F0DF49000A084C2 /* EmpireApp.swift in Sources */,
 				70B0CF632F1064D0003FCD20 /* SignUpView.swift in Sources */,
 				704251B42F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
+				7080848D2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
 				70B0CF6B2F106908003FCD20 /* EmpireTheme.swift in Sources */,
 				70B0CF6E2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
 				70A017112F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
@@ -658,6 +665,7 @@
 				70B0CF612F1064D0003FCD20 /* SignUpView.swift in Sources */,
 				70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				704251B52F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
+				7080848E2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
 				70B0CF592F10646D003FCD20 /* LoginView.swift in Sources */,
 				70DF41702F1972590034C5FB /* ManageAccountView.swift in Sources */,
 				70A017422F0DF49000A084C2 /* MerchView.swift in Sources */,
