@@ -5,6 +5,7 @@ struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.dismiss) private var dismissView
     @State private var showSettings = false
+    @State private var showHelpSupport: Bool = false
     @State private var showManageAccount: Bool = false
     @State private var animateGradient = false
     
@@ -345,7 +346,8 @@ struct ProfileView: View {
                 VStack(spacing: 14) {
                     Button { showSettings = true } label: { GlassOptionRow(icon: "gearshape.fill", title: "Settings") }
                         .buttonStyle(.plain)
-                    GlassOptionRow(icon: "questionmark.circle.fill", title: "Help & Support")
+                    Button { showHelpSupport = true } label: { GlassOptionRow(icon: "questionmark.circle.fill", title: "Help & Support") }
+                        .buttonStyle(.plain)
                     Button {
                         print("[ProfileView] Haptic + about to call performLogoutNow()")
                         let gen = UIImpactFeedbackGenerator(style: .medium)
@@ -383,16 +385,21 @@ struct ProfileView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
                     .environmentObject(authViewModel)
-                    .preferredColorScheme(.dark)
+                    .preferredColorScheme(ColorScheme.dark)
             }
             .sheet(isPresented: $showManageAccount) {
                 ManageAccountView()
                     .environmentObject(authViewModel)
-                    .preferredColorScheme(.dark)
+                    .preferredColorScheme(ColorScheme.dark)
+            }
+            .sheet(isPresented: $showHelpSupport) {
+                HelpSupportView()
+                    .environmentObject(authViewModel)
+                    .preferredColorScheme(ColorScheme.dark)
             }
             .sheet(isPresented: $showAddVehicle) {
                 EmpireAddVehicleView(vm: vehiclesVM)
-                    .preferredColorScheme(.dark)
+                    .preferredColorScheme(ColorScheme.dark)
             }
             .onAppear {
                 Task { await vehiclesVM.loadVehicles() }
