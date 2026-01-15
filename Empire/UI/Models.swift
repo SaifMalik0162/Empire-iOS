@@ -31,7 +31,7 @@ struct Meet: Identifiable {
 
 // MARK: - Car
 struct Car: Identifiable, Codable {
-    let id = UUID()
+    var id: UUID
     var name: String
     var description: String
     var imageName: String
@@ -41,19 +41,45 @@ struct Car: Identifiable, Codable {
     var mods: [ModItem] = []
     var isJailbreak: Bool = false
     var vehicleClass: VehicleClass? = nil
+
+    init(id: UUID = UUID(), name: String, description: String, imageName: String, horsepower: Int, stage: Int, specs: [SpecItem] = [], mods: [ModItem] = [], isJailbreak: Bool = false, vehicleClass: VehicleClass? = nil) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.imageName = imageName
+        self.horsepower = horsepower
+        self.stage = stage
+        self.specs = specs
+        self.mods = mods
+        self.isJailbreak = isJailbreak
+        self.vehicleClass = vehicleClass
+    }
 }
 
 struct SpecItem: Identifiable, Hashable, Codable {
-    let id = UUID()
+    var id: UUID
     var key: String
     var value: String
+
+    init(id: UUID = UUID(), key: String, value: String) {
+        self.id = id
+        self.key = key
+        self.value = value
+    }
 }
 
 struct ModItem: Identifiable, Hashable, Codable {
-    let id = UUID()
+    var id: UUID
     var title: String
     var notes: String = ""
     var isMajor: Bool = false
+
+    init(id: UUID = UUID(), title: String, notes: String = "", isMajor: Bool = false) {
+        self.id = id
+        self.title = title
+        self.notes = notes
+        self.isMajor = isMajor
+    }
 }
 
 enum VehicleClass: String, CaseIterable, Identifiable, Codable {
