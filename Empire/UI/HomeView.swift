@@ -22,6 +22,7 @@ private func loadAnySavedCarPhotoData() -> Data? {
 struct HomeView: View {
     // MARK: - Meets Data
     @State private var meets: [Meet] = []
+    @State private var showSettings: Bool = false
     @State private var isLoadingMeets = false
     @State private var meetsError: String? = nil
 
@@ -56,7 +57,7 @@ struct HomeView: View {
                 GeometryReader { geo in
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 20) {
-                            HomeHeader()
+                            HomeHeader(showSettings: $showSettings)
                                 .padding(.horizontal, 16)
                                 .padding(.top, 8)
 
@@ -372,6 +373,10 @@ struct HomeView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
+                    .preferredColorScheme(.dark)
+            }
         }
     }
 
@@ -439,6 +444,7 @@ struct GlassCard<Content: View>: View {
 
 // MARK: - Home Header
 private struct HomeHeader: View {
+    @Binding var showSettings: Bool
     @State private var query: String = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -453,11 +459,18 @@ private struct HomeHeader: View {
                         .frame(width: 32, height: 32)
                         .overlay(Image(systemName: "bell").foregroundStyle(.white))
                         .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: 32, height: 32)
-                        .overlay(Image(systemName: "gearshape").foregroundStyle(.white))
-                        .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    Button {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        showSettings = true
+                    } label: {
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .frame(width: 32, height: 32)
+                            .overlay(Image(systemName: "gearshape").foregroundStyle(.white))
+                            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
