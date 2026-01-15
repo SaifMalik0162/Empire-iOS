@@ -126,8 +126,8 @@ struct ProfileView: View {
                             guard let item = newValue else { return }
                             Task {
                                 if let data = try? await item.loadTransferable(type: Data.self) {
-                                    await MainActor.run { 
-                                        selectedImageData = data 
+                                    await MainActor.run {
+                                        selectedImageData = data
                                     }
                                     // TODO: When API is available, upload avatar to backend here using selectedImageData
                                     // Example:
@@ -242,7 +242,7 @@ struct ProfileView: View {
                     .overlay(
                         VStack(spacing: 10) {
                             HStack {
-                                Text("My Vehicle")
+                                Text("My Garage")
                                     .foregroundColor(.white)
                                     .font(.headline.bold())
                                 Spacer()
@@ -255,7 +255,7 @@ struct ProfileView: View {
                                     } label: {
                                         HStack(spacing: 8) {
                                             Image(systemName: "plus.circle.fill")
-                                            Text("Add your first vehicle")
+                                            Text("No vehicles added")
                                         }
                                         .font(.caption.weight(.semibold))
                                         .foregroundColor(Color("EmpireMint"))
@@ -396,38 +396,6 @@ struct ProfileView: View {
             .onAppear {
                 Task { await vehiclesVM.loadVehicles() }
             }
-            .background(
-                ZStack {
-                    LinearGradient(
-                        colors: [Color.black, Color.black.opacity(0.95)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea()
-                    
-                    RadialGradient(colors: [Color("EmpireMint").opacity(0.18), .clear], center: .top, startRadius: 20, endRadius: 300)
-                        .ignoresSafeArea()
-
-                    Circle()
-                        .fill(Color("EmpireMint").opacity(0.12))
-                        .frame(width: 420)
-                        .blur(radius: 100)
-                        .offset(x: -140, y: -280)
-                        .blendMode(.plusLighter)
-
-                    Circle()
-                        .fill(Color.cyan.opacity(0.08))
-                        .frame(width: 520)
-                        .blur(radius: 130)
-                        .offset(x: 180, y: -320)
-                        .blendMode(.plusLighter)
-
-                    Rectangle()
-                        .fill(.ultraThinMaterial)
-                        .opacity(0.2)
-                        .ignoresSafeArea()
-                }
-            )
         }
     }
 }
