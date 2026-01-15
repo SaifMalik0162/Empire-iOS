@@ -24,6 +24,9 @@ struct CarsView: View {
     
     @State private var selectedCommunityIndex: Int? = nil
     @State private var likedCommunity: Set<UUID> = []
+    
+    @State private var showSpecsPopup: Bool = false
+    @State private var showModsPopup: Bool = false
 
     var body: some View {
         ZStack {
@@ -74,7 +77,12 @@ struct CarsView: View {
                         }
                     }
 
-                CarExpandedCardInline(car: userVehiclesVM.vehicles[selected], ns: ns) {
+                CarExpandedCardInline(
+                    car: userVehiclesVM.vehicles[selected],
+                    ns: ns,
+                    onSpecs: { showSpecsPopup = true },
+                    onMods: { showModsPopup = true }
+                ) {
                     let generator = UIImpactFeedbackGenerator(style: .rigid)
                     generator.impactOccurred()
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
@@ -86,6 +94,24 @@ struct CarsView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 30)
                 .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
+                
+                if showSpecsPopup, userVehiclesVM.vehicles.indices.contains(selected) {
+                    PopupCard {
+                        SpecsListView(specs: userVehiclesVM.vehicles[selected].specs)
+                    } onClose: {
+                        showSpecsPopup = false
+                    }
+                    .zIndex(2)
+                }
+                
+                if showModsPopup, userVehiclesVM.vehicles.indices.contains(selected) {
+                    PopupCard {
+                        ModsListView(mods: userVehiclesVM.vehicles[selected].mods)
+                    } onClose: {
+                        showModsPopup = false
+                    }
+                    .zIndex(2)
+                }
             }
             
             if let selected = selectedCommunityIndex, communityCars.indices.contains(selected) {
@@ -569,6 +595,8 @@ private struct GalleryTile: View {
 private struct CarExpandedCardInline: View {
     let car: Car
     var ns: Namespace.ID
+    var onSpecs: () -> Void = {}
+    var onMods: () -> Void = {}
     var onClose: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -682,8 +710,8 @@ private struct CarExpandedCardInline: View {
 
                 VStack(spacing: 12) {
                     HStack(spacing: 12) {
-                        GlassButton(title: "Mods") { hapticTap() }
-                        GlassButton(title: "Specs") { hapticTap() }
+                        GlassButton(title: "Mods") { hapticTap(); onMods() }
+                        GlassButton(title: "Specs") { hapticTap(); onSpecs() }
                         GlassButton(title: "Share") { hapticTap() }
                     }
 
@@ -1185,3 +1213,153 @@ private func loadSavedPhotoData(for id: UUID) -> Data? {
     return nil
 }
 
+// MARK: - Local PopupCard, SpecsListView, ModsListView for use in CarsView
+
+private struct PopupCard<Content: View>: View {
+    @ViewBuilder var content: Content
+    var onClose: () -> Void
+    var body: some View {
+        ZStack {
+            // Dim background and allow tap-to-dismiss
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture { onClose() }
+
+            // Centered compact card
+            VStack(spacing: 0) {
+                // Content area (do NOT wrap a List in ScrollView)
+                content
+                    .frame(maxWidth: .infinity)
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color("EmpireMint").opacity(0.15))
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.3), Color.white.opacity(0.07)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                // Divider and embedded Close button
+                Divider().background(Color.white.opacity(0.15))
+                Button(action: onClose) {
+                    Text("Close")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule().fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+            }
+            .frame(maxWidth: 360, maxHeight: 420)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color("EmpireMint").opacity(0.25), radius: 18, x: 0, y: 10)
+            .padding(.horizontal, 24)
+        }
+        .transition(.opacity)
+    }
+}
+
+private struct SpecsListView: View {
+    let specs: [SpecItem]
+    var body: some View {
+        NavigationStack {
+            List {
+                if specs.isEmpty {
+                    Section { Text("No specs added yet").foregroundColor(.secondary) }
+                } else {
+                    ForEach(specs) { item in
+                        HStack {
+                            Text(item.key).font(.subheadline.weight(.semibold)).foregroundColor(.white)
+                            Spacer()
+                            Text(item.value).font(.subheadline).foregroundColor(.white.opacity(0.85))
+                        }
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12).stroke(
+                                        LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                        lineWidth: 1
+                                    )
+                                )
+                        )
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(
+                LinearGradient(colors: [Color.black, Color.black.opacity(0.95)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            )
+            .navigationTitle("Specs")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+private struct ModsListView: View {
+    let mods: [ModItem]
+    var body: some View {
+        NavigationStack {
+            List {
+                if mods.isEmpty {
+                    Section { Text("No mods added yet").foregroundColor(.secondary) }
+                } else {
+                    ForEach(mods) { mod in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(mod.title).font(.subheadline.weight(.semibold)).foregroundColor(.white)
+                            if !mod.notes.isEmpty {
+                                Text(mod.notes).font(.footnote).foregroundColor(.white.opacity(0.8))
+                            }
+                        }
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12).stroke(
+                                        LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                        lineWidth: 1
+                                    )
+                                )
+                        )
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(
+                LinearGradient(colors: [Color.black, Color.black.opacity(0.95)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            )
+            .navigationTitle("Mods")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}

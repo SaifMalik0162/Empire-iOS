@@ -45,6 +45,14 @@ struct VehicleEditorView: View {
         _tempStage = State(initialValue: baseCar.stage)
         _tempSpecs = State(initialValue: baseCar.specs.isEmpty ? VehicleEditorView.defaultSpecs() : baseCar.specs)
         _tempMods = State(initialValue: baseCar.mods)
+
+        // Preselect presets based on saved mods titles and select all existing mod pills
+        let presetSet: Set<String> = Set(["Tune", "Intake", "Headers", "Exhaust", "Forced Induction", "Motor Swap", "Drivetrain Swap", "Transmission Upgrades", "Built Motor"]) 
+        let titles = Set(baseCar.mods.map { $0.title })
+        let intersecting = titles.intersection(presetSet)
+        _selectedPresetMods = State(initialValue: intersecting)
+        _selectedModIDs = State(initialValue: Set(baseCar.mods.map { $0.id }))
+
         _tempIsJailbreak = State(initialValue: baseCar.isJailbreak)
         _tempVehicleClass = State(initialValue: baseCar.vehicleClass)
 
@@ -243,6 +251,17 @@ struct VehicleEditorView: View {
         updated.horsepower = tempHorsepower
         updated.stage = tempStage
         updated.specs = tempSpecs
+
+        // Ensure all selected preset pills exist as ModItem entries so they persist
+        let existingTitles = Set(tempMods.map { $0.title })
+        let presetsToAdd = selectedPresetMods.subtracting(existingTitles)
+        if !presetsToAdd.isEmpty {
+            let newItems = presetsToAdd.map { title in
+                ModItem(title: title, notes: "", isMajor: true)
+            }
+            tempMods.append(contentsOf: newItems)
+        }
+
         updated.mods = tempMods
         updated.isJailbreak = tempIsJailbreak
         updated.vehicleClass = tempVehicleClass
