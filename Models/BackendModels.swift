@@ -60,10 +60,20 @@ struct CarsResponse: Codable {
     let cars: [BackendCar]
 }
 
-struct CarCreateResponse: Codable {  // ← MAKE SURE THIS EXISTS
+struct CarCreateResponse: Codable {
     let success: Bool
     let message: String
     let data: BackendCar
+}
+struct ImageUploadResponse: Codable {
+    let success: Bool
+    let message: String
+    let imageUrl: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case success, message
+        case imageUrl = "image_url"
+    }
 }
 
 // MARK: - Meets

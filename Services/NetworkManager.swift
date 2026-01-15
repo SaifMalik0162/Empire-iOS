@@ -1,5 +1,13 @@
 import Foundation
 
+enum NetworkError: Error {
+    case invalidURL
+    case noData
+    case decodingError(Error)
+    case serverError(String)
+    case unauthorized
+}
+
 enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
@@ -7,62 +15,39 @@ enum HTTPMethod: String {
     case delete = "DELETE"
 }
 
-enum NetworkError: Error, LocalizedError {
-    case invalidURL
-    case decodingError(Error)
-    case serverError(String)
-    case unauthorized
-    case unknown(Error)
-    
-    var errorDescription: String?  {
-        switch self {
-        case .invalidURL:
-            return "Invalid URL"
-        case . decodingError(let error):
-            return "Decoding failed: \(error.localizedDescription)"
-        case .serverError(let message):
-            return message
-        case .unauthorized:
-            return "Please log in again"
-        case .unknown(let error):
-            return error.localizedDescription
-        }
-    }
-}
-
-class NetworkManager {
+final class NetworkManager {
     static let shared = NetworkManager()
-    private init() {}
     
-    private let tokenKey = "authToken"
+    private(set) var authToken: String?
     
-    var authToken: String? {
-        get { UserDefaults.standard.string(forKey: tokenKey) }
-        set { UserDefaults.standard.set(newValue, forKey: tokenKey) }
+    private init() {
+        loadAuthToken()
     }
     
-    var isAuthenticated: Bool {
-        let token = authToken
-        if APIConfig.enableNetworkLogging {
-            print("[Network] isAuthenticated? token=\(token != nil ? "present" : "nil")")
-        }
-        return token != nil
-    }
+    // MARK: - Auth Token Management
     
     func setAuthToken(_ token: String) {
         self.authToken = token
+        UserDefaults.standard.set(token, forKey: "authToken")
     }
     
     func clearAuthToken() {
-        if APIConfig.enableNetworkLogging {
-            let old = authToken ?? "nil"
-            print("[Network] clearAuthToken old=\(old)")
-        }
         self.authToken = nil
-        if APIConfig.enableNetworkLogging {
-            print("[Network] clearAuthToken new=\(authToken ?? "nil")")
-        }
+        UserDefaults.standard.removeObject(forKey: "authToken")
     }
+    
+    private func loadAuthToken() {
+        self.authToken = UserDefaults.standard.string(forKey: "authToken")
+    }
+    
+    var isAuthenticated: Bool {
+        if APIConfig.enableNetworkLogging {
+            print("[Network] isAuthenticated?  token=\(authToken != nil ? "exists" : "nil")")
+        }
+        return authToken != nil
+    }
+    
+    // MARK: - Generic Request
     
     func request<T: Decodable>(
         endpoint: String,
@@ -70,22 +55,29 @@ class NetworkManager {
         body:  Encodable? = nil,
         requiresAuth: Bool = false
     ) async throws -> T {
-        
         guard let url = URL(string: APIConfig.baseURL + endpoint) else {
             throw NetworkError.invalidURL
         }
         
-        var request = URLRequest(url: url)
+        var request = URLRequest(url:  url)
         request.httpMethod = method.rawValue
-        request.timeoutInterval = APIConfig.timeoutInterval
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = APIConfig.timeoutInterval
         
+        // Add auth token if required
         if requiresAuth, let token = authToken {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
+        // Add request body if provided
         if let body = body {
             request.httpBody = try JSONEncoder().encode(body)
+            
+            if APIConfig.enableNetworkLogging {
+                if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+                    print("📤 Request Body: \(jsonString)")
+                }
+            }
         }
         
         if APIConfig.enableNetworkLogging {
@@ -99,109 +91,110 @@ class NetworkManager {
         }
         
         if APIConfig.enableNetworkLogging {
-            print("📡 Status:  \(httpResponse.statusCode)")
-            if let json = String(data: data, encoding: . utf8) {
-                print("📄 Response: \(json)")
+            print("📡 Status: \(httpResponse.statusCode)")
+            if let jsonString = String(data: data, encoding: . utf8) {
+                print("📄 Response: \(jsonString)")
             }
         }
         
         let statusCode = httpResponse.statusCode
         
-        // Handle different status codes
         if statusCode >= 200 && statusCode < 300 {
             // Success - decode response
             do {
                 let decoded = try JSONDecoder().decode(T.self, from: data)
                 return decoded
             } catch {
+                if APIConfig.enableNetworkLogging {
+                    print("❌ DECODING ERROR:")
+                    print("   Type: \(T.self)")
+                    print("   Error: \(error)")
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        print("   Raw JSON: \(jsonString)")
+                    }
+                }
                 throw NetworkError.decodingError(error)
             }
         } else if statusCode == 401 {
-            // Unauthorized
+            // Unauthorized - clear token
             clearAuthToken()
             throw NetworkError.unauthorized
         } else {
-            // Other errors
+            // Server error
             if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
                 throw NetworkError.serverError(errorResponse.message)
             }
-            throw NetworkError.serverError("Error: \(statusCode)")
+            throw NetworkError.serverError("HTTP Error: \(statusCode)")
         }
     }
     
-    func uploadMultipart<T: Decodable>(
+    // MARK: - Image Upload
+    
+    func uploadImage<T: Decodable>(
         endpoint: String,
         imageData: Data,
-        imageFieldName: String = "image",
-        fileName: String = "upload.jpg",
-        mimeType: String = "image/jpeg",
-        additionalFields: [String: String] = [:],
+        fieldName: String = "image",
         requiresAuth: Bool = true
     ) async throws -> T {
         guard let url = URL(string: APIConfig.baseURL + endpoint) else {
             throw NetworkError.invalidURL
         }
-
+        
         var request = URLRequest(url: url)
-        request.httpMethod = HTTPMethod.post.rawValue
+        request.httpMethod = "POST"
         request.timeoutInterval = APIConfig.timeoutInterval
-
-        // Boundary
+        
+        // Create boundary for multipart form data
         let boundary = "Boundary-\(UUID().uuidString)"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-
+        
+        // Add auth token
         if requiresAuth, let token = authToken {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-
-        // Build body
+        
+        // Build multipart body
         var body = Data()
-        func append(_ string: String) {
-            if let data = string.data(using: .utf8) { body.append(data) }
-        }
-
-        // Additional fields
-        for (key, value) in additionalFields {
-            append("--\(boundary)\r\n")
-            append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n")
-            append("\(value)\r\n")
-        }
-
-        // Image part
-        append("--\(boundary)\r\n")
-        append("Content-Disposition: form-data; name=\"\(imageFieldName)\"; filename=\"\(fileName)\"\r\n")
-        append("Content-Type: \(mimeType)\r\n\r\n")
+        
+        // Add image data
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"car-image.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
         body.append(imageData)
-        append("\r\n")
-
-        // Closing boundary
-        append("--\(boundary)--\r\n")
-
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
         request.httpBody = body
-
+        
         if APIConfig.enableNetworkLogging {
-            print("🌐 UPLOAD POST \(url) (multipart)")
+            print("🌐 POST \(url) (image upload, \(imageData.count) bytes)")
         }
-
+        
         let (data, response) = try await URLSession.shared.data(for: request)
-
+        
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.serverError("Invalid response")
         }
-
+        
         if APIConfig.enableNetworkLogging {
-            print("📡 Status:  \(httpResponse.statusCode)")
+            print("📡 Status: \(httpResponse.statusCode)")
             if let json = String(data: data, encoding: .utf8) {
                 print("📄 Response: \(json)")
             }
         }
-
+        
         let statusCode = httpResponse.statusCode
+        
         if statusCode >= 200 && statusCode < 300 {
             do {
                 let decoded = try JSONDecoder().decode(T.self, from: data)
                 return decoded
             } catch {
+                if APIConfig.enableNetworkLogging {
+                    print("❌ DECODING ERROR:")
+                    print("   Type: \(T.self)")
+                    print("   Error: \(error)")
+                }
                 throw NetworkError.decodingError(error)
             }
         } else if statusCode == 401 {

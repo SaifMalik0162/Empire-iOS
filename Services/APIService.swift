@@ -140,6 +140,23 @@ class APIService {
             requiresAuth: true
         )
     }
+    func uploadCarImage(carId: Int, imageData: Data) async throws -> String {
+        print("📸 Uploading image for car \(carId)...")
+        print("   Image size: \(imageData.count) bytes")
+        
+        let response:  ImageUploadResponse = try await networkManager.uploadImage(
+            endpoint: "\(APIConfig.Endpoints.cars)/\(carId)/images",
+            imageData: imageData,
+            fieldName: "image"
+        )
+        
+        guard let imageUrl = response.imageUrl else {
+            throw NetworkError.serverError("No image URL returned")
+        }
+        
+        print("✅ Image uploaded:  \(imageUrl)")
+        return imageUrl
+    }
     // MARK: - Meets
     func getAllMeets() async throws -> [BackendMeet] {
         let response: MeetsResponse = try await networkManager.request(

@@ -138,30 +138,30 @@ struct CarsView: View {
         }
         .sheet(isPresented: $showVehicleEditor) {
             if let idx = editingIndex, userVehiclesVM.vehicles.indices.contains(idx) {
-                VehicleEditorView(car: $userVehiclesVM.vehicles[idx]) { updated in
+                VehicleEditorView(car: $userVehiclesVM.vehicles[idx]) { updated, imageData in
                     Task {
-                        await userVehiclesVM.updateVehicle(at: idx, with: updated)
+                        await userVehiclesVM.updateVehicle(at: idx, with: updated, imageData: imageData)
                     }
                 }
                 .preferredColorScheme(.dark)
             } else if let first = userVehiclesVM.vehicles.indices.first {
                 // Fallback to first vehicle if the saved index became invalid
-                VehicleEditorView(car: $userVehiclesVM.vehicles[first]) { updated in
+                VehicleEditorView(car: $userVehiclesVM.vehicles[first]) { updated, imageData in
                     Task {
-                        await userVehiclesVM.updateVehicle(at: first, with: updated)
+                        await userVehiclesVM.updateVehicle(at: first, with: updated, imageData: imageData)
                     }
                 }
-                . preferredColorScheme(.dark)
+                .preferredColorScheme(.dark)
                 .onAppear { editingIndex = first }
             } else {
                 // No vehicles exist; create a placeholder and open editor
                 VStack(spacing: 12) {
                     ProgressView().tint(Color("EmpireMint"))
                     Text("Creating a vehicle...")
-                        .foregroundColor(. white)
+                        .foregroundColor(.white)
                         .font(.footnote)
                 }
-                .padding()
+                . padding()
                 .preferredColorScheme(.dark)
                 .task {
                     if let newIdx = await userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {

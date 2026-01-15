@@ -28,8 +28,8 @@ final class UserVehiclesViewModel: ObservableObject {
             print("🚗 Creating car for user ID: \(userId)")
             
             let backendCar = try await APIService.shared.createCar(
-                make:  "Your",      // ← FIXED: Real value!
-                model: "Car",      // ← FIXED: Simple default
+                make:  "Your",
+                model: "Car",      
                 year: 2024,
                 color: nil,
                 horsepower: 0,
@@ -86,7 +86,7 @@ final class UserVehiclesViewModel: ObservableObject {
             vehicles = backendCars.map { backendCar in
                 Car(
                     backendId:  backendCar.id,
-                    name: "\(backendCar.make) \(backendCar.model)",  // ← FIXED: Use both!
+                    name: backendCar.model,
                     description: "\(backendCar.year) · \(backendCar.color ??  "No color")",
                     imageName: backendCar.imageUrl ?? "car_placeholder",
                     horsepower: backendCar.horsepower ?? 0,
@@ -134,7 +134,7 @@ final class UserVehiclesViewModel: ObservableObject {
             
             let newCar = Car(
                 backendId: backendCar.id,
-                name: "\(backendCar.make) \(backendCar.model)",  // ← FIXED: Use both!
+                name: backendCar.model,
                 description: "Tap to edit details",
                 imageName: backendCar.imageUrl ?? "car_placeholder",
                 horsepower: backendCar.horsepower ?? 0,
@@ -176,7 +176,7 @@ final class UserVehiclesViewModel: ObservableObject {
     }
     
     @MainActor
-    func updateVehicle(at index: Int, with updated: Car) async {
+    func updateVehicle(at index: Int, with updated: Car, imageData: Data?  = nil) async {
         guard vehicles.indices.contains(index) else { return }
         
         vehicles[index] = updated
@@ -190,31 +190,19 @@ final class UserVehiclesViewModel: ObservableObject {
         print("🔄 Updating car \(backendId) on backend...")
         print("📝 Car data: name=\(updated.name), hp=\(updated.horsepower), stage=\(updated.stage)")
         
-        // ✅ FIXED: Parse make and model from name
-        let parts = updated.name.split(separator: " ", maxSplits: 1)
-        let make:  String
-        let model: String
+        let fullName = updated.name.isEmpty ? "Car" : updated.name
+        let make = fullName
+        let model = fullName
         
-        if parts.count >= 2 {
-            make = String(parts[0])
-            model = String(parts[1])
-        } else if parts.count == 1 {
-            make = String(parts[0])
-            model = "Car"
-        } else {
-            make = "Your"
-            model = "Car"
-        }
-        
-        // Parse year from description (format: "2024 · Color")
         let descParts = updated.description.split(separator: "·")
-        let yearString = descParts.first?.trimmingCharacters(in: .whitespaces) ?? "2024"
+        let yearString = descParts.first?.trimmingCharacters(in:  .whitespaces) ?? "2024"
         let year = Int(yearString) ?? 2024
         let color = descParts.count > 1 ? descParts[1].trimmingCharacters(in: . whitespaces) : nil
         
-        print("🔍 Parsed:  make=\(make), model=\(model), year=\(year), color=\(color ?? "nil")")
+        print("🔍 Sending to backend:  make=\(make), model=\(model), year=\(year), color=\(color ?? "nil")")
         
         do {
+            // 1. Update car details
             let backendCar = try await APIService.shared.updateCar(
                 id: backendId,
                 make: make,
@@ -226,11 +214,21 @@ final class UserVehiclesViewModel: ObservableObject {
             )
             print("✅ Updated car \(backendId) on backend")
             
+            // 2. Upload image if provided
+            if let imageData = imageData {
+                print("📸 Uploading image for car \(backendId)...")
+                let imageUrl = try await APIService.shared.uploadCarImage(carId: backendId, imageData: imageData)
+                print("✅ Image uploaded: \(imageUrl)")
+                
+                // Update local car with new image URL
+                vehicles[index].imageName = imageUrl
+                persistVehicles()
+            }
+            
         } catch {
             print("❌ Failed to update car on backend: \(error)")
         }
     }
-
     @MainActor
     func append(_ car: Car) {
         vehicles.append(car)

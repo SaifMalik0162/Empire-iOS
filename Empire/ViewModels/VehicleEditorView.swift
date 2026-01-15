@@ -6,7 +6,7 @@ struct VehicleEditorView: View {
     @Environment(\.dismiss) private var dismiss
 
     @Binding var car: Car
-    var onSave: (Car) -> Void
+    var onSave: (Car, Data?) -> Void
 
     @State private var tempName: String
     @State private var tempDescription: String
@@ -27,7 +27,7 @@ struct VehicleEditorView: View {
     @State private var selectedPresetMods: Set<String> = []
     @State private var showStageSuggestion: Bool = true
 
-    init(car: Binding<Car>, onSave: @escaping (Car) -> Void) {
+    init(car: Binding<Car>, onSave: @escaping (Car, Data?) -> Void) {
         self._car = car
         self.onSave = onSave
 
@@ -41,7 +41,7 @@ struct VehicleEditorView: View {
         _tempName = State(initialValue: baseCar.name)
         _tempDescription = State(initialValue: baseCar.description)
         _tempImageName = State(initialValue: baseCar.imageName)
-        _tempHorsepower = State(initialValue: baseCar.horsepower)
+        _tempHorsepower = State(initialValue:  baseCar.horsepower)
         _tempStage = State(initialValue: baseCar.stage)
         _tempSpecs = State(initialValue: baseCar.specs.isEmpty ? VehicleEditorView.defaultSpecs() : baseCar.specs)
         _tempMods = State(initialValue: baseCar.mods)
@@ -51,7 +51,6 @@ struct VehicleEditorView: View {
         // Load any previously saved photo for this car id.
         _tempPhotoData = State(initialValue: Self.loadSavedPhotoData(for: car.wrappedValue.id, userKey: currentUserId))
     }
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -246,15 +245,16 @@ struct VehicleEditorView: View {
         updated.mods = tempMods
         updated.isJailbreak = tempIsJailbreak
         updated.vehicleClass = tempVehicleClass
-        // Persist per-user so edits survive relaunch.
+        
         Self.saveCar(updated, userKey: userStorageKey)
         if let data = tempPhotoData {
             Self.savePhotoData(data, for: updated.id, userKey: userStorageKey)
         }
-        onSave(updated)
+        
+        // Pass image data to onSave
+        onSave(updated, tempPhotoData)
         dismiss()
     }
-
     private static func defaultSpecs() -> [SpecItem] {
         return [
             SpecItem(key: "Engine", value: ""),
