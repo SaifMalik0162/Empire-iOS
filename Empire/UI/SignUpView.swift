@@ -8,13 +8,15 @@ struct SignUpView: View {
     @State private var showPassword = false
     @State private var showConfirmPassword = false
     @Environment(\.dismiss) private var dismiss
+    
+    @EnvironmentObject var authViewModel: AuthViewModel 
 
     @State private var animateGradient = false
     @State private var showValidation: Bool = false
-    @State private var isCreating: Bool = false
+    @State private var isCreating:  Bool = false
 
     private var isFormValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !name.trimmingCharacters(in: . whitespaces).isEmpty &&
         !email.trimmingCharacters(in: .whitespaces).isEmpty &&
         password.count >= 6 &&
         password == confirmPassword
@@ -24,15 +26,15 @@ struct SignUpView: View {
         ZStack {
             ZStack {
                 EmpireTheme.mintTealGradient(start: animateGradient ? .topLeading : .bottomTrailing,
-                                             end: animateGradient ? .bottomTrailing : .topLeading)
+                                             end: animateGradient ?  .bottomTrailing : .topLeading)
                 EmpireTheme.mintTealGradient(start: animateGradient ? .bottomLeading : .topTrailing,
-                                             end: animateGradient ? .topTrailing : .bottomLeading)
+                                             end: animateGradient ? .topTrailing :  .bottomLeading)
                     .opacity(0.45)
                     .blendMode(.plusLighter)
             }
-            .blur(radius: 8)
+            . blur(radius: 8)
             .ignoresSafeArea()
-            .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
+            . animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
             .onAppear {
                 animateGradient = true
             }
@@ -45,11 +47,11 @@ struct SignUpView: View {
                     Text("Create your account")
                         .font(.title)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundColor(. primary)
 
                     Text("Join us in a few taps")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        . foregroundColor(.secondary)
                 }
 
                 // Fields
@@ -60,26 +62,26 @@ struct SignUpView: View {
                             .autocapitalization(.words)
                     }
                     .padding()
-                    .background(
+                    . background(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.ultraThinMaterial)
+                            . fill(. ultraThinMaterial)
                     )
-                    .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                    .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
+                    .empireMintGlassStroke(cornerRadius:  16, lineWidth: 1.25)
+                    .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y:  4)
 
                     Group {
                         TextField("Email", text: $email)
-                            .textContentType(.emailAddress)
+                            . textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: 16, style: . continuous)
+                            .fill(. ultraThinMaterial)
                     )
-                    .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                    .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
+                    .empireMintGlassStroke(cornerRadius: 16, lineWidth:  1.25)
+                    .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y:  4)
 
                     if showValidation && email.isEmpty {
                         Text("Please enter your email.")
@@ -91,11 +93,11 @@ struct SignUpView: View {
                     Group {
                         if showPassword {
                             TextField("Password", text: $password)
-                                .textContentType(.newPassword)
+                                .textContentType(. newPassword)
                                 .autocapitalization(.none)
                         } else {
                             SecureField("Password", text: $password)
-                                .textContentType(.newPassword)
+                                .textContentType(. newPassword)
                         }
                     }
                     .padding()
@@ -111,10 +113,10 @@ struct SignUpView: View {
                                     showPassword.toggle()
                                 }
                             } label: {
-                                Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                                Image(systemName: showPassword ? "eye.slash. fill" : "eye.fill")
                                     .foregroundColor(EmpireTheme.mintCore.opacity(0.7))
                             }
-                            .padding(.trailing, 12)
+                            .padding(. trailing, 12)
                         }
                     )
                     .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
@@ -133,13 +135,13 @@ struct SignUpView: View {
                                 .textContentType(.newPassword)
                                 .autocapitalization(.none)
                         } else {
-                            SecureField("Confirm password", text: $confirmPassword)
-                                .textContentType(.newPassword)
+                            SecureField("Confirm password", text:  $confirmPassword)
+                                . textContentType(.newPassword)
                         }
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius:  16, style: .continuous)
                             .fill(.ultraThinMaterial)
                     )
                     .overlay(
@@ -153,7 +155,7 @@ struct SignUpView: View {
                                 Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
                                     .foregroundColor(EmpireTheme.mintCore.opacity(0.7))
                             }
-                            .padding(.trailing, 12)
+                            .padding(. trailing, 12)
                         }
                     )
                     .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
@@ -162,20 +164,21 @@ struct SignUpView: View {
                     if showValidation && confirmPassword != password {
                         Text("Passwords don't match.")
                             .font(.footnote)
+                            . foregroundColor(.red.opacity(0.9))
+                    }
+                    
+                    
+                    if let errorMessage = authViewModel.errorMessage {
+                        Text(errorMessage)
+                            .font(. footnote)
                             .foregroundColor(.red.opacity(0.9))
+                            .multilineTextAlignment(.center)
                     }
                 }
 
-                // Create Account Button
+                // Create Account Button - ✅ FIXED
                 Button {
-                    let isValid = !name.isEmpty && !email.isEmpty && password.count >= 6 && password == confirmPassword
-                    showValidation = !isValid
-                    if isValid {
-                        isCreating = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                            isCreating = false
-                        }
-                    }
+                    performRegistration()
                 } label: {
                     HStack {
                         if isCreating {
@@ -184,7 +187,7 @@ struct SignUpView: View {
                         }
                         Text(isCreating ? "Creating..." : "Create Account")
                             .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: . infinity)
                     }
                     .padding()
                     .background(
@@ -195,7 +198,7 @@ struct SignUpView: View {
                     .foregroundColor(.white)
                 }
                 .disabled(!isFormValid || isCreating)
-                .opacity(isCreating ? 0.8 : (isFormValid ? 1 : 0.55))
+                .opacity(isCreating ?  0.8 : (isFormValid ? 1 : 0.55))
 
                 // Footnote
                 Text("By creating an account you agree to our Terms of Service and Privacy Policy.")
@@ -216,7 +219,7 @@ struct SignUpView: View {
             .padding(30)
             .frame(maxWidth: 450)
             .background(
-                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                RoundedRectangle(cornerRadius: 32, style:  .continuous)
                     .fill(.ultraThinMaterial)
             )
             .empireMintGlassStroke(cornerRadius: 32, lineWidth: 1.5)
@@ -230,8 +233,8 @@ struct SignUpView: View {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28, weight: .semibold))
+                        Image(systemName: "xmark.circle. fill")
+                            .font(. system(size: 28, weight: .semibold))
                             .foregroundColor(Color.white.opacity(0.75))
                             .shadow(radius: 4)
                     }
@@ -241,10 +244,46 @@ struct SignUpView: View {
             }
         }
     }
+    
+    
+    private func performRegistration() {
+        let isValid = !name.isEmpty && !email.isEmpty && password.count >= 6 && password == confirmPassword
+        showValidation = !isValid
+        
+        guard isValid else { return }
+        
+        isCreating = true
+        
+        let generator = UIImpactFeedbackGenerator(style:  .medium)
+        generator.impactOccurred()
+        
+        Task {
+            await authViewModel.register(
+                email: email,
+                password: password,
+                username: name
+            )
+            
+            await MainActor.run {
+                isCreating = false
+                
+                // Check if registration was successful
+                if authViewModel.isAuthenticated {
+                    let successGenerator = UINotificationFeedbackGenerator()
+                    successGenerator.notificationOccurred(. success)
+                    dismiss()  // Close the sheet on success
+                } else {
+                    // Error message will be shown from authViewModel. errorMessage
+                    let errorGenerator = UINotificationFeedbackGenerator()
+                    errorGenerator.notificationOccurred(.error)
+                }
+            }
+        }
+    }
 
     private var animatedBackground: some View {
-        EmpireTheme.mintDarkGradient(start: animateGradient ? .topLeading : .bottomTrailing,
-                                end: animateGradient ? .bottomTrailing : .topLeading)
+        EmpireTheme.mintDarkGradient(start:  animateGradient ? .topLeading : .bottomTrailing,
+                                end: animateGradient ? . bottomTrailing : .topLeading)
         .animation(.easeInOut(duration: 5).repeatForever(autoreverses: true), value: animateGradient)
         .onAppear {
             animateGradient.toggle()
@@ -267,6 +306,6 @@ extension Color {
 
 #Preview {
     SignUpView()
+        .environmentObject(AuthViewModel())
         .preferredColorScheme(.dark)
 }
-

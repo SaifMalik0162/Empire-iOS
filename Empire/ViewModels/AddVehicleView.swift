@@ -12,8 +12,10 @@ struct EmpireAddVehicleView: View {
                     .foregroundColor(.white)
 
                 Button {
-                    vm.addPlaceholderVehicle()
+                    Task {
+                   await vm.addPlaceholderVehicle()
                     dismiss()
+                    }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "plus.circle.fill")

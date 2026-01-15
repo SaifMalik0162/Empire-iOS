@@ -7,7 +7,7 @@ enum EmpireTab: CaseIterable, Hashable {
     var icon: String {
         switch self {
         case .home: return "house.fill"
-        case .meets: return "map.fill"
+        case . meets: return "map.fill"
         case .cars: return "car.fill"
         case .merch: return "bag.fill"
         case .profile: return "person.fill"
@@ -31,19 +31,32 @@ struct Meet: Identifiable {
 
 // MARK: - Car
 struct Car: Identifiable, Codable {
-    var id: UUID
+    let id: UUID
+    var backendId: Int?  // ← ADDED
     var name: String
     var description: String
     var imageName: String
     var horsepower: Int
     var stage: Int
-    var specs: [SpecItem] = []
-    var mods: [ModItem] = []
-    var isJailbreak: Bool = false
-    var vehicleClass: VehicleClass? = nil
-
-    init(id: UUID = UUID(), name: String, description: String, imageName: String, horsepower: Int, stage: Int, specs: [SpecItem] = [], mods: [ModItem] = [], isJailbreak: Bool = false, vehicleClass: VehicleClass? = nil) {
+    var specs: [SpecItem]
+    var mods: [ModItem]
+    var isJailbreak: Bool
+    var vehicleClass: VehicleClass?
+    
+    // ← ADDED INIT
+    init(id: UUID = UUID(),
+         backendId: Int?  = nil,
+         name: String,
+         description: String,
+         imageName: String,
+         horsepower: Int,
+         stage: Int,
+         specs:  [SpecItem] = [],
+         mods: [ModItem] = [],
+         isJailbreak: Bool = false,
+         vehicleClass: VehicleClass?  = nil) {
         self.id = id
+        self.backendId = backendId
         self.name = name
         self.description = description
         self.imageName = imageName
@@ -57,11 +70,11 @@ struct Car: Identifiable, Codable {
 }
 
 struct SpecItem: Identifiable, Hashable, Codable {
-    var id: UUID
+    let id:  UUID
     var key: String
     var value: String
-
-    init(id: UUID = UUID(), key: String, value: String) {
+    
+    init(id: UUID = UUID(), key: String, value:  String) {
         self.id = id
         self.key = key
         self.value = value
@@ -69,11 +82,11 @@ struct SpecItem: Identifiable, Hashable, Codable {
 }
 
 struct ModItem: Identifiable, Hashable, Codable {
-    var id: UUID
+    let id: UUID
     var title: String
-    var notes: String = ""
-    var isMajor: Bool = false
-
+    var notes: String
+    var isMajor: Bool
+    
     init(id: UUID = UUID(), title: String, notes: String = "", isMajor: Bool = false) {
         self.id = id
         self.title = title
@@ -103,10 +116,10 @@ enum MerchCategory: String, CaseIterable, Codable, Equatable, Hashable {
     case banners = "Banners"
 }
 
-struct MerchItem: Identifiable {
+struct MerchItem:  Identifiable {
     let id = UUID()
     let name: String
     let price: String
     let imageName: String
-    let category: MerchCategory
+    let category:  MerchCategory
 }

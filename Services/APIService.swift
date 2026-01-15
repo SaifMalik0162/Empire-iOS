@@ -21,7 +21,7 @@ class APIService {
     }
 
     // MARK: - Auth
-    func login(email:  String, password: String) async throws -> AuthResponse {
+    func login(email: String, password: String) async throws -> AuthResponse {
         let request = LoginRequest(email: email, password: password)
         let response:  AuthResponse = try await networkManager.request(
             endpoint: APIConfig.Endpoints.login,
@@ -61,6 +61,78 @@ class APIService {
             endpoint: APIConfig.Endpoints.cars
         )
         return response.cars
+    }
+    
+    func createCar(make: String, model: String, year: Int, color: String?, horsepower: Int?, stage: String?, userId: Int) async throws -> BackendCar {
+        struct CreateCarRequest: Encodable {
+            let make: String
+            let model: String
+            let year: Int
+            let color: String?
+            let horsepower: Int?
+            let stage: String?
+            let user_id: Int
+        }
+        
+        let request = CreateCarRequest(
+            make: make,
+            model: model,
+            year: year,
+            color:  color,
+            horsepower:  horsepower,
+            stage:  stage,
+            user_id:  userId
+        )
+        
+        let response: CarCreateResponse = try await networkManager.request(
+            endpoint: APIConfig.Endpoints.cars,
+            method: .post,
+            body: request
+        )
+        
+        return response.data
+    }
+    
+    func updateCar(id: Int, make: String, model: String, year: Int, color: String?, horsepower: Int?, stage: String?) async throws -> BackendCar {
+        struct UpdateCarRequest:  Encodable {
+            let make: String
+            let model: String
+            let year: Int
+            let color: String?
+            let horsepower: Int?
+            let stage: String?
+        }
+        
+        let request = UpdateCarRequest(
+            make:  make,
+            model: model,
+            year: year,
+            color: color,
+            horsepower: horsepower,
+            stage: stage
+        )
+        
+        let response: CarCreateResponse = try await networkManager.request(
+            endpoint: "\(APIConfig.Endpoints.cars)/\(id)",
+            method: .put,
+            body: request,
+            requiresAuth: true  // ← BACKEND REQUIRES AUTH
+        )
+        
+        return response.data
+    }
+    
+    func deleteCar(id: Int) async throws {
+        struct DeleteResponse: Codable {
+            let success: Bool
+            let message: String
+        }
+        
+        let _: DeleteResponse = try await networkManager.request(
+            endpoint: "\(APIConfig.Endpoints.cars)/\(id)",
+            method: .delete,
+            requiresAuth: true  // ← BACKEND REQUIRES AUTH
+        )
     }
 
     // MARK: - Meets

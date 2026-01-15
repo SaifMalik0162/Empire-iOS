@@ -208,35 +208,24 @@ struct LoginView: View {
         generator.impactOccurred()
         
         Task {
-            do {
-                try await authViewModel.login(email: email, password: password)
+            await authViewModel.login(email: email, password: password)
+            
+            await MainActor.run {
+                isLoading = false
                 
-                await MainActor.run {
-                    isLoading = false
-                    // No need to navigate - EmpireApp will automatically switch to main app
+                // Check if login was successful
+                if authViewModel.isAuthenticated {
                     let successGenerator = UINotificationFeedbackGenerator()
                     successGenerator.notificationOccurred(.success)
-                }
-            } catch let error as NetworkError {
-                await MainActor.run {
-                    errorMessage = error.errorDescription
-                    isLoading = false
-                    
-                    let errorGenerator = UINotificationFeedbackGenerator()
-                    errorGenerator.notificationOccurred(.error)
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = "An unexpected error occurred"
-                    isLoading = false
-                    
+                } else {
+                    // Show error from authViewModel
+                    errorMessage = authViewModel.errorMessage ?? "Login failed"
                     let errorGenerator = UINotificationFeedbackGenerator()
                     errorGenerator.notificationOccurred(.error)
                 }
             }
         }
     }
-    
     private var animatedBackground: some View {
         EmpireTheme.mintDarkGradient(start: animateGradient ? .topLeading : .bottomTrailing,
                                  end: animateGradient ? .bottomTrailing : .topLeading)

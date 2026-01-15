@@ -13,8 +13,8 @@ struct LoginRequest: Codable {
     let password: String
 }
 
-struct RegisterRequest: Codable {
-    let email: String
+struct RegisterRequest:  Codable {
+    let email:  String
     let password: String
     let username: String
 }
@@ -41,7 +41,7 @@ struct BackendCar: Codable, Identifiable {
     let year: Int
     let color: String?
     let imageUrl: String?
-    let horsepower:  Int?
+    let horsepower: Int?
     let stage: String?
     
     enum CodingKeys: String, CodingKey {
@@ -60,6 +60,12 @@ struct CarsResponse: Codable {
     let cars: [BackendCar]
 }
 
+struct CarCreateResponse: Codable {
+    let success: Bool
+    let message: String
+    let data: BackendCar
+}
+
 // MARK: - Meets
 struct BackendMeet: Codable, Identifiable {
     let id: Int
@@ -74,8 +80,8 @@ struct BackendMeet: Codable, Identifiable {
     }
 }
 
-struct MeetsResponse:  Codable {
-    let success:  Bool
+struct MeetsResponse: Codable {
+    let success: Bool
     let meets: [BackendMeet]
 }
 

@@ -4,9 +4,9 @@ import UIKit
 struct CarsView: View {
     // MARK: - User's cars
     @StateObject private var userVehiclesVM = UserVehiclesViewModel()
-    @State private var showAddVehicle: Bool = false
-    @State private var editingIndex: Int? = nil
-    @State private var showVehicleEditor: Bool = false
+    @State private var showAddVehicle:  Bool = false
+    @State private var editingIndex: Int?  = nil
+    @State private var showVehicleEditor:  Bool = false
     @State private var userKey: String = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
     
     // MARK: - Community Cars
@@ -16,7 +16,7 @@ struct CarsView: View {
         Car(name: "1968 Mustang", description: "347 Stroker V8", imageName: "68_blaze", horsepower: 350, stage: 2)
     ]
 
-    @State private var selectedCarIndex: Int? = nil
+    @State private var selectedCarIndex: Int?  = nil
     @Namespace private var ns
     @State private var ripple: Bool = false
     @State private var showLightbox: Bool = false
@@ -29,13 +29,15 @@ struct CarsView: View {
         ZStack {
             background
 
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 24) {
+            ScrollView(. vertical, showsIndicators: false) {
+                VStack(spacing:  24) {
                     if userVehiclesVM.vehicles.isEmpty {
                         Button {
-                            if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
-                                editingIndex = idx
-                                showVehicleEditor = true
+                            Task {
+                                if let idx = await userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
+                                    editingIndex = idx
+                                    showVehicleEditor = true
+                                }
                             }
                         } label: {
                             HStack(spacing: 8) {
@@ -49,14 +51,14 @@ struct CarsView: View {
                                 RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white.opacity(0.06))
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(. plain)
                         .padding(.horizontal, 20)
                     } else {
                         userCarousel
                     }
                     communitySection
                 }
-                .padding(.vertical, 12)
+                .padding(. vertical, 12)
             }
 
             // Expanded card overlays above
@@ -97,7 +99,7 @@ struct CarsView: View {
                     .onTapGesture {
                         let generator = UIImpactFeedbackGenerator(style: .light)
                         generator.impactOccurred()
-                        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                        withAnimation(. spring(response: 0.45, dampingFraction: 0.82)) {
                             selectedCommunityIndex = nil
                         }
                     }
@@ -119,14 +121,14 @@ struct CarsView: View {
                 .zIndex(1)
                 .frame(maxWidth: 480)
                 .padding(.horizontal, 20)
-                .padding(.vertical, 30)
-                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
+                .padding(. vertical, 30)
+                .transition(.asymmetric(insertion: .opacity.combined(with: . scale(scale: 0.98)), removal: .opacity))
             }
 
             CoolRipple(active: $ripple)
-                .edgesIgnoringSafeArea(.all)
+                .edgesIgnoringSafeArea(. all)
         }
-        .fullScreenCover(isPresented: $showLightbox) {
+        .fullScreenCover(isPresented:  $showLightbox) {
             CommunityLightbox(cars: communityCars, startIndex: lightboxIndex) {
                 showLightbox = false
             }
@@ -134,28 +136,32 @@ struct CarsView: View {
         .sheet(isPresented: $showVehicleEditor) {
             if let idx = editingIndex, userVehiclesVM.vehicles.indices.contains(idx) {
                 VehicleEditorView(car: $userVehiclesVM.vehicles[idx]) { updated in
-                    userVehiclesVM.updateVehicle(at: idx, with: updated)
+                    Task {
+                        await userVehiclesVM.updateVehicle(at: idx, with: updated)
+                    }
                 }
                 .preferredColorScheme(.dark)
             } else if let first = userVehiclesVM.vehicles.indices.first {
                 // Fallback to first vehicle if the saved index became invalid
                 VehicleEditorView(car: $userVehiclesVM.vehicles[first]) { updated in
-                    userVehiclesVM.updateVehicle(at: first, with: updated)
+                    Task {
+                        await userVehiclesVM.updateVehicle(at: first, with: updated)
+                    }
                 }
-                .preferredColorScheme(.dark)
+                . preferredColorScheme(.dark)
                 .onAppear { editingIndex = first }
             } else {
                 // No vehicles exist; create a placeholder and open editor
                 VStack(spacing: 12) {
                     ProgressView().tint(Color("EmpireMint"))
                     Text("Creating a vehicle...")
-                        .foregroundColor(.white)
+                        .foregroundColor(. white)
                         .font(.footnote)
                 }
                 .padding()
                 .preferredColorScheme(.dark)
                 .task {
-                    if let newIdx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
+                    if let newIdx = await userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
                         await MainActor.run {
                             editingIndex = newIdx
                         }
@@ -176,13 +182,13 @@ struct CarsView: View {
     }
 }
 
-// MARK: - Sections
+// MARK:  - Sections
 private extension CarsView {
     var background: some View {
         ZStack {
             LinearGradient(colors: [Color.black, Color.black.opacity(0.95)],
                            startPoint: .top,
-                           endPoint: .bottom)
+                           endPoint: . bottom)
                 .ignoresSafeArea()
             RadialGradient(colors: [Color("EmpireMint").opacity(0.18), .clear], center: .top, startRadius: 20, endRadius: 300)
                 .ignoresSafeArea()
@@ -220,12 +226,12 @@ private extension CarsView {
         .frame(height: 360)
     }
 
-    var communitySection: some View {
+    var communitySection:  some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Community Gallery")
                     .font(.headline.weight(.semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(. white)
                 Spacer()
                 Text("See All")
                     .font(.caption)
@@ -259,7 +265,7 @@ private extension CarsView {
     }
 }
 
-// MARK: - Liquid Glass Compact Card
+// MARK:  - Liquid Glass Compact Card
 private struct LiquidGlassCarCard: View {
     let car: Car
     var ns: Namespace.ID
@@ -267,16 +273,16 @@ private struct LiquidGlassCarCard: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(. ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 22)
                         .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                         .blendMode(.screen)
                 )
-                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 18, x: 0, y: 10)
-                .shadow(color: .black.opacity(0.5), radius: 12, x: 0, y: 6)
-                .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
+                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 18, x: 0, y:  10)
+                .shadow(color: . black.opacity(0.5), radius: 12, x: 0, y:  6)
+                .matchedGeometryEffect(id:  "card-\(car.id)", in: ns)
 
             // Full-bleed background image
             GeometryReader { proxy in
@@ -294,7 +300,7 @@ private struct LiquidGlassCarCard: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width, height: size.height)
                     .opacity(0.55)
-                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
+                    .matchedGeometryEffect(id:  "image-\(car.id)", in: ns)
                     .clipped()
 
                     LinearGradient(
@@ -304,13 +310,13 @@ private struct LiquidGlassCarCard: View {
                             Color.black.opacity(0.45)
                         ],
                         startPoint: .top,
-                        endPoint: .bottom
+                        endPoint: . bottom
                     )
                     
                     LinearGradient(
                         gradient: Gradient(stops: [
-                            .init(color: .clear, location: 0.0),
-                            .init(color: .white.opacity(0.22), location: 0.48),
+                            .init(color: . clear, location: 0.0),
+                            . init(color: .white.opacity(0.22), location: 0.48),
                             .init(color: .clear, location: 1.0)
                         ]),
                         startPoint: .topLeading,
@@ -319,7 +325,7 @@ private struct LiquidGlassCarCard: View {
                     .blendMode(.screen)
                     .opacity(0.28)
                     .blur(radius: 10)
-                    .rotationEffect(.degrees(18))
+                    .rotationEffect(. degrees(18))
                     .modifier(CompactShineAnimation(cardCorner: 22))
 
                 }
@@ -337,15 +343,15 @@ private struct LiquidGlassCarCard: View {
                     .font(.headline)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
-                    .foregroundStyle(.white)
-                    .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
+                    .foregroundStyle(. white)
+                    .matchedGeometryEffect(id:  "title-\(car.id)", in: ns)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
                         if car.isJailbreak {
                             StatCapsule(label: "Jailbreak", value: "", tint: .purple)
                         } else if car.stage == 0 {
-                            StatCapsule(label: "Stock", value: "", tint: .gray)
+                            StatCapsule(label: "Stock", value: "", tint: . gray)
                         } else {
                             StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
                         }
@@ -358,11 +364,11 @@ private struct LiquidGlassCarCard: View {
     }
 }
 
-private func stageTint(for stage: Int) -> Color {
+private func stageTint(for stage:  Int) -> Color {
     switch stage {
     case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
+    case 2: return . yellow
+    case 3: return . red
     default: return .gray
     }
 }
@@ -377,8 +383,8 @@ private struct JiggleWrapper<Content: View>: View {
     var body: some View {
         content()
             .scaleEffect(isPressed ? 0.98 : 1.0)
-            .rotationEffect(.degrees(isJiggling ? 1.8 : 0), anchor: .center)
-            .animation(isJiggling ? .easeInOut(duration: 0.09).repeatForever(autoreverses: true) : .default, value: isJiggling)
+            .rotationEffect(. degrees(isJiggling ? 1.8 : 0), anchor: .center)
+            .animation(isJiggling ? . easeInOut(duration: 0.09).repeatForever(autoreverses: true) : .default, value: isJiggling)
             .simultaneousGesture(TapGesture().onEnded { onTap() })
             .gesture(
                 LongPressGesture(minimumDuration: 0.2)
@@ -408,7 +414,7 @@ private struct CompactShineAnimation: ViewModifier {
             .offset(x: phase * 220, y: phase * 80)
             .onAppear {
                 phase = -1.1
-                withAnimation(.linear(duration: 5.5).repeatForever(autoreverses: false)) {
+                withAnimation(.linear(duration: 5.5).repeatForever(autoreverses:  false)) {
                     phase = 1.3
                 }
             }
@@ -424,7 +430,7 @@ private struct CompactShineAnimation: ViewModifier {
 private struct StatCapsule: View {
     let label: String
     let value: String
-    let tint: Color
+    let tint:  Color
     var body: some View {
         HStack(spacing: 6) {
             Text(label.uppercased())
@@ -438,10 +444,10 @@ private struct StatCapsule: View {
                 .minimumScaleFactor(0.8)
                 .foregroundStyle(.white)
         }
-        .padding(.horizontal, 8)
+        .padding(. horizontal, 8)
         .padding(.vertical, 6)
         .background(
-            Capsule().fill(.ultraThinMaterial)
+            Capsule().fill(. ultraThinMaterial)
         )
         .overlay(
             Capsule().stroke(tint.opacity(0.6), lineWidth: 1)
@@ -453,7 +459,7 @@ private struct TagChip: View {
     let text: String
     var body: some View {
         Text(text)
-            .font(.caption2.weight(.semibold))
+            .font(. caption2.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Capsule().fill(.ultraThinMaterial))
@@ -464,7 +470,7 @@ private struct TagChip: View {
 
 private struct GlassButton: View {
     let title: String
-    var action: (() -> Void)? = nil
+    var action: (() -> Void)?  = nil
 
     var body: some View {
         Button(action: { action?() }) {
@@ -473,15 +479,15 @@ private struct GlassButton: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(
-                    Capsule().fill(.ultraThinMaterial)
+                    Capsule().fill(. ultraThinMaterial)
                 )
                 .overlay(
                     Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                 )
-                .foregroundStyle(.white)
+                .foregroundStyle(. white)
         }
         .buttonStyle(.plain)
-        .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, x: 0, y: 4)
+        .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, x: 0, y:  4)
     }
 }
 
@@ -490,12 +496,12 @@ private struct HoloShimmerMask: View {
     var body: some View {
         LinearGradient(
             gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.3), location: 0.45),
+                .init(color: . clear, location: 0.0),
+                .init(color: . white.opacity(0.3), location: 0.45),
                 .init(color: .clear, location: 0.9)
             ]),
             startPoint: .topLeading,
-            endPoint: .bottomTrailing
+            endPoint:  .bottomTrailing
         )
         .scaleEffect(x: 1.8)
         .offset(x: -120 + phase * 240)
@@ -504,7 +510,7 @@ private struct HoloShimmerMask: View {
                 phase = 1
             }
         }
-        .blendMode(.screen)
+        . blendMode(.screen)
         .opacity(0.6)
         .allowsHitTesting(false)
     }
@@ -515,34 +521,34 @@ private struct GalleryTile: View {
     let isLiked: Bool
     let onToggleLike: () -> Void
 
-    var body: some View {
+    var body:  some View {
         ZStack(alignment: .topTrailing) {
          
             ZStack(alignment: .bottomLeading) {
                 Image(car.imageName)
-                    .resizable()
+                    . resizable()
                     .scaledToFill()
                     .frame(height: 180)
                     .frame(maxWidth: .infinity)
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay(
-                        LinearGradient(colors: [.clear, .black.opacity(0.45)], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(colors: [. clear, .black.opacity(0.45)], startPoint: .top, endPoint: .bottom)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                             .allowsHitTesting(false)
                     )
-                    .contentShape(Rectangle())
+                    . contentShape(Rectangle())
 
                 // Metadata badges
                 HStack(spacing: 8) {
                     if car.isJailbreak {
                         StatCapsule(label: "Jailbreak", value: "", tint: .purple)
                     } else if car.stage == 0 {
-                        StatCapsule(label: "Stock", value: "", tint: .gray)
+                        StatCapsule(label: "Stock", value: "", tint: . gray)
                     } else {
                         StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
                     }
-                    StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                    StatCapsule(label:  "HP", value: "\(car.horsepower)", tint: .cyan)
                 }
                 .padding(10)
             }
@@ -550,10 +556,10 @@ private struct GalleryTile: View {
             // Like button
             Button(action: { onToggleLike() }) {
                 Image(systemName: isLiked ? "heart.fill" : "heart")
-                    .foregroundStyle(isLiked ? Color("EmpireMint") : .white)
+                    . foregroundStyle(isLiked ? Color("EmpireMint") : . white)
                     .padding(8)
                     .background(
-                        Circle().fill(.ultraThinMaterial)
+                        Circle().fill(. ultraThinMaterial)
                     )
                     .overlay(
                         Circle().stroke(Color.white.opacity(0.3), lineWidth: 1)
@@ -578,30 +584,30 @@ private struct CarExpandedCardInline: View {
         ZStack {
             // Card base with glass and shimmer
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(. ultraThinMaterial)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 28)
+                    RoundedRectangle(cornerRadius:  28)
                         .stroke(
                             LinearGradient(
                                 colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
+                                startPoint:  .topLeading, endPoint: .bottomTrailing
                             ),
                             lineWidth: 1
                         )
                         .blendMode(.screen)
                 )
                 .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(reduceMotion ? 0 : 1))
-                .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y: 18)
-                .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
-                .rotation3DEffect(.degrees(Double(tilt.width) * 0.06), axis: (x: 0, y: 1, z: 0))
-                .rotation3DEffect(.degrees(Double(-tilt.height) * 0.06), axis: (x: 1, y: 0, z: 0))
+                .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y:  18)
+                .matchedGeometryEffect(id:  "card-\(car.id)", in: ns)
+                .rotation3DEffect(. degrees(Double(tilt.width) * 0.06), axis: (x:  0, y: 1, z: 0))
+                .rotation3DEffect(.degrees(Double(-tilt.height) * 0.06), axis: (x: 1, y: 0, z:  0))
 
             // Embedded full-card image with parallax
             GeometryReader { proxy in
                 let size = proxy.size
                 ZStack {
                     Group {
-                        if let data = loadSavedPhotoData(for: car.id), let uiImage = UIImage(data: data) {
+                        if let data = loadSavedPhotoData(for: car.id), let uiImage = UIImage(data:  data) {
                             Image(uiImage: uiImage)
                                 .resizable()
                         } else {
@@ -609,13 +615,13 @@ private struct CarExpandedCardInline: View {
                                 .resizable()
                         }
                     }
-                    .aspectRatio(contentMode: .fill)
+                    . aspectRatio(contentMode: . fill)
                     .frame(width: size.width + (reduceMotion ? 0 : tilt.width * 0.4), height: size.height)
                     .opacity(0.5)
                     .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
                     .accessibilityHidden(true)
                     .clipped()
-                    .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 : tilt.height * 0.04)
+                    .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ?  0 : tilt.height * 0.04)
 
                     LinearGradient(
                         colors: [
@@ -635,14 +641,14 @@ private struct CarExpandedCardInline: View {
             VStack(spacing: 16) {
                 VStack(spacing: 6) {
                     Text(car.name)
-                        .font(.system(.title3, design: .rounded).weight(.semibold))
+                        .font(.system(. title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
                         .shadow(radius: 6)
-                        .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
+                        .matchedGeometryEffect(id:  "title-\(car.id)", in: ns)
 
                     Text(car.description)
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(. white.opacity(0.8))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
                 }
@@ -652,25 +658,25 @@ private struct CarExpandedCardInline: View {
                     if car.isJailbreak {
                         StatCapsule(label: "Jailbreak", value: "", tint: .purple)
                     } else if car.stage == 0 {
-                        StatCapsule(label: "Stock", value: "", tint: .gray)
+                        StatCapsule(label:  "Stock", value: "", tint: .gray)
                     } else {
-                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
+                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for:  car.stage))
                     }
                     StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
                 VStack(spacing: 10) {
                     StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
-                    StatRow(name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"), value: Double(car.isJailbreak ? 1 : car.stage), max: car.isJailbreak ? 1 : 3, accent: car.isJailbreak ? .purple : stageTint(for: car.stage))
+                    StatRow(name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ?  "Stock" : "Stage"), value: Double(car.isJailbreak ? 1 : car.stage), max: car.isJailbreak ? 1 : 3, accent: car.isJailbreak ? . purple : stageTint(for: car.stage))
                 }
                 .padding(14)
                 .background(
-                    RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04))
+                    RoundedRectangle(cornerRadius:  16).fill(Color.white.opacity(0.04))
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
                                 .stroke(
                                     LinearGradient(
-                                        colors: [.white.opacity(0.25), .white.opacity(0.05)],
+                                        colors: [. white.opacity(0.25), .white.opacity(0.05)],
                                         startPoint: .topLeading, endPoint: .bottomTrailing
                                     ),
                                     lineWidth: 1
@@ -712,14 +718,14 @@ private struct CarExpandedCardInline: View {
                 }
         )
         #if os(iOS)
-        .hoverEffect(.lift)
+        .hoverEffect(. lift)
         #endif
     }
 }
 
-// MARK: - Reusable Components
+// MARK:  - Reusable Components
 private struct Badge: View {
-    let text: String
+    let text:  String
     let color: Color
 
     var body: some View {
@@ -733,24 +739,24 @@ private struct Badge: View {
             .overlay(
                 Capsule().stroke(color.opacity(0.6), lineWidth: 1)
             )
-            .foregroundStyle(.white)
+            .foregroundStyle(. white)
     }
 }
 
 private struct StatRow: View {
     let name: String
     let value: Double
-    let max: Double
+    let max:  Double
     let accent: Color
 
-    @State private var animate: Bool = false
+    @State private var animate:  Bool = false
 
     var body: some View {
         VStack(spacing: 4) {
             HStack {
                 Text(name)
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(. white.opacity(0.8))
                 Spacer()
                 Text(displayValue)
                     .font(.caption2.weight(.semibold))
@@ -760,9 +766,9 @@ private struct StatRow: View {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color.white.opacity(0.08))
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(LinearGradient(colors: [accent.opacity(0.9), accent.opacity(0.6)], startPoint: .leading, endPoint: .trailing))
+                    . fill(LinearGradient(colors: [accent.opacity(0.9), accent.opacity(0.6)], startPoint: .leading, endPoint: .trailing))
                     .frame(width: animate ? barWidth : 0)
-                    .shadow(color: accent.opacity(0.4), radius: 6, x: 0, y: 2)
+                    .shadow(color: accent.opacity(0.4), radius: 6, x: 0, y:  2)
             }
             .frame(height: 10)
             .onAppear {
@@ -778,7 +784,7 @@ private struct StatRow: View {
             let clamped = Swift.max(0, Swift.min(Int(value), 3))
             return Double(clamped) / 3.0
         }
-        return max == 0 ? 0 : Swift.min(value / max, 1)
+        return max == 0 ? 0 :  Swift.min(value / max, 1)
     }
     private var barWidth: CGFloat { CGFloat(normalized) * 220 }
     private var displayValue: String {
@@ -801,7 +807,7 @@ private struct CommunityLightbox: View {
     @Environment(\.dismiss) private var dismiss
     @State private var index: Int
     @State private var liked: Set<UUID> = []
-    @State private var showHeartBurst: Bool = false
+    @State private var showHeartBurst:  Bool = false
     @State private var heartScale: CGFloat = 0.6
     @State private var heartOpacity: Double = 0.0
 
@@ -829,7 +835,7 @@ private struct CommunityLightbox: View {
                                 .transition(.opacity)
                             // Double tap gesture
                                 .contentShape(Rectangle())
-                                .onTapGesture(count: 2) {
+                                . onTapGesture(count: 2) {
                                     let gen = UIImpactFeedbackGenerator(style: .light)
                                     gen.impactOccurred()
                                     toggleLike()
@@ -851,7 +857,7 @@ private struct CommunityLightbox: View {
                                     }
                                 }
 
-                            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
+                            LinearGradient(colors: [. clear, .black.opacity(0.6)], startPoint: .top, endPoint: .bottom)
                                 .frame(height: 220)
                                 .ignoresSafeArea(edges: .bottom)
 
@@ -861,7 +867,7 @@ private struct CommunityLightbox: View {
                                     .font(.headline)
                                     .foregroundStyle(.white)
                                 Text(cars[i].description)
-                                    .font(.caption)
+                                    .font(. caption)
                                     .foregroundStyle(.white.opacity(0.85))
                                     .lineLimit(2)
                                 HStack(spacing: 10) {
@@ -870,7 +876,7 @@ private struct CommunityLightbox: View {
                                     } else if cars[i].stage == 0 {
                                         StatCapsule(label: "Stock", value: "", tint: .gray)
                                     } else {
-                                        StatCapsule(label: "Stage", value: "\(cars[i].stage)", tint: stageTint(for: cars[i].stage))
+                                        StatCapsule(label:  "Stage", value: "\(cars[i].stage)", tint: stageTint(for: cars[i].stage))
                                     }
                                     StatCapsule(label: "HP", value: "\(cars[i].horsepower)", tint: .cyan)
                                 }
@@ -883,7 +889,7 @@ private struct CommunityLightbox: View {
                     .tag(i)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            .tabViewStyle(. page(indexDisplayMode: .never))
 
             // Heart burst overlay
             if showHeartBurst {
@@ -893,7 +899,7 @@ private struct CommunityLightbox: View {
                     .shadow(color: Color("EmpireMint").opacity(0.6), radius: 12)
                     .scaleEffect(heartScale)
                     .opacity(heartOpacity)
-                    .transition(.scale.combined(with: .opacity))
+                    . transition(.scale.combined(with: .opacity))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                     .ignoresSafeArea()
                     .zIndex(3)
@@ -906,7 +912,7 @@ private struct CommunityLightbox: View {
                         let gen = UIImpactFeedbackGenerator(style: .light)
                         gen.impactOccurred()
                         onClose()
-                    } label: {
+                    } label:  {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
@@ -921,8 +927,8 @@ private struct CommunityLightbox: View {
                             gen.impactOccurred()
                             toggleLike()
                         } label: {
-                            Image(systemName: isLiked ? "heart.fill" : "heart")
-                                .foregroundStyle(isLiked ? Color("EmpireMint") : .white)
+                            Image(systemName: isLiked ?  "heart.fill" : "heart")
+                                .foregroundStyle(isLiked ?  Color("EmpireMint") : . white)
                                 .padding(10)
                                 .background(Circle().fill(.ultraThinMaterial))
                                 .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
@@ -1007,14 +1013,14 @@ private struct LiteCommunityExpandedCard: View {
                         .stroke(
                             LinearGradient(
                                 colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
+                                startPoint:  .topLeading, endPoint: .bottomTrailing
                             ),
                             lineWidth: 1
                         )
                         .blendMode(.screen)
                 )
                 .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(reduceMotion ? 0 : 1))
-                .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y: 18)
+                .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y:  18)
 
             GeometryReader { proxy in
                 let size = proxy.size
@@ -1026,7 +1032,7 @@ private struct LiteCommunityExpandedCard: View {
                         .opacity(0.5)
                         .accessibilityHidden(true)
                         .clipped()
-                        .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 : tilt.height * 0.04)
+                        .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 :  tilt.height * 0.04)
 
                     LinearGradient(
                         colors: [
@@ -1034,8 +1040,8 @@ private struct LiteCommunityExpandedCard: View {
                             Color.black.opacity(0.12),
                             Color.black.opacity(0.32)
                         ],
-                        startPoint: .top,
-                        endPoint: .bottom
+                        startPoint:  .top,
+                        endPoint: . bottom
                     )
                 }
                 .mask(RoundedRectangle(cornerRadius: 28, style: .continuous))
@@ -1064,29 +1070,29 @@ private struct LiteCommunityExpandedCard: View {
                 }
                 .padding(.top, 4)
 
-                HStack(spacing: 10) {
+                HStack(spacing:  10) {
                     if car.isJailbreak {
                         StatCapsule(label: "Jailbreak", value: "", tint: .purple)
                     } else if car.stage == 0 {
-                        StatCapsule(label: "Stock", value: "", tint: .gray)
+                        StatCapsule(label: "Stock", value: "", tint: . gray)
                     } else {
                         StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
                     }
-                    StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                    StatCapsule(label:  "HP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
                 VStack(spacing: 10) {
                     StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
-                    StatRow(name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"), value: Double(car.isJailbreak ? 1 : car.stage), max: car.isJailbreak ? 1 : 3, accent: car.isJailbreak ? .purple : stageTint(for: car.stage))
+                    StatRow(name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ?  "Stock" : "Stage"), value: Double(car.isJailbreak ? 1 : car.stage), max: car.isJailbreak ? 1 : 3, accent: car.isJailbreak ? .purple : stageTint(for: car.stage))
                 }
                 .padding(14)
                 .background(
                     RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04))
-                        .overlay(
+                        . overlay(
                             RoundedRectangle(cornerRadius: 16)
                                 .stroke(
                                     LinearGradient(
-                                        colors: [.white.opacity(0.25), .white.opacity(0.05)],
+                                        colors: [. white.opacity(0.25), .white.opacity(0.05)],
                                         startPoint: .topLeading, endPoint: .bottomTrailing
                                     ),
                                     lineWidth: 1
@@ -1113,11 +1119,11 @@ private struct LiteCommunityExpandedCard: View {
             // Heart burst overlay on like
             if showHeartBurst {
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 96))
+                    . font(.system(size: 96))
                     .foregroundStyle(Color("EmpireMint"))
                     .shadow(color: Color("EmpireMint").opacity(0.6), radius: 12)
-                    .transition(.scale.combined(with: .opacity))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    . transition(.scale.combined(with: .opacity))
+                    .frame(maxWidth: .infinity, maxHeight: . infinity, alignment: .center)
                     .allowsHitTesting(false)
             }
         }
@@ -1128,10 +1134,10 @@ private struct LiteCommunityExpandedCard: View {
                     let w = Swift.max(-40, Swift.min(40, value.translation.width))
                     let h = Swift.max(-40, Swift.min(40, value.translation.height))
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                        tilt = CGSize(width: w, height: h)
+                        tilt = CGSize(width:  w, height: h)
                     }
                 }
-                .onEnded { _ in
+                . onEnded { _ in
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
                         tilt = .zero
                     }
@@ -1170,7 +1176,6 @@ struct CarsView_Previews: PreviewProvider {
     }
 }
 
-
 // MARK: - Saved Photo Loader (per-user, per-car)
 private func loadSavedPhotoData(for id: UUID) -> Data? {
     let currentUserId = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
@@ -1184,4 +1189,3 @@ private func loadSavedPhotoData(for id: UUID) -> Data? {
     }
     return nil
 }
-
