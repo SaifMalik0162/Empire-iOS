@@ -25,7 +25,12 @@ struct VehicleEditorView: View {
 
     @State private var selectedModIDs: Set<UUID> = []
     @State private var selectedPresetMods: Set<String> = []
-    @State private var showStageSuggestion: Bool = true
+    @State private var showStageSuggestion: Bool = false
+
+    private static let presetSet: Set<String> = [
+        "Tune", "Intake", "Headers", "Exhaust", "Forced Induction",
+        "Motor Swap", "Drivetrain Swap", "Transmission Upgrades", "Built Motor"
+    ]
 
     init(car: Binding<Car>, onSave: @escaping (Car) -> Void) {
         self._car = car
@@ -47,7 +52,7 @@ struct VehicleEditorView: View {
         _tempMods = State(initialValue: baseCar.mods)
 
         // Preselect presets based on saved mods titles and select all existing mod pills
-        let presetSet: Set<String> = Set(["Tune", "Intake", "Headers", "Exhaust", "Forced Induction", "Motor Swap", "Drivetrain Swap", "Transmission Upgrades", "Built Motor"]) 
+        let presetSet = Self.presetSet
         let titles = Set(baseCar.mods.map { $0.title })
         let intersecting = titles.intersection(presetSet)
         _selectedPresetMods = State(initialValue: intersecting)
@@ -147,7 +152,7 @@ struct VehicleEditorView: View {
                             QuickAddModsRow(selectedPresets: $selectedPresetMods)
                             let modGridColumns: [GridItem] = [GridItem(.adaptive(minimum: 140), spacing: 8)]
                             LazyVGrid(columns: modGridColumns, spacing: 8) {
-                                ForEach(Array(tempMods.enumerated()), id: \.element.id) { index, item in
+                                ForEach(Array(tempMods.enumerated()).filter { !Self.presetSet.contains($0.element.title) }, id: \.element.id) { index, item in
                                     let id = item.id
                                     ModPillView(
                                         title: item.title.isEmpty ? "Untitled Mod" : item.title,
@@ -220,6 +225,20 @@ struct VehicleEditorView: View {
                         }
                     }
                 )
+                .onChange(of: selectedPresetMods) { _, _ in
+                    let selectedPresetCount = selectedPresetMods.count
+                    let selectedModCount = tempMods.filter { selectedModIDs.contains($0.id) && !Self.presetSet.contains($0.title) }.count
+                    let totalSelectedCount = selectedPresetCount + selectedModCount
+                    let hasTuneAny = selectedPresetMods.contains { $0.localizedCaseInsensitiveContains("tune") } || tempMods.contains { mod in selectedModIDs.contains(mod.id) && mod.title.localizedCaseInsensitiveContains("tune") }
+                    if totalSelectedCount >= 3 && hasTuneAny { showStageSuggestion = true }
+                }
+                .onChange(of: selectedModIDs) { _, _ in
+                    let selectedPresetCount = selectedPresetMods.count
+                    let selectedModCount = tempMods.filter { selectedModIDs.contains($0.id) && !Self.presetSet.contains($0.title) }.count
+                    let totalSelectedCount = selectedPresetCount + selectedModCount
+                    let hasTuneAny = selectedPresetMods.contains { $0.localizedCaseInsensitiveContains("tune") } || tempMods.contains { mod in selectedModIDs.contains(mod.id) && mod.title.localizedCaseInsensitiveContains("tune") }
+                    if totalSelectedCount >= 3 && hasTuneAny { showStageSuggestion = true }
+                }
             }
             .navigationTitle("Edit Vehicle")
             .navigationBarTitleDisplayMode(.inline)
@@ -252,17 +271,23 @@ struct VehicleEditorView: View {
         updated.stage = tempStage
         updated.specs = tempSpecs
 
-        // Ensure all selected preset pills exist as ModItem entries so they persist
-        let existingTitles = Set(tempMods.map { $0.title })
-        let presetsToAdd = selectedPresetMods.subtracting(existingTitles)
-        if !presetsToAdd.isEmpty {
-            let newItems = presetsToAdd.map { title in
+        updated.mods = tempMods
+
+        // Merge selected preset pills into saved mods without duplicating in the editor grid
+        let existingTitles = Set(updated.mods.map { $0.title })
+        let presetsToPersist = selectedPresetMods.subtracting(existingTitles)
+        if !presetsToPersist.isEmpty {
+            let newPresetItems = presetsToPersist.map { title in
                 ModItem(title: title, notes: "", isMajor: true)
             }
-            tempMods.append(contentsOf: newItems)
+            updated.mods.append(contentsOf: newPresetItems)
         }
 
-        updated.mods = tempMods
+        // Remove any preset mods that are no longer selected
+        updated.mods.removeAll { item in
+            Self.presetSet.contains(item.title) && !selectedPresetMods.contains(item.title)
+        }
+
         updated.isJailbreak = tempIsJailbreak
         updated.vehicleClass = tempVehicleClass
         // Persist per-user so edits survive relaunch.
@@ -271,6 +296,7 @@ struct VehicleEditorView: View {
             Self.savePhotoData(data, for: updated.id, userKey: userStorageKey)
         }
         onSave(updated)
+        showStageSuggestion = false
         dismiss()
     }
 
