@@ -28,8 +28,8 @@ final class UserVehiclesViewModel: ObservableObject {
             print("🚗 Creating car for user ID: \(userId)")
             
             let backendCar = try await APIService.shared.createCar(
-                make:  "Your",
-                model: "Car",      
+                make:  "Your",      // ← FIXED: Real value!
+                model: "Car",      // ← FIXED: Simple default
                 year: 2024,
                 color: nil,
                 horsepower: 0,
@@ -123,8 +123,8 @@ final class UserVehiclesViewModel: ObservableObject {
             print("🚗 Creating car for user ID: \(userId)")
             
             let backendCar = try await APIService.shared.createCar(
-                make: "Your",      // ← FIXED: Real value!
-                model: "Car",      // ← FIXED: Simple default
+                make: "Your",
+                model: "Car",
                 year: 2024,
                 color: nil,
                 horsepower: 0,
