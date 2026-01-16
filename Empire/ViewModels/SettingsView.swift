@@ -2,9 +2,9 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject var authViewModel: AuthViewModel
     @State private var enableHaptics: Bool = true
-    @State private var darkMode: Bool = true
     @State private var notificationsEnabled: Bool = true
     @State private var reduceMotion: Bool = false
     @State private var showManageAccount: Bool = false
@@ -21,19 +21,44 @@ struct SettingsView: View {
                     VStack(spacing: 18) {
                         settingsSection(title: "Account") {
                             SettingsGlassCard {
-                                GlassRow(icon: "person.crop.circle", title: displayName, subtitle: "Signed in")
-                            }
-                            SettingsGlassCard {
-                                GlassButtonRow(icon: "person.crop.circle.badge.gearshape", title: "Manage Account") {
-                                    let gen = UIImpactFeedbackGenerator(style: .light)
-                                    gen.impactOccurred()
-                                    showManageAccount = true
+                                HStack(spacing: 12) {
+                                    // Left: account info row visuals
+                                    HStack(spacing: 12) {
+                                        Circle()
+                                            .fill(.ultraThinMaterial)
+                                            .frame(width: 36, height: 36)
+                                            .overlay(Image(systemName: "person.crop.circle").foregroundStyle(Color("EmpireMint")))
+                                            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(displayName)
+                                                .foregroundStyle(.white)
+                                                .font(.subheadline.weight(.semibold))
+                                            Text("Signed in")
+                                                .foregroundStyle(.white.opacity(0.7))
+                                                .font(.caption)
+                                        }
+                                    }
+                                    Spacer()
+                                    // Right: Manage Account action
+                                    Button {
+                                        let gen = UIImpactFeedbackGenerator(style: .light)
+                                        gen.impactOccurred()
+                                        showManageAccount = true
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Text("Manage Account")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.white)
+                                            Image(systemName: "chevron.right")
+                                                .foregroundStyle(.white.opacity(0.6))
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Capsule().fill(.ultraThinMaterial))
+                                        .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                            }
-                        }
-                        settingsSection(title: "Appearance") {
-                            SettingsGlassCard {
-                                ToggleRow(icon: "moon.fill", title: "Dark Mode", isOn: $darkMode)
                             }
                         }
                         settingsSection(title: "Notifications") {
@@ -43,10 +68,16 @@ struct SettingsView: View {
                         }
                         settingsSection(title: "About") {
                             SettingsGlassCard {
-                                GlassRow(icon: "info.circle.fill", title: "Version", subtitle: appVersion)
+                                GlassButtonRow(icon: "link", title: "Website", subtitle: "empireontario.shop", trailingAccessory: (text: "Open", systemImage: "")) {
+                                    let gen = UIImpactFeedbackGenerator(style: .light)
+                                    gen.impactOccurred()
+                                    if let url = URL(string: "https://empireontario.shop/") {
+                                        openURL(url)
+                                    }
+                                }
                             }
                             SettingsGlassCard {
-                                GlassRow(icon: "link", title: "Website", subtitle: "empire.example")
+                                GlassRow(icon: "info.circle.fill", title: "Version", subtitle: appVersion)
                             }
                         }
                         Spacer(minLength: 24)
@@ -151,7 +182,9 @@ private struct GlassRow: View {
 private struct GlassButtonRow: View {
     let icon: String
     let title: String
+    var subtitle: String? = nil
     var destructive: Bool = false
+    var trailingAccessory: (text: String, systemImage: String)? = nil
     var action: () -> Void
 
     var body: some View {
@@ -162,12 +195,35 @@ private struct GlassButtonRow: View {
                     .frame(width: 36, height: 36)
                     .overlay(Image(systemName: icon).foregroundStyle(destructive ? .red : Color("EmpireMint")))
                     .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
-                Text(title)
-                    .foregroundStyle(destructive ? .red : .white)
-                    .font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .foregroundStyle(destructive ? .red : .white)
+                        .font(.subheadline.weight(.semibold))
+                    if let subtitle {
+                        Text(subtitle)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .font(.caption)
+                    }
+                }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.white.opacity(0.5))
+                if let trailingAccessory {
+                    HStack(spacing: 6) {
+                        Text(trailingAccessory.text)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.9))
+                        if !trailingAccessory.systemImage.isEmpty {
+                            Image(systemName: trailingAccessory.systemImage)
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(.ultraThinMaterial))
+                    .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+                } else {
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.white.opacity(0.5))
+                }
             }
             .padding(10)
             .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))

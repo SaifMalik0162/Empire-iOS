@@ -15,7 +15,6 @@ struct ManageAccountView: View {
 
                 ScrollView {
                     VStack(spacing: 18) {
-                        headerCard
                         SettingsGlassCard {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Account Info")
@@ -106,41 +105,6 @@ struct ManageAccountView: View {
     private var emailDisplay: String {
         if let u = authViewModel.currentUser, !u.email.isEmpty { return u.email }
         return ""
-    }
-
-    private var headerCard: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                        .blendMode(.screen)
-                )
-                .shadow(color: Color("EmpireMint").opacity(0.25), radius: 18, y: 8)
-                .overlay(ShimmerMask().clipShape(RoundedRectangle(cornerRadius: 24)).opacity(0.45))
-            HStack(spacing: 14) {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 56, height: 56)
-                    .overlay(
-                        Image(systemName: "person.crop.circle.fill")
-                            .foregroundStyle(Color("EmpireMint"))
-                            .font(.system(size: 22, weight: .semibold))
-                    )
-                    .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Account")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    Text("Manage your profile")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-                Spacer()
-            }
-            .padding(16)
-        }
     }
 
     private var avatarView: some View {
