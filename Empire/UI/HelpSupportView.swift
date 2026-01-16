@@ -16,15 +16,21 @@ struct HelpSupportView: View {
                     VStack(spacing: 18) {
                         section(title: "Quick Help") {
                             HelpGlassCard {
-                                HelpRow(icon: "questionmark.circle.fill", title: "FAQ") {
-                                    haptic()
-                                    // Placeholder action: show FAQ or open link
-                                }
-                            }
-                            HelpGlassCard {
-                                HelpRow(icon: "envelope.badge", title: "Contact & Feedback") {
-                                    haptic()
-                                    // Placeholder: open a unified contact/feedback form or mail composer
+                                VStack(spacing: 0) {
+                                    HelpRow(icon: "person.2.fill", title: "Contact Support") {
+                                        haptic()
+                                        // Placeholder: open support contact form or mail composer
+                                    }
+                                    Divider().background(Color.white.opacity(0.1))
+                                    HelpRow(icon: "bubble.left.and.bubble.right.fill", title: "Submit Feedback") {
+                                        haptic()
+                                        // Placeholder: open feedback form
+                                    }
+                                    Divider().background(Color.white.opacity(0.1))
+                                    HelpRow(icon: "ladybug.fill", title: "Report a Bug") {
+                                        haptic()
+                                        // Placeholder: open bug report form or issue tracker
+                                    }
                                 }
                             }
                         }
@@ -62,6 +68,13 @@ struct HelpSupportView: View {
                                 .padding(10)
                                 .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(LinearGradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+                            }
+
+                            HelpGlassCard {
+                                HelpRow(icon: "questionmark.circle.fill", title: "FAQ") {
+                                    haptic()
+                                    // Placeholder action: show FAQ or open link
+                                }
                             }
 
                             HelpGlassCard {
