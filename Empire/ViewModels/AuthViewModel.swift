@@ -18,6 +18,23 @@ import Combine
     
     private let networkManager = NetworkManager.shared
     
+    private let userDefaultsUserKey = "currentUser"
+
+    private func persistCurrentUser(_ user: BackendUser?) {
+        if let user {
+            if let data = try? JSONEncoder().encode(user) {
+                UserDefaults.standard.set(data, forKey: userDefaultsUserKey)
+            }
+        } else {
+            UserDefaults.standard.removeObject(forKey: userDefaultsUserKey)
+        }
+    }
+
+    private func restoreCurrentUser() -> BackendUser? {
+        guard let data = UserDefaults.standard.data(forKey: userDefaultsUserKey) else { return nil }
+        return try? JSONDecoder().decode(BackendUser.self, from: data)
+    }
+    
     init() {
         print("[AuthVM] init: instanceID=\(instanceID)")
         checkAuthStatus()
@@ -27,17 +44,27 @@ import Combine
         print("[AuthVM] checkAuthStatus() start: isLoading(before)=\(isLoading)")
         isLoading = true
         print("[AuthVM] checkAuthStatus() set isLoading=true")
-        
+
         print("[AuthVM] checkAuthStatus() evaluating token presence...")
         if networkManager.isAuthenticated {
             print("[AuthVM] ✅ Found stored token, user is authenticated")
             isAuthenticated = true
-            // TODO: Optionally fetch user profile from backend
+
+            // Try to restore a previously persisted user first
+            if let restored = restoreCurrentUser() {
+                self.currentUser = restored
+                UserDefaults.standard.set(restored.id, forKey: "currentUserId")
+                print("[AuthVM] Restored user from disk: \(restored.username)")
+                // TODO: When APIService exposes a current-user endpoint, refresh profile here.
+            }
         } else {
             print("[AuthVM] ❌ No token found, user needs to log in")
             isAuthenticated = false
+            self.currentUser = nil
+            self.persistCurrentUser(nil)
+            UserDefaults.standard.removeObject(forKey: "currentUserId")
         }
-        
+
         isLoading = false
         print("[AuthVM] checkAuthStatus() end: isAuthenticated=\(isAuthenticated), isLoading=\(isLoading)")
     }
@@ -49,6 +76,10 @@ import Combine
             if response.success {
                 self.currentUser = response.user
                 self.isAuthenticated = true
+                if let user = response.user {
+                    UserDefaults.standard.set(user.id, forKey: "currentUserId")
+                    self.persistCurrentUser(user)
+                }
                 print("[AuthVM] ✅ User logged in:  \(response.user?.username ?? "unknown")")
             }
         }
@@ -70,6 +101,10 @@ import Combine
             if response.success {
                 self.currentUser = response.user
                 self.isAuthenticated = true
+                if let user = response.user {
+                    UserDefaults.standard.set(user.id, forKey: "currentUserId")
+                    self.persistCurrentUser(user)
+                }
                 print("[AuthVM] ✅ User registered: \(response.user?.username ?? "unknown")")
             }
         }
@@ -86,6 +121,8 @@ import Combine
         self.isAuthenticated = false
         self.shouldPromptAddVehicle = false
         self.isLoading = false
+        self.persistCurrentUser(nil)
+        UserDefaults.standard.removeObject(forKey: "currentUserId")
         print("[AuthVM] logout: posting empireRequestDismiss notification")
         NotificationCenter.default.post(name: .empireRequestDismiss, object: nil)
         print("[AuthVM] logout: invoking checkAuthStatus()")
@@ -104,4 +141,3 @@ import Combine
 extension Notification.Name {
     static let empireRequestDismiss = Notification.Name("EmpireRequestDismiss")
 }
-
