@@ -46,9 +46,21 @@
 		7080848C2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
 		7080848D2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
 		7080848E2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
+		7089A7C32F1C280900EDB4D5 /* RewardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C22F1C280900EDB4D5 /* RewardsView.swift */; };
+		7089A7C42F1C280900EDB4D5 /* RewardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C22F1C280900EDB4D5 /* RewardsView.swift */; };
+		7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C22F1C280900EDB4D5 /* RewardsView.swift */; };
+		7089A7C72F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C62F1C2B5800EDB4D5 /* RecentBuyView.swift */; };
+		7089A7C82F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C62F1C2B5800EDB4D5 /* RecentBuyView.swift */; };
+		7089A7C92F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C62F1C2B5800EDB4D5 /* RecentBuyView.swift */; };
+		7089A7CB2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7CA2F1C2DD800EDB4D5 /* MerchCatalog.swift */; };
+		7089A7CC2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7CA2F1C2DD800EDB4D5 /* MerchCatalog.swift */; };
+		7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7CA2F1C2DD800EDB4D5 /* MerchCatalog.swift */; };
 		7092F00E2F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
 		7092F00F2F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
 		7092F0102F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
+		709FF7F42F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
+		709FF7F52F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
+		709FF7F62F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
 		70A017032F0DF49000A084C2 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 70A017012F0DF49000A084C2 /* Info.plist */; };
 		70A017042F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
 		70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
@@ -111,6 +123,9 @@
 		70A2E4062F10ABDA004B950D /* EmpireLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */; };
 		70A2E4072F10ABDA004B950D /* EmpireLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */; };
 		70A2E4082F10ABDA004B950D /* EmpireLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */; };
+		70A6A7522F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
+		70A6A7532F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
+		70A6A7542F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
 		70B0CF572F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
 		70B0CF582F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
 		70B0CF592F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
@@ -183,7 +198,11 @@
 		704E4BA32F11EE2C00AB0A5D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		704E4BA52F11EE2C00AB0A5D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		7080848B2F197D1B0035A23E /* HelpSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpSupportView.swift; sourceTree = "<group>"; };
+		7089A7C22F1C280900EDB4D5 /* RewardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardsView.swift; sourceTree = "<group>"; };
+		7089A7C62F1C2B5800EDB4D5 /* RecentBuyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentBuyView.swift; sourceTree = "<group>"; };
+		7089A7CA2F1C2DD800EDB4D5 /* MerchCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchCatalog.swift; sourceTree = "<group>"; };
 		7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "empire 360.mp4"; sourceTree = "<group>"; };
+		709FF7F32F1AF32800309115 /* VIPMembershipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VIPMembershipView.swift; sourceTree = "<group>"; };
 		70A016E92F0DF49000A084C2 /* EmpireApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireApp.swift; sourceTree = "<group>"; };
 		70A016EC2F0DF49000A084C2 /* CarCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarCardView.swift; sourceTree = "<group>"; };
 		70A016ED2F0DF49000A084C2 /* CarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarsView.swift; sourceTree = "<group>"; };
@@ -205,6 +224,7 @@
 		70A017002F0DF49000A084C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		70A017012F0DF49000A084C2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireLogoView.swift; sourceTree = "<group>"; };
+		70A6A7512F1ECCDD00483418 /* TopToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopToast.swift; sourceTree = "<group>"; };
 		70B0CF552F10634F003FCD20 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		70B0CF602F1064D0003FCD20 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		70B0CF642F1067F0003FCD20 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
@@ -347,6 +367,11 @@
 				7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */,
 				7020AB8F2F12EECA0082F480 /* CartView.swift */,
 				7080848B2F197D1B0035A23E /* HelpSupportView.swift */,
+				709FF7F32F1AF32800309115 /* VIPMembershipView.swift */,
+				7089A7C22F1C280900EDB4D5 /* RewardsView.swift */,
+				7089A7C62F1C2B5800EDB4D5 /* RecentBuyView.swift */,
+				7089A7CA2F1C2DD800EDB4D5 /* MerchCatalog.swift */,
+				70A6A7512F1ECCDD00483418 /* TopToast.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -549,6 +574,7 @@
 				70B0CF6A2F106908003FCD20 /* EmpireTheme.swift in Sources */,
 				70B0CF672F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
 				704251982F13397100322849 /* BackendModels.swift in Sources */,
+				7089A7CB2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				704251992F13397100322849 /* APIService.swift in Sources */,
 				7042519A2F13397100322849 /* NetworkManager.swift in Sources */,
 				7042519B2F13397100322849 /* APIConfig.swift in Sources */,
@@ -557,11 +583,13 @@
 				70A0171E2F0DF49000A084C2 /* HomeView.swift in Sources */,
 				70A0171F2F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
 				70A017202F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
+				709FF7F42F1AF32900309115 /* VIPMembershipView.swift in Sources */,
 				704E4B922F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
 				70A017212F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
 				70DF41712F1972590034C5FB /* ManageAccountView.swift in Sources */,
 				70B0CF6D2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
 				70A017232F0DF49000A084C2 /* Models.swift in Sources */,
+				7089A7C82F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
 				70A017242F0DF49000A084C2 /* CarCardView.swift in Sources */,
 				70A017252F0DF49000A084C2 /* CarsView.swift in Sources */,
 				70A017262F0DF49000A084C2 /* EmpireApp.swift in Sources */,
@@ -570,8 +598,10 @@
 				70A017282F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
 				704251B32F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
 				704251AC2F1339BA00322849 /* AuthViewModel.swift in Sources */,
+				7089A7C42F1C280900EDB4D5 /* RewardsView.swift in Sources */,
 				704E4B8F2F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				70A017292F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
+				70A6A7532F1ECCDE00483418 /* TopToast.swift in Sources */,
 				70A0172A2F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				70A0172B2F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */,
@@ -599,10 +629,14 @@
 				7042519F2F13397100322849 /* APIConfig.swift in Sources */,
 				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
 				7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */,
+				7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
 				70DF416D2F196E930034C5FB /* SettingsView.swift in Sources */,
+				7089A7C32F1C280900EDB4D5 /* RewardsView.swift in Sources */,
 				704251AB2F1339BA00322849 /* AuthViewModel.swift in Sources */,
 				70A0170A2F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
+				709FF7F52F1AF32900309115 /* VIPMembershipView.swift in Sources */,
+				70A6A7542F1ECCDE00483418 /* TopToast.swift in Sources */,
 				70A0170B2F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
 				704E4B932F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
 				70A0170D2F0DF49000A084C2 /* Models.swift in Sources */,
@@ -621,6 +655,7 @@
 				70A017122F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
 				70A017132F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
 				70A017142F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
+				7089A7C92F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
 				70A017152F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				70A017162F0DF49000A084C2 /* MerchView.swift in Sources */,
 				70A017172F0DF49000A084C2 /* ProfileView.swift in Sources */,
@@ -641,6 +676,7 @@
 				704E4B902F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
 				7020AB952F12EEFD0082F480 /* CartView.swift in Sources */,
+				7089A7CC2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				7020AB962F12EEFD0082F480 /* Cart.swift in Sources */,
 				70A017342F0DF49000A084C2 /* HomeView.swift in Sources */,
 				704251AD2F1339BA00322849 /* AuthViewModel.swift in Sources */,
@@ -653,6 +689,7 @@
 				70A0173B2F0DF49000A084C2 /* CarsView.swift in Sources */,
 				70A0173C2F0DF49000A084C2 /* EmpireApp.swift in Sources */,
 				70A0173D2F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
+				709FF7F62F1AF32900309115 /* VIPMembershipView.swift in Sources */,
 				70B0CF652F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
 				70E699D62F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
 				70A0173E2F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
@@ -662,11 +699,14 @@
 				70A017402F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				70B0CF692F106908003FCD20 /* EmpireTheme.swift in Sources */,
 				70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */,
+				7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */,
 				70B0CF612F1064D0003FCD20 /* SignUpView.swift in Sources */,
 				70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				704251B52F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
+				7089A7C72F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
 				7080848E2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
 				70B0CF592F10646D003FCD20 /* LoginView.swift in Sources */,
+				70A6A7522F1ECCDE00483418 /* TopToast.swift in Sources */,
 				70DF41702F1972590034C5FB /* ManageAccountView.swift in Sources */,
 				70A017422F0DF49000A084C2 /* MerchView.swift in Sources */,
 				70A017432F0DF49000A084C2 /* ProfileView.swift in Sources */,
@@ -822,7 +862,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 46;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -859,7 +899,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 46;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
