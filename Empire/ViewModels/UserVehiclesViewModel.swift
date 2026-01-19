@@ -41,7 +41,7 @@ final class UserVehiclesViewModel: ObservableObject {
             
             let newCar = Car(
                 backendId: backendCar.id,
-                name: "\(backendCar.make) \(backendCar.model)",  // ← FIXED: Use both!
+                name: backendCar.model, 
                 description: "Tap to edit details",
                 imageName:  backendCar.imageUrl ??  "car_placeholder",
                 horsepower: backendCar.horsepower ?? 0,
