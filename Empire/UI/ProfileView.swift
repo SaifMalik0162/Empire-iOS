@@ -7,6 +7,9 @@ struct ProfileView: View {
     @State private var showSettings = false
     @State private var showHelpSupport: Bool = false
     @State private var showManageAccount: Bool = false
+    @State private var showVIP: Bool = false
+    @State private var showRewards: Bool = false
+    @State private var showRecentBuy: Bool = false
     @State private var animateGradient = false
     
     @State private var username: String = ""
@@ -195,7 +198,7 @@ struct ProfileView: View {
                     // MARK: - Featured
                     HStack(spacing: 14) {
                         ForEach(Array(featuredCards.enumerated()), id: \.offset) { idx, card in
-                            ZStack {
+                            let cardView = ZStack {
                                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                                     .fill(.ultraThinMaterial)
                                     .overlay(
@@ -225,6 +228,19 @@ struct ProfileView: View {
                                 }
                             }
                             .frame(width: 120, height: 55)
+
+                            if card == "VIP Perk" {
+                                Button { showVIP = true } label: { cardView }
+                                    .buttonStyle(.plain)
+                            } else if card == "Rewards" {
+                                Button { showRewards = true } label: { cardView }
+                                    .buttonStyle(.plain)
+                            } else if card == "Recent Buy" {
+                                Button { showRecentBuy = true } label: { cardView }
+                                    .buttonStyle(.plain)
+                            } else {
+                                cardView
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -415,6 +431,24 @@ struct ProfileView: View {
                     EmpireAddVehicleView(vm: vehiclesVM)
                         .preferredColorScheme(ColorScheme.dark)
                 }
+                .sheet(isPresented: $showVIP) {
+                    VIPMembershipView()
+                        .preferredColorScheme(.dark)
+                }
+                .sheet(isPresented: $showRewards) {
+                    RewardsView()
+                        .preferredColorScheme(.dark)
+                }
+                .sheet(isPresented: $showRecentBuy) {
+                    let recent = MerchCatalog.featured.first ?? MerchItem(name: "Empire Hoodie", price: "$78.00", imageName: "hoodiePlaceholder", category: .apparel)
+                    RecentBuyView(
+                        item: recent,
+                        variant: "Black / L",
+                        orderDate: "Jan 12, 2026",
+                        status: "Shipped"
+                    )
+                    .preferredColorScheme(.dark)
+                }
                 .onAppear {
                     Task { await vehiclesVM.loadVehicles() }
                 }
@@ -454,3 +488,4 @@ private struct ProfileChip: View {
             .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
     }
 }
+
