@@ -1,7 +1,10 @@
 import SwiftUI
+import Combine
 
 struct CartView: View {
     @EnvironmentObject private var cart: Cart
+    @State private var showToast: Bool = false
+    @State private var toastText: String = ""
     @State private var showingCheckoutAlert = false
     @State private var checkoutProvider: CheckoutProvider?
 
@@ -42,9 +45,19 @@ struct CartView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(cartItem.item.name)
                                         .font(.subheadline.bold())
-                                    Text(cartItem.item.price)
-                                        .font(.caption)
-                                        .foregroundStyle(Color("EmpireMint"))
+                                    HStack(spacing: 6) {
+                                        Text(cartItem.item.price)
+                                            .font(.caption)
+                                            .foregroundStyle(Color("EmpireMint"))
+                                        if let size = cartItem.selectedSize {
+                                            Text("•")
+                                                .font(.caption)
+                                                .foregroundStyle(.white.opacity(0.6))
+                                            Text("Size: \(size)")
+                                                .font(.caption)
+                                                .foregroundStyle(.white.opacity(0.8))
+                                        }
+                                    }
                                 }
                                 Spacer()
                                 Stepper(value: Binding(
@@ -112,6 +125,21 @@ struct CartView: View {
                 }
                 .padding(16)
                 .background(.ultraThinMaterial)
+            }
+        }
+        .overlay(alignment: .top) {
+            if showToast {
+                TopToast(text: toastText)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+                    .padding(.top, 8)
+            }
+        }
+        .onReceive(cart.$lastAddedItemName.compactMap { $0 }.removeDuplicates()) { name in
+            toastText = "Added \"\(name)\" to cart"
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) { showToast = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                withAnimation(.easeInOut(duration: 0.25)) { showToast = false }
             }
         }
         .navigationTitle("Cart")

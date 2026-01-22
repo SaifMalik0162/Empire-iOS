@@ -5,15 +5,17 @@ import SwiftUI
 struct CartItem: Identifiable, Equatable, Hashable {
     let id = UUID()
     let item: MerchItem
+    var selectedSize: String? = nil
     var quantity: Int
 
     static func == (lhs: CartItem, rhs: CartItem) -> Bool {
-        return lhs.id == rhs.id && lhs.item.id == rhs.item.id && lhs.quantity == rhs.quantity
+        return lhs.id == rhs.id && lhs.item.id == rhs.item.id && lhs.selectedSize == rhs.selectedSize && lhs.quantity == rhs.quantity
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(item.id)
+        hasher.combine(selectedSize)
         hasher.combine(quantity)
     }
 }
@@ -21,12 +23,20 @@ struct CartItem: Identifiable, Equatable, Hashable {
 @MainActor
 final class Cart: ObservableObject {
     @Published private(set) var items: [CartItem] = []
+    @Published var lastAddedItemName: String? = nil
+    private var toastClearTask: Task<Void, Never>? = nil
 
-    func add(_ item: MerchItem, quantity: Int = 1) {
-        if let idx = items.firstIndex(where: { $0.item.id == item.id }) {
+    func add(_ item: MerchItem, quantity: Int = 1, selectedSize: String? = nil) {
+        if let idx = items.firstIndex(where: { $0.item.id == item.id && $0.selectedSize == selectedSize }) {
             items[idx].quantity += quantity
         } else {
-            items.append(CartItem(item: item, quantity: quantity))
+            items.append(CartItem(item: item, selectedSize: selectedSize, quantity: quantity))
+        }
+        lastAddedItemName = item.name
+        toastClearTask?.cancel()
+        toastClearTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await MainActor.run { self?.lastAddedItemName = nil }
         }
     }
 
