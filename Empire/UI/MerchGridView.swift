@@ -1,9 +1,14 @@
 import SwiftUI
+import Combine
 
 struct MerchGridView: View {
     let title: String
     let items: [MerchItem]
     var categoryFilter: MerchCategory? = nil
+
+    @EnvironmentObject private var cart: Cart
+    @State private var showToast: Bool = false
+    @State private var toastText: String = ""
 
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -28,6 +33,21 @@ struct MerchGridView: View {
             LinearGradient(colors: [Color.black, Color.black.opacity(0.95)], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
         )
+        .overlay(alignment: .top) {
+            if showToast {
+                TopToast(text: toastText)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+                    .padding(.top, 8)
+            }
+        }
+        .onReceive(cart.$lastAddedItemName.compactMap { $0 }.removeDuplicates()) { name in
+            toastText = "Added \"\(name)\" to cart"
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) { showToast = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                withAnimation(.easeInOut(duration: 0.25)) { showToast = false }
+            }
+        }
     }
 }
 
@@ -102,4 +122,3 @@ private struct MerchGridCard: View {
         ])
     }
 }
-
