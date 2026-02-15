@@ -27,13 +27,14 @@ struct CarsView: View {
     
     @State private var showSpecsPopup: Bool = false
     @State private var showModsPopup: Bool = false
+    @State private var showExploreGallery: Bool = false
 
     var body: some View {
         ZStack {
             background
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 24) {
+                VStack(spacing: 12) {
                     if userVehiclesVM.vehicles.isEmpty {
                         Button {
                             if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
@@ -157,6 +158,10 @@ struct CarsView: View {
                 showLightbox = false
             }
         }
+        .sheet(isPresented: $showExploreGallery) {
+            ExploreGallerySheet(communityCars: communityCars, likedCommunity: $likedCommunity)
+                .preferredColorScheme(.dark)
+        }
         .sheet(isPresented: $showVehicleEditor) {
             if let idx = editingIndex, userVehiclesVM.vehicles.indices.contains(idx) {
                 VehicleEditorView(car: $userVehiclesVM.vehicles[idx]) { updated in
@@ -216,53 +221,77 @@ private extension CarsView {
     }
 
     var userCarousel: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 24) {
-                ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
-                    JiggleWrapper {
-                        LiquidGlassCarCard(car: userVehiclesVM.vehicles[idx], ns: ns)
-                            .frame(width: selectedCarIndex == idx ? 300 : 220,
-                                   height: selectedCarIndex == idx ? 380 : 250)
-                            .scaleEffect(selectedCarIndex == idx ? 1.04 : 1)
-                    } onLongPress: {
-                        editingIndex = idx
-                        showVehicleEditor = true
-                    } onTap: {
-                        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-                            selectedCarIndex = selectedCarIndex == idx ? nil : idx
-                            ripple = true
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            ripple = false
-                        }
-                        if let sel = selectedCarIndex, !userVehiclesVM.vehicles.indices.contains(sel) {
-                            selectedCarIndex = nil
+        VStack(alignment: .leading, spacing: 0) {
+            Text("My Garage")
+                .font(.title2.weight(.bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 24) {
+                    ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
+                        JiggleWrapper {
+                            LiquidGlassCarCard(car: userVehiclesVM.vehicles[idx], ns: ns)
+                                .frame(width: selectedCarIndex == idx ? 300 : 220,
+                                       height: selectedCarIndex == idx ? 380 : 250)
+                                .scaleEffect(selectedCarIndex == idx ? 1.04 : 1)
+                        } onLongPress: {
+                            editingIndex = idx
+                            showVehicleEditor = true
+                        } onTap: {
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                                selectedCarIndex = selectedCarIndex == idx ? nil : idx
+                                ripple = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                ripple = false
+                            }
+                            if let sel = selectedCarIndex, !userVehiclesVM.vehicles.indices.contains(sel) {
+                                selectedCarIndex = nil
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
+            .frame(height: 360)
         }
-        .frame(height: 360)
     }
 
     var communitySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center) {
                 Text("Community Gallery")
                     .font(.headline.weight(.semibold))
                     .foregroundColor(.white)
                 Spacer()
-                Text("See All")
-                    .font(.caption)
-                    .foregroundColor(Color("EmpireMint").opacity(0.9))
+                Button(action: { showExploreGallery = true }) {
+                    HStack(spacing: 6) {
+                        Text("Explore")
+                            .font(.caption.weight(.semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundColor(Color("EmpireMint"))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(LinearGradient(colors: [Color("EmpireMint").opacity(0.6), Color("EmpireMint").opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                            .blendMode(.screen)
+                    )
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
 
             LazyVGrid(columns: [
-                GridItem(.adaptive(minimum: 150), spacing: 12)
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
             ], spacing: 12) {
-                ForEach(communityCars.indices, id: \.self) { idx in
+                ForEach(communityCars.prefix(4).indices, id: \.self) { idx in
                     GalleryTile(
                         car: communityCars[idx],
                         isLiked: likedCommunity.contains(communityCars[idx].id),
@@ -1360,6 +1389,91 @@ private struct ModsListView: View {
             )
             .navigationTitle("Mods")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+// MARK: - Explore Gallery Sheet
+private struct ExploreGallerySheet: View {
+    let communityCars: [Car]
+    @Binding var likedCommunity: Set<UUID>
+    @Environment(\.dismiss) private var dismiss
+    @State private var showContent: Bool = false
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color.black, Color.black.opacity(0.95)], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            
+            RadialGradient(colors: [Color("EmpireMint").opacity(0.12), .clear], center: .topLeading, startRadius: 20, endRadius: 300)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Enhanced Header
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("All Builds")
+                                .font(.title2.weight(.bold))
+                                .foregroundColor(.white)
+                            Text("Explore the community's finest creations")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+                        Spacer()
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(Color("EmpireMint").opacity(0.8))
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 0, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+
+                Divider()
+                    .opacity(0.2)
+
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        LazyVGrid(columns: [
+                            GridItem(.flexible(), spacing: 14),
+                            GridItem(.flexible(), spacing: 14)
+                        ], spacing: 14) {
+                            ForEach(communityCars.indices, id: \.self) { idx in
+                                GalleryTile(
+                                    car: communityCars[idx],
+                                    isLiked: likedCommunity.contains(communityCars[idx].id),
+                                    onToggleLike: {
+                                        let id = communityCars[idx].id
+                                        if likedCommunity.contains(id) {
+                                            likedCommunity.remove(id)
+                                        } else {
+                                            likedCommunity.insert(id)
+                                        }
+                                    }
+                                )
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.9)), removal: .opacity))
+                            }
+                        }
+                        .padding(.horizontal, 20)
+
+                        // Empty space at bottom for scrolling
+                        Color.clear
+                            .frame(height: 20)
+                    }
+                    .padding(.vertical, 16)
+                }
+            }
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.4)) {
+                showContent = true
+            }
         }
     }
 }
