@@ -61,7 +61,6 @@
 		709FF7F42F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
 		709FF7F52F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
 		709FF7F62F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
-		70A017032F0DF49000A084C2 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 70A017012F0DF49000A084C2 /* Info.plist */; };
 		70A017042F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
 		70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
 		70A017062F0DF49000A084C2 /* CoolRipple.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EE2F0DF49000A084C2 /* CoolRipple.swift */; };
@@ -100,7 +99,6 @@
 		70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F82F0DF49000A084C2 /* MerchView.swift */; };
 		70A0172D2F0DF49000A084C2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FB2F0DF49000A084C2 /* ProfileView.swift */; };
 		70A0172E2F0DF49000A084C2 /* StageChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FC2F0DF49000A084C2 /* StageChip.swift */; };
-		70A0172F2F0DF49000A084C2 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 70A017012F0DF49000A084C2 /* Info.plist */; };
 		70A017302F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
 		70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
 		70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EE2F0DF49000A084C2 /* CoolRipple.swift */; };
@@ -544,7 +542,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70A017032F0DF49000A084C2 /* Info.plist in Resources */,
 				7092F0102F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
 				70A017042F0DF49000A084C2 /* Assets.xcassets in Resources */,
 			);
@@ -554,7 +551,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70A0172F2F0DF49000A084C2 /* Info.plist in Resources */,
 				7092F00E2F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
 				70A017302F0DF49000A084C2 /* Assets.xcassets in Resources */,
 			);
