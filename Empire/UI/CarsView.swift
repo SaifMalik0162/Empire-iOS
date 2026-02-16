@@ -27,14 +27,14 @@ struct CarsView: View {
     
     @State private var showSpecsPopup: Bool = false
     @State private var showModsPopup: Bool = false
-    @State private var showExploreGallery: Bool = false
+    @State private var showExploreFeed: Bool = false
 
     var body: some View {
         ZStack {
             background
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 12) {
+                VStack(spacing: 4) {
                     if userVehiclesVM.vehicles.isEmpty {
                         Button {
                             if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
@@ -60,7 +60,7 @@ struct CarsView: View {
                     }
                     communitySection
                 }
-                .padding(.vertical, 12)
+                .padding(.vertical, 8)
             }
 
             // Expanded card overlays above
@@ -158,9 +158,11 @@ struct CarsView: View {
                 showLightbox = false
             }
         }
-        .sheet(isPresented: $showExploreGallery) {
-            ExploreGallerySheet(communityCars: communityCars, likedCommunity: $likedCommunity)
-                .preferredColorScheme(.dark)
+        .fullScreenCover(isPresented: $showExploreFeed) {
+            ExploreFeedView(communityCars: communityCars, likedCommunity: $likedCommunity) {
+                showExploreFeed = false
+            }
+            .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showVehicleEditor) {
             if let idx = editingIndex, userVehiclesVM.vehicles.indices.contains(idx) {
@@ -221,20 +223,20 @@ private extension CarsView {
     }
 
     var userCarousel: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("My Garage")
                 .font(.title2.weight(.bold))
                 .foregroundColor(.white)
                 .padding(.horizontal, 20)
             
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 24) {
+                HStack(spacing: 16) {
                     ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
                         JiggleWrapper {
                             LiquidGlassCarCard(car: userVehiclesVM.vehicles[idx], ns: ns)
-                                .frame(width: selectedCarIndex == idx ? 300 : 220,
-                                       height: selectedCarIndex == idx ? 380 : 250)
-                                .scaleEffect(selectedCarIndex == idx ? 1.04 : 1)
+                                .frame(width: selectedCarIndex == idx ? 340 : 260,
+                                       height: selectedCarIndex == idx ? 420 : 300)
+                                .scaleEffect(selectedCarIndex == idx ? 1.05 : 1)
                         } onLongPress: {
                             editingIndex = idx
                             showVehicleEditor = true
@@ -252,65 +254,98 @@ private extension CarsView {
                         }
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 12)
             }
-            .frame(height: 360)
+            .frame(height: 410)
         }
     }
 
     var communitySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center) {
-                Text("Community Gallery")
-                    .font(.headline.weight(.semibold))
+        VStack(spacing: 16) {
+            // Header with inline Explore button - single line
+            HStack(alignment: .center, spacing: 12) {
+                Text("Community Spotlight")
+                    .font(.title3.weight(.bold))
                     .foregroundColor(.white)
+                
                 Spacer()
-                Button(action: { showExploreGallery = true }) {
-                    HStack(spacing: 6) {
-                        Text("Explore")
-                            .font(.caption.weight(.semibold))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
+                
+                // Wider glassy explore button
+                Button(action: {
+                    let gen = UIImpactFeedbackGenerator(style: .medium)
+                    gen.impactOccurred()
+                    withAnimation(.spring(response: 0.48, dampingFraction: 0.78)) {
+                        showExploreFeed = true
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        Text("Explore Feed")
+                            .font(.footnote.weight(.semibold))
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundColor(Color("EmpireMint"))
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(LinearGradient(colors: [Color("EmpireMint").opacity(0.6), Color("EmpireMint").opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                            .blendMode(.screen)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(.ultraThinMaterial)
                     )
-                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(
+                                LinearGradient(colors: [Color("EmpireMint").opacity(0.7), Color("EmpireMint").opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                lineWidth: 1.2
+                            ).blendMode(.screen)
+                    )
+                    .shadow(color: Color("EmpireMint").opacity(0.2), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
-
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 12) {
-                ForEach(communityCars.prefix(4).indices, id: \.self) { idx in
-                    GalleryTile(
-                        car: communityCars[idx],
-                        isLiked: likedCommunity.contains(communityCars[idx].id),
-                        onToggleLike: {
-                            let id = communityCars[idx].id
-                            if likedCommunity.contains(id) { likedCommunity.remove(id) } else { likedCommunity.insert(id) }
+            
+            // Featured builds - horizontal scroll
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(communityCars.indices, id: \.self) { idx in
+                        ZStack(alignment: .bottomLeading) {
+                            Image(communityCars[idx].imageName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 140, height: 180)
+                                .clipped()
+                                .cornerRadius(16)
+                                .overlay(
+                                    LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                                        .cornerRadius(16)
+                                )
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(communityCars[idx].name)
+                                    .font(.caption.weight(.semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                                    .foregroundColor(.white)
+                                
+                                HStack(spacing: 4) {
+                                    if communityCars[idx].stage == 0 {
+                                        StatCapsule(label: "Stock", value: "", tint: .gray)
+                                    } else {
+                                        StatCapsule(label: "Stage", value: "\(communityCars[idx].stage)", tint: stageTint(for: communityCars[idx].stage))
+                                    }
+                                    StatCapsule(label: "HP", value: "\(communityCars[idx].horsepower)", tint: .cyan)
+                                }
+                            }
+                            .padding(8)
                         }
-                    )
-                    .onTapGesture {
-                        selectedCommunityIndex = idx
-                    }
-                    .onLongPressGesture(minimumDuration: 0.35) {
-                        lightboxIndex = idx
-                        showLightbox = true
+                        .frame(width: 140, height: 180)
                     }
                 }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
         }
+        .padding(.vertical, 8)
     }
 }
 
