@@ -373,7 +373,7 @@ private struct LiquidGlassCarCard: View {
                 let size = proxy.size
                 ZStack {
                     Group {
-                        if let data = loadSavedPhotoData(for: car.id), let uiImage = UIImage(data: data) {
+                        if let data = loadPhotoDataFromDisk(fileName: car.photoFileName), let uiImage = UIImage(data: data) {
                             Image(uiImage: uiImage)
                                 .resizable()
                         } else {
@@ -693,7 +693,7 @@ private struct CarExpandedCardInline: View {
                 let size = proxy.size
                 ZStack {
                     Group {
-                        if let data = loadSavedPhotoData(for: car.id), let uiImage = UIImage(data: data) {
+                        if let data = loadPhotoDataFromDisk(fileName: car.photoFileName), let uiImage = UIImage(data: data) {
                             Image(uiImage: uiImage)
                                 .resizable()
                         } else {
@@ -1262,19 +1262,12 @@ struct CarsView_Previews: PreviewProvider {
     }
 }
 
-
-// MARK: - Saved Photo Loader (per-user, per-car)
-private func loadSavedPhotoData(for id: UUID) -> Data? {
-    let currentUserId = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
-    // Primary per-user key used by VehicleEditorView
-    if let data = UserDefaults.standard.data(forKey: "saved_car_photo_\(currentUserId)_\(id.uuidString)") {
-        return data
-    }
-    // Legacy fallback without user scoping
-    if let legacy = UserDefaults.standard.data(forKey: "saved_car_photo_\(id.uuidString)") {
-        return legacy
-    }
-    return nil
+// MARK: - Small image loader from disk for given photoFileName
+private func loadPhotoDataFromDisk(fileName: String?) -> Data? {
+    guard let fileName else { return nil }
+    let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    let url = dir.appendingPathComponent(fileName)
+    return try? Data(contentsOf: url)
 }
 
 // MARK: - Local PopupCard, SpecsListView, ModsListView for use in CarsView
