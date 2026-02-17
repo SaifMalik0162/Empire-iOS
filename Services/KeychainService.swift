@@ -1,7 +1,10 @@
 import Foundation
+import Security
 
 final class KeychainService {
     static let shared = KeychainService()
+    
+    private let service = "com.empire.app"
 
     private init() {}
 
@@ -11,7 +14,8 @@ final class KeychainService {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrService as String: service
         ]
 
         SecItemDelete(query as CFDictionary)
@@ -25,7 +29,8 @@ final class KeychainService {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
             kSecReturnData as String: kCFBooleanTrue as Any,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecAttrService as String: service
         ]
 
         var item: CFTypeRef?
@@ -38,7 +43,8 @@ final class KeychainService {
     func delete(forKey key: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key
+            kSecAttrAccount as String: key,
+            kSecAttrService as String: service
         ]
         let status = SecItemDelete(query as CFDictionary)
         return status == errSecSuccess || status == errSecItemNotFound
