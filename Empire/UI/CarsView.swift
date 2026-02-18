@@ -35,6 +35,7 @@ struct CarsView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 4) {
+                    
                     if userVehiclesVM.vehicles.isEmpty {
                         Button {
                             if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {

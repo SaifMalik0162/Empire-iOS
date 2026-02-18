@@ -2,10 +2,10 @@ import SwiftUI
 
 struct RewardsView: View {
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var store = StoreKitManager.shared
 
     // Placeholder state to simulate backend wiring later
     @State private var currentPoints: Int = 1240
-    @State private var isVIP: Bool = false // Flip true to preview VIP doubling banner
 
     // Tier thresholds (inclusive lower bounds)
     private let tiers: [(name: String, threshold: Int)] = [
@@ -44,9 +44,10 @@ struct RewardsView: View {
     private var recentActivity: [(String, Int, String)] {
         // (title, points, date)
         [
-            ("Merch purchase", 120, "Today"),
-            ("Show check-in", 80, "2d ago"),
-            ("Invite a friend", 200, "5d ago")
+            ("Meet check-in", 80, "Today"),
+            ("Posted in VIP Threads", 60, "2d ago"),
+            ("Invited a friend", 200, "5d ago"),
+            ("Joined a crew drive", 120, "1w ago")
         ]
     }
 
@@ -68,7 +69,7 @@ struct RewardsView: View {
                                 Image(systemName: "gift.fill")
                                     .foregroundStyle(Color("EmpireMint"))
                                     .font(.system(size: 20, weight: .bold))
-                                Text("Empire Rewards")
+                                Text("Empire Rewards Club")
                                     .font(.title3.weight(.bold))
                                     .foregroundColor(.white)
                                 Spacer()
@@ -111,9 +112,10 @@ struct RewardsView: View {
                             // VIP banner
                             HStack(spacing: 10) {
                                 Image(systemName: "crown.fill").foregroundStyle(Color("EmpireMint"))
-                                Text(isVIP ? "VIP active: You earn 2× points on eligible actions" : "Join VIP to earn 2× points on eligible actions")
+                                MarqueeText(text: store.isVIP ? "VIP active: Earn 2× points on eligible community actions" : "Join VIP to earn 2× points on eligible community actions")
                                     .font(.footnote.weight(.semibold))
                                     .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 Spacer(minLength: 0)
                             }
                             .padding(.horizontal, 12)
@@ -133,9 +135,24 @@ struct RewardsView: View {
 
                         VStack(spacing: 10) {
                             milestoneRow(title: "Member", threshold: 0, achieved: currentPoints >= 0)
-                            milestoneRow(title: "Silver", threshold: 1000, achieved: currentPoints >= 1000)
-                            milestoneRow(title: "Gold", threshold: 2000, achieved: currentPoints >= 2000)
-                            milestoneRow(title: "Platinum", threshold: 5000, achieved: currentPoints >= 5000)
+                            milestoneRow(title: "Street", threshold: 1000, achieved: currentPoints >= 1000)
+                            milestoneRow(title: "Track", threshold: 2000, achieved: currentPoints >= 2000)
+                            milestoneRow(title: "Legend", threshold: 5000, achieved: currentPoints >= 5000)
+                        }
+                    }
+                    .padding(16)
+                    .background(glassCard(cornerRadius: 22))
+                    .padding(.horizontal, 16)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("How to earn")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                            earnCard(title: "Check in at a meet", points: store.isVIP ? 160 : 80, icon: "calendar.badge.clock")
+                            earnCard(title: "Post to VIP Threads", points: store.isVIP ? 120 : 60, icon: "text.bubble.fill")
+                            earnCard(title: "Invite a friend", points: store.isVIP ? 400 : 200, icon: "person.crop.circle.badge.plus")
+                            earnCard(title: "Join a crew drive", points: store.isVIP ? 240 : 120, icon: "steeringwheel")
                         }
                     }
                     .padding(16)
@@ -202,12 +219,12 @@ struct RewardsView: View {
             switch title {
             case "Member":
                 return ("seal.fill", LinearGradient(colors: [Color("EmpireMint"), Color("EmpireMint").opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            case "Silver":
-                return ("hexagon.fill", LinearGradient(colors: [Color(white: 0.85), Color(white: 0.65)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            case "Gold":
-                return ("diamond.fill", LinearGradient(colors: [Color.yellow, Color.orange], startPoint: .topLeading, endPoint: .bottomTrailing))
-            case "Platinum":
-                return ("star.circle.fill", LinearGradient(colors: [Color.cyan, Color.blue.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            case "Street":
+                return ("car.fill", LinearGradient(colors: [Color.gray, Color(white: 0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            case "Track":
+                return ("flag.checkered", LinearGradient(colors: [Color.orange, Color.red], startPoint: .topLeading, endPoint: .bottomTrailing))
+            case "Legend":
+                return ("star.circle.fill", LinearGradient(colors: [Color.yellow, Color.orange], startPoint: .topLeading, endPoint: .bottomTrailing))
             default:
                 return ("seal", LinearGradient(colors: [.white.opacity(0.8), .white.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
             }
@@ -300,6 +317,29 @@ struct RewardsView: View {
         .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(gradientStroke, lineWidth: 1))
     }
+
+    private func earnCard(title: String, points: Int, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(Color("EmpireMint"))
+                Spacer()
+                Text("+\(points)")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.white.opacity(0.06)))
+                    .overlay(Capsule().stroke(gradientStroke, lineWidth: 1))
+            }
+            Text(title)
+                .foregroundStyle(.white)
+                .font(.subheadline)
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(gradientStroke, lineWidth: 1))
+    }
 }
 
 private struct PointsRing: View {
@@ -326,7 +366,77 @@ private struct PointsRing: View {
     }
 }
 
+private struct MarqueeText: View {
+    let text: String
+    var speed: Double = 30 // points per second
+    var delay: Double = 1.0
+
+    @State private var textSize: CGSize = .zero
+    @State private var containerSize: CGSize = .zero
+    @State private var offset: CGFloat = 0
+    @State private var animate: Bool = false
+
+    var body: some View {
+        GeometryReader { geo in
+            let containerWidth = geo.size.width
+            ZStack(alignment: .leading) {
+                Text(text)
+                    .background(SizeReader(size: $textSize))
+                    .offset(x: offset)
+                    .onChange(of: text) { _, _ in reset(containerWidth: containerWidth) }
+                    .onAppear { containerSize = geo.size; reset(containerWidth: containerWidth) }
+            }
+            .clipped()
+            .onChange(of: geo.size) { _, newSize in
+                containerSize = newSize
+                reset(containerWidth: newSize.width)
+            }
+            .task(id: animate) {
+                guard textSize.width > containerWidth else { return }
+                // total distance to scroll = textWidth + gap
+                let gap: CGFloat = 40
+                let distance = textSize.width + gap
+                while animate {
+                    // start from 0 to -distance
+                    withAnimation(.linear(duration: distance / speed)) {
+                        offset = -distance
+                    }
+                    try? await Task.sleep(for: .seconds(distance / speed))
+                    offset = 0
+                    try? await Task.sleep(for: .seconds(delay))
+                }
+            }
+            .onAppear { animate = true }
+            .onDisappear { animate = false }
+        }
+        .frame(height: UIFont.preferredFont(forTextStyle: .footnote).lineHeight + 6)
+    }
+
+    private func reset(containerWidth: CGFloat) {
+        offset = 0
+    }
+}
+
+private struct SizeReader: View {
+    @Binding var size: CGSize
+    var body: some View {
+        GeometryReader { geo in
+            Color.clear
+                .preference(key: SizePreferenceKey.self, value: geo.size)
+        }
+        .onPreferenceChange(SizePreferenceKey.self) { newValue in
+            size = newValue
+        }
+    }
+}
+
+private struct SizePreferenceKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
+    }
+}
+
 #Preview {
     RewardsView()
 }
-
