@@ -432,7 +432,7 @@ struct ProfileView: View {
                         .preferredColorScheme(ColorScheme.dark)
                 }
                 .sheet(isPresented: $showVIP) {
-                    VIPMembershipView()
+                    VIPExperienceView()
                         .preferredColorScheme(.dark)
                 }
                 .sheet(isPresented: $showRewards) {
