@@ -8,7 +8,11 @@ struct CarsView: View {
     @State private var editingIndex: Int? = nil
     @State private var showVehicleEditor: Bool = false
     @State private var userKey: String = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
-    
+    @State private var showQuickMods: Bool = false
+    @State private var showQuickSpecs: Bool = false
+    @State private var currentGarageIndex: Int = 0
+    @State private var showManageGarage: Bool = false
+
     // MARK: - Community Cars
     @State private var communityCars: [Car] = [
         Car(name: "Honda Prelude BB2", description: "@officialtobysemple — Clean BB2 build", imageName: "prelude_bb2", horsepower: 450, stage: 3),
@@ -21,10 +25,10 @@ struct CarsView: View {
     @State private var ripple: Bool = false
     @State private var showLightbox: Bool = false
     @State private var lightboxIndex: Int = 0
-    
+
     @State private var selectedCommunityIndex: Int? = nil
     @State private var likedCommunity: Set<UUID> = []
-    
+
     @State private var showSpecsPopup: Bool = false
     @State private var showModsPopup: Bool = false
     @State private var showExploreFeed: Bool = false
@@ -34,8 +38,8 @@ struct CarsView: View {
             background
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 4) {
-                    
+                VStack(spacing: 6) {
+
                     if userVehiclesVM.vehicles.isEmpty {
                         Button {
                             if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
@@ -58,10 +62,13 @@ struct CarsView: View {
                         .padding(.horizontal, 20)
                     } else {
                         userCarousel
+                        // quickActionsRow
+                        Spacer(minLength: 24)
                     }
                     communitySection
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
+                .padding(.bottom, 40)
             }
 
             // Expanded card overlays above
@@ -96,7 +103,7 @@ struct CarsView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 30)
                 .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.98)), removal: .opacity))
-                
+
                 if showSpecsPopup, userVehiclesVM.vehicles.indices.contains(selected) {
                     PopupCard {
                         SpecsListView(specs: userVehiclesVM.vehicles[selected].specs)
@@ -105,7 +112,7 @@ struct CarsView: View {
                     }
                     .zIndex(2)
                 }
-                
+
                 if showModsPopup, userVehiclesVM.vehicles.indices.contains(selected) {
                     PopupCard {
                         ModsListView(mods: userVehiclesVM.vehicles[selected].mods)
@@ -115,7 +122,7 @@ struct CarsView: View {
                     .zIndex(2)
                 }
             }
-            
+
             if let selected = selectedCommunityIndex, communityCars.indices.contains(selected) {
                 // Dim background
                 Rectangle()
@@ -197,6 +204,62 @@ struct CarsView: View {
                 }
             }
         }
+        .sheet(isPresented: $showQuickMods) {
+            if let first = userVehiclesVM.vehicles.indices.first {
+                VehicleEditorView(car: $userVehiclesVM.vehicles[first]) { updated in
+                    userVehiclesVM.updateVehicle(at: first, with: updated)
+                }
+                .preferredColorScheme(.dark)
+            } else {
+                VStack(spacing: 12) {
+                    ProgressView().tint(Color("EmpireMint"))
+                    Text("Preparing editor...")
+                        .foregroundColor(.white)
+                        .font(.footnote)
+                }
+                .padding()
+                .preferredColorScheme(.dark)
+                .task {
+                    if let newIdx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
+                        await MainActor.run {
+                            editingIndex = newIdx
+                            showVehicleEditor = true
+                            showQuickMods = false
+                        }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showQuickSpecs) {
+            if let first = userVehiclesVM.vehicles.indices.first {
+                VehicleEditorView(car: $userVehiclesVM.vehicles[first]) { updated in
+                    userVehiclesVM.updateVehicle(at: first, with: updated)
+                }
+                .preferredColorScheme(.dark)
+            } else {
+                VStack(spacing: 12) {
+                    ProgressView().tint(Color("EmpireMint"))
+                    Text("Preparing editor...")
+                        .foregroundColor(.white)
+                        .font(.footnote)
+                }
+                .padding()
+                .preferredColorScheme(.dark)
+                .task {
+                    if let newIdx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
+                        await MainActor.run {
+                            editingIndex = newIdx
+                            showVehicleEditor = true
+                            showQuickSpecs = false
+                        }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showManageGarage) {
+            ManageGarageSheet(vehiclesVM: userVehiclesVM)
+                .preferredColorScheme(.dark)
+        }
         .onAppear {
             Task { await userVehiclesVM.loadVehicles() }
             userKey = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
@@ -224,20 +287,48 @@ private extension CarsView {
     }
 
     var userCarousel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("My Garage")
-                .font(.title2.weight(.bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 10) {
+                Text("My Garage")
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.white)
+                Spacer()
+                Button {
+                    let gen = UIImpactFeedbackGenerator(style: .light)
+                    gen.impactOccurred()
+                    showManageGarage = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wrench.and.screwdriver")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Manage Garage")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundColor(Color("EmpireMint"))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule().fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        Capsule().stroke(
+                            LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            lineWidth: 1
+                        )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+
+            TabView(selection: $currentGarageIndex) {
+                ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
+                    VStack {
                         JiggleWrapper {
                             LiquidGlassCarCard(car: userVehiclesVM.vehicles[idx], ns: ns)
-                                .frame(width: selectedCarIndex == idx ? 340 : 260,
-                                       height: selectedCarIndex == idx ? 420 : 300)
-                                .scaleEffect(selectedCarIndex == idx ? 1.05 : 1)
+                                .frame(width: selectedCarIndex == idx ? 320 : 260,
+                                       height: selectedCarIndex == idx ? 340 : 270)
+                                .scaleEffect(currentGarageIndex == idx ? 1.05 : 0.95)
                         } onLongPress: {
                             editingIndex = idx
                             showVehicleEditor = true
@@ -253,24 +344,66 @@ private extension CarsView {
                                 selectedCarIndex = nil
                             }
                         }
+                        .padding(.horizontal, 32)
+                    }
+                    .tag(idx)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 340)
+
+            HStack(spacing: 6) {
+                ForEach(userVehiclesVM.vehicles.indices, id: \.self) { i in
+                    Circle()
+                        .fill(i == currentGarageIndex ? Color("EmpireMint").opacity(0.9) : Color.white.opacity(0.25))
+                        .frame(width: i == currentGarageIndex ? 8 : 6, height: i == currentGarageIndex ? 8 : 6)
+                        .animation(.easeInOut(duration: 0.2), value: currentGarageIndex)
+                }
+            }
+            .padding(.top, 6)
+            .padding(.bottom, 2)
+            .frame(maxWidth: .infinity)
+        }
+    }
+    
+    var quickActionsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 14) {
+                GlassActionButton(title: "Add Car", systemImage: "plus.circle.fill") {
+                    let gen = UIImpactFeedbackGenerator(style: .medium)
+                    gen.impactOccurred()
+                    if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
+                        editingIndex = idx
+                        showVehicleEditor = true
                     }
                 }
-                .padding(.horizontal, 12)
+                GlassActionButton(title: "Log Mod", systemImage: "wrench.and.screwdriver.fill") {
+                    let gen = UIImpactFeedbackGenerator(style: .light)
+                    gen.impactOccurred()
+                    showQuickMods = true
+                }
+                GlassActionButton(title: "Add Spec", systemImage: "gauge.with.dots.needle.50percent") {
+                    let gen = UIImpactFeedbackGenerator(style: .light)
+                    gen.impactOccurred()
+                    showQuickSpecs = true
+                }
             }
-            .frame(height: 410)
+            .padding(.horizontal, 20)
         }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     var communitySection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Header with inline Explore button - single line
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
                 Text("Community Spotlight")
                     .font(.title3.weight(.bold))
                     .foregroundColor(.white)
-                
+
                 Spacer()
-                
+
                 // Wider glassy explore button
                 Button(action: {
                     let gen = UIImpactFeedbackGenerator(style: .medium)
@@ -279,7 +412,7 @@ private extension CarsView {
                         showExploreFeed = true
                     }
                 }) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Text("Explore Feed")
                             .font(.footnote.weight(.semibold))
                         Image(systemName: "arrow.right.circle.fill")
@@ -305,30 +438,30 @@ private extension CarsView {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
-            
+
             // Featured builds - horizontal scroll
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     ForEach(communityCars.indices, id: \.self) { idx in
                         ZStack(alignment: .bottomLeading) {
                             Image(communityCars[idx].imageName)
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 140, height: 180)
+                                .frame(width: 150, height: 190)
                                 .clipped()
                                 .cornerRadius(16)
                                 .overlay(
                                     LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
                                         .cornerRadius(16)
                                 )
-                            
+
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(communityCars[idx].name)
                                     .font(.caption.weight(.semibold))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
                                     .foregroundColor(.white)
-                                
+
                                 HStack(spacing: 4) {
                                     if communityCars[idx].stage == 0 {
                                         StatCapsule(label: "Stock", value: "", tint: .gray)
@@ -340,13 +473,15 @@ private extension CarsView {
                             }
                             .padding(8)
                         }
-                        .frame(width: 140, height: 180)
+                        .frame(width: 150, height: 190)
                     }
                 }
                 .padding(.horizontal, 20)
             }
         }
         .padding(.vertical, 8)
+        .padding(.bottom, 60)
+        .padding(.top, 24)
     }
 }
 
@@ -359,14 +494,15 @@ private struct LiquidGlassCarCard: View {
         ZStack {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(.ultraThinMaterial)
+                .background(Color.white.opacity(0.02))
                 .overlay(
                     RoundedRectangle(cornerRadius: 22)
                         .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                         .blendMode(.screen)
                 )
-                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 18, x: 0, y: 10)
-                .shadow(color: .black.opacity(0.5), radius: 12, x: 0, y: 6)
+                .shadow(color: Color("EmpireMint").opacity(0.14), radius: 14, x: 0, y: 8)
+                .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 6)
                 .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
 
             // Full-bleed background image
@@ -397,7 +533,7 @@ private struct LiquidGlassCarCard: View {
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    
+
                     LinearGradient(
                         gradient: Gradient(stops: [
                             .init(color: .clear, location: 0.0),
@@ -417,7 +553,7 @@ private struct LiquidGlassCarCard: View {
                 .mask(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                 )
-                
+
             }
 
             // Foreground overlay
@@ -561,7 +697,7 @@ private struct GlassButton: View {
         Button(action: { action?() }) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .background(
                     Capsule().fill(.ultraThinMaterial)
@@ -572,7 +708,58 @@ private struct GlassButton: View {
                 .foregroundStyle(.white)
         }
         .buttonStyle(.plain)
-        .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, x: 0, y: 4)
+        .shadow(color: Color("EmpireMint").opacity(0.2), radius: 6, x: 0, y: 3)
+    }
+}
+
+private struct GlassActionButton: View {
+    let title: String
+    let systemImage: String
+    var action: (() -> Void)? = nil
+
+    @State private var pressed: Bool = false
+
+    var body: some View {
+        Button(action: { action?() }) {
+            VStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Color("EmpireMint"))
+                    .shadow(color: Color("EmpireMint").opacity(0.35), radius: 8, x: 0, y: 4)
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(width: 92, height: 88)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: Color("EmpireMint").opacity(0.18), radius: 10, x: 0, y: 6)
+            .scaleEffect(pressed ? 0.96 : 1.0)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                            pressed = true
+                        }
+                    }
+                    .onEnded { _ in
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            pressed = false
+                        }
+                    }
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -672,6 +859,7 @@ private struct CarExpandedCardInline: View {
             // Card base with glass and shimmer
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(.ultraThinMaterial)
+                .background(Color.white.opacity(0.02))
                 .overlay(
                     RoundedRectangle(cornerRadius: 28)
                         .stroke(
@@ -684,7 +872,7 @@ private struct CarExpandedCardInline: View {
                         .blendMode(.screen)
                 )
                 .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(reduceMotion ? 0 : 1))
-                .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y: 18)
+                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 22, x: 0, y: 14)
                 .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
                 .rotation3DEffect(.degrees(Double(tilt.width) * 0.06), axis: (x: 0, y: 1, z: 0))
                 .rotation3DEffect(.degrees(Double(-tilt.height) * 0.06), axis: (x: 1, y: 0, z: 0))
@@ -733,11 +921,20 @@ private struct CarExpandedCardInline: View {
                         .shadow(radius: 6)
                         .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
 
-                    Text(car.description)
-                        .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
+                    // Show make and model if available, otherwise show description
+                    if let make = car.make, !make.isEmpty, let model = car.model, !model.isEmpty {
+                        Text("\(make) \(model)")
+                            .font(.footnote)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                    } else {
+                        Text(car.description)
+                            .font(.footnote)
+                            .foregroundStyle(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                    }
                 }
                 .padding(.top, 8)
 
@@ -857,7 +1054,7 @@ private struct StatRow: View {
                     .frame(width: animate ? barWidth : 0)
                     .shadow(color: accent.opacity(0.4), radius: 6, x: 0, y: 2)
             }
-            .frame(height: 10)
+            .frame(height: 8)
             .onAppear {
                 withAnimation(.easeOut(duration: 0.6)) {
                     animate = true
@@ -1064,12 +1261,6 @@ private struct CommunityLightbox: View {
     }
 }
 
-extension Collection {
-    subscript(safe index: Index) -> Element? {
-        indices.contains(index) ? self[index] : nil
-    }
-}
-
 // MARK: - Lite Community Expanded Card
 private struct LiteCommunityExpandedCard: View {
     let car: Car
@@ -1095,6 +1286,7 @@ private struct LiteCommunityExpandedCard: View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(.ultraThinMaterial)
+                .background(Color.white.opacity(0.02))
                 .overlay(
                     RoundedRectangle(cornerRadius: 28)
                         .stroke(
@@ -1106,8 +1298,7 @@ private struct LiteCommunityExpandedCard: View {
                         )
                         .blendMode(.screen)
                 )
-                .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(reduceMotion ? 0 : 1))
-                .shadow(color: Color("EmpireMint").opacity(0.22), radius: 28, x: 0, y: 18)
+                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 22, x: 0, y: 14)
 
             GeometryReader { proxy in
                 let size = proxy.size
@@ -1291,7 +1482,7 @@ private struct PopupCard<Content: View>: View {
                     .padding(14)
                     .background(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color("EmpireMint").opacity(0.15))
+                            .fill(Color("EmpireMint").opacity(0.12))
                             .background(.ultraThinMaterial)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     )
@@ -1380,7 +1571,7 @@ private struct SpecsListView: View {
                 LinearGradient(colors: [Color.black, Color.black.opacity(0.95)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             )
             .navigationTitle("Specs")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 }
@@ -1417,7 +1608,7 @@ private struct ModsListView: View {
                 LinearGradient(colors: [Color.black, Color.black.opacity(0.95)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             )
             .navigationTitle("Mods")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 }
@@ -1433,7 +1624,7 @@ private struct ExploreGallerySheet: View {
         ZStack {
             LinearGradient(colors: [Color.black, Color.black.opacity(0.95)], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
-            
+
             RadialGradient(colors: [Color("EmpireMint").opacity(0.12), .clear], center: .topLeading, startRadius: 20, endRadius: 300)
                 .ignoresSafeArea()
 
@@ -1506,3 +1697,4 @@ private struct ExploreGallerySheet: View {
         }
     }
 }
+
