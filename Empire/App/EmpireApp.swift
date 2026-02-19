@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import SwiftData
 
 @main
 struct EmpireApp: App {
@@ -13,6 +14,9 @@ struct EmpireApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
+                ContextBridge { context in
+                    vehiclesVM.setContext(context)
+                }
                 EmpireTabView()
                     .environmentObject(authViewModel)
                     .environmentObject(cart)
@@ -43,6 +47,19 @@ struct EmpireApp: App {
                 dismissObserver = nil
             }
         }
+        .modelContainer(for: [CarEntity.self, SpecItemEntity.self, ModItemEntity.self, MerchItemEntity.self])
     }
     
+}
+
+fileprivate struct ContextBridge: View {
+    @Environment(\.modelContext) private var modelContext
+    var onReady: (ModelContext) -> Void
+    init(_ onReady: @escaping (ModelContext) -> Void) { self.onReady = onReady }
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .onAppear { onReady(modelContext) }
+            .accessibilityHidden(true)
+    }
 }

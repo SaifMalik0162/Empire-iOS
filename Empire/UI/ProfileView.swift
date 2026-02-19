@@ -1,9 +1,11 @@
 import SwiftUI
 import PhotosUI
+import SwiftData
 
 struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.dismiss) private var dismissView
+    @Environment(\.modelContext) private var modelContext
     @State private var showSettings = false
     @State private var showHelpSupport: Bool = false
     @State private var showManageAccount: Bool = false
@@ -191,6 +193,10 @@ struct ProfileView: View {
                         .onAppear {
                             // Initialize avatar URL if your BackendUser provides one later
                             // Example: if let urlString = authViewModel.currentUser?.avatarURL { avatarURL = URL(string: urlString) }
+                            print("[ProfileView] onAppear")
+                            print("[ProfileView] has AuthVM instanceID: \(authViewModel.instanceID)")
+                            print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
+                            vehiclesVM.setContext(modelContext)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -403,6 +409,7 @@ struct ProfileView: View {
                     print("[ProfileView] onAppear")
                     print("[ProfileView] has AuthVM instanceID: \(authViewModel.instanceID)")
                     print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
+                    vehiclesVM.setContext(modelContext)
                 }
                 .task {
                     print("[ProfileView] .task appeared")

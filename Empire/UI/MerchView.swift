@@ -1,14 +1,16 @@
 import SwiftUI
 import Combine
+import SwiftData
 
 struct MerchView: View {
-    let featured: [MerchItem] = MerchCatalog.featured
-    let bestSellers: [MerchItem] = MerchCatalog.bestSellers
-    let newArrivals: [MerchItem] = MerchCatalog.newArrivals
+    @State private var featured: [MerchItem] = []
+    @State private var bestSellers: [MerchItem] = []
+    @State private var newArrivals: [MerchItem] = []
     
     @State private var query: String = ""
     @State private var showFilters: Bool = false
     @State private var selectedCategory: MerchCategory? = nil
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         NavigationStack {
@@ -49,6 +51,25 @@ struct MerchView: View {
                     }
                     .padding(.bottom, 40)
                 }
+            }
+            .task {
+                // 1) Load cached merch immediately
+                let cached = LocalStore.shared.fetchMerch(context: modelContext)
+                if !cached.isEmpty {
+                    // Backend categorization logic, apply it here. For now we use MerchCatalog helpers to split
+                    // This assumes ids/names match between cache and catalog. We simply group by category
+                    let byCategory: [MerchCategory: [MerchItem]] = Dictionary(grouping: cached, by: { $0.category })
+                    featured = byCategory[.apparel] ?? []
+                    bestSellers = byCategory[.accessories] ?? []
+                    newArrivals = byCategory[.banners] ?? []
+                }
+
+                // 2) Fetch fresh data (placeholder: use MerchCatalog) and cache it
+                let freshAll = MerchCatalog.featured + MerchCatalog.bestSellers + MerchCatalog.newArrivals
+                LocalStore.shared.cacheMerch(freshAll, context: modelContext)
+                featured = MerchCatalog.featured
+                bestSellers = MerchCatalog.bestSellers
+                newArrivals = MerchCatalog.newArrivals
             }
         }
     }

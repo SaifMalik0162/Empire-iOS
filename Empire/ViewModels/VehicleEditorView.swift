@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import SwiftData
 
 private enum ImageStore {
     static func save(_ data: Data, fileName: String) throws -> URL {
@@ -23,6 +24,7 @@ private enum ImageStore {
 
 struct VehicleEditorView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @Binding var car: Car
     var onSave: (Car) -> Void
@@ -342,6 +344,8 @@ struct VehicleEditorView: View {
 
         // Persist per-user so edits survive relaunch.
         Self.saveCar(updated, userKey: userStorageKey)
+
+        LocalStore.shared.upsertCar(updated, context: modelContext, userKey: userStorageKey)
 
         onSave(updated)
         showStageSuggestion = false

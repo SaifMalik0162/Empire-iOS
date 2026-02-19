@@ -19,6 +19,9 @@
 		7036AA612F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
 		7036AA622F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
 		7036AA632F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
+		7039BA1D2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
+		7039BA1E2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
+		7039BA1F2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
 		704251942F13397100322849 /* BackendModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518F2F13397100322849 /* BackendModels.swift */; };
 		704251952F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
 		704251962F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
@@ -209,6 +212,7 @@
 		7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
 		7020AB8F2F12EECA0082F480 /* CartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartView.swift; sourceTree = "<group>"; };
 		7036AA602F45562A009F57DB /* VIP.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = VIP.storekit; sourceTree = "<group>"; };
+		7039BA1C2F47521800004437 /* LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStore.swift; sourceTree = "<group>"; };
 		7042518D2F13397100322849 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		7042518F2F13397100322849 /* BackendModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendModels.swift; sourceTree = "<group>"; };
 		704251912F13397100322849 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
@@ -409,6 +413,7 @@
 				70C0A6872F457D1D003F8425 /* VIPWelcomeView.swift */,
 				70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */,
 				70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */,
+				7039BA1C2F47521800004437 /* LocalStore.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -625,6 +630,7 @@
 				70A0171E2F0DF49000A084C2 /* HomeView.swift in Sources */,
 				70A0171F2F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
 				70A017202F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
+				7039BA1E2F47521800004437 /* LocalStore.swift in Sources */,
 				709FF7F42F1AF32900309115 /* VIPMembershipView.swift in Sources */,
 				704E4B922F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
 				70A017212F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
@@ -705,6 +711,7 @@
 				70E699D72F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
 				70B0CF662F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
 				70A017122F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
+				7039BA1D2F47521800004437 /* LocalStore.swift in Sources */,
 				70A017132F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
 				70A017142F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				7089A7C92F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
@@ -750,6 +757,7 @@
 				70E699D62F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
 				70A0173E2F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
 				704251B92F134C5E00322849 /* AddVehicleView.swift in Sources */,
+				7039BA1F2F47521800004437 /* LocalStore.swift in Sources */,
 				70A0173F2F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
 				704E4B942F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
 				70C0A68A2F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
