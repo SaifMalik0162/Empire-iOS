@@ -22,6 +22,12 @@
 		7039BA1D2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
 		7039BA1E2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
 		7039BA1F2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
+		7039BA212F475FAC00004437 /* SafeCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA202F475FAC00004437 /* SafeCollection.swift */; };
+		7039BA222F475FAC00004437 /* SafeCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA202F475FAC00004437 /* SafeCollection.swift */; };
+		7039BA232F475FAC00004437 /* SafeCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA202F475FAC00004437 /* SafeCollection.swift */; };
+		7039BA252F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
+		7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
+		7039BA272F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
 		704251942F13397100322849 /* BackendModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518F2F13397100322849 /* BackendModels.swift */; };
 		704251952F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
 		704251962F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
@@ -213,6 +219,8 @@
 		7020AB8F2F12EECA0082F480 /* CartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartView.swift; sourceTree = "<group>"; };
 		7036AA602F45562A009F57DB /* VIP.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = VIP.storekit; sourceTree = "<group>"; };
 		7039BA1C2F47521800004437 /* LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStore.swift; sourceTree = "<group>"; };
+		7039BA202F475FAC00004437 /* SafeCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeCollection.swift; sourceTree = "<group>"; };
+		7039BA242F47612900004437 /* ManageGarageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageGarageSheet.swift; sourceTree = "<group>"; };
 		7042518D2F13397100322849 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		7042518F2F13397100322849 /* BackendModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendModels.swift; sourceTree = "<group>"; };
 		704251912F13397100322849 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
@@ -414,6 +422,8 @@
 				70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */,
 				70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */,
 				7039BA1C2F47521800004437 /* LocalStore.swift */,
+				7039BA202F475FAC00004437 /* SafeCollection.swift */,
+				7039BA242F47612900004437 /* ManageGarageSheet.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -618,6 +628,7 @@
 				7020AB932F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
 				70B0CF6A2F106908003FCD20 /* EmpireTheme.swift in Sources */,
 				70B0CF672F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
+				7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */,
 				704251982F13397100322849 /* BackendModels.swift in Sources */,
 				70C0A6842F457D18003F8425 /* VIPJoinView.swift in Sources */,
 				7068B04A2F42783100D6628C /* KeychainService.swift in Sources */,
@@ -655,6 +666,7 @@
 				70A6A7532F1ECCDE00483418 /* TopToast.swift in Sources */,
 				70A0172A2F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				70A0172B2F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
+				7039BA232F475FAC00004437 /* SafeCollection.swift in Sources */,
 				70C0A68E2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
 				70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */,
 				7080848C2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
@@ -682,11 +694,13 @@
 				7042519F2F13397100322849 /* APIConfig.swift in Sources */,
 				7068B04B2F42783100D6628C /* KeychainService.swift in Sources */,
 				70C0A6902F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
+				7039BA222F475FAC00004437 /* SafeCollection.swift in Sources */,
 				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
 				7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */,
 				7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
 				70DF416D2F196E930034C5FB /* SettingsView.swift in Sources */,
+				7039BA272F47612900004437 /* ManageGarageSheet.swift in Sources */,
 				707D0C932F4551AE00521AA5 /* StoreKitManager.swift in Sources */,
 				7089A7C32F1C280900EDB4D5 /* RewardsView.swift in Sources */,
 				704251AB2F1339BA00322849 /* AuthViewModel.swift in Sources */,
@@ -762,7 +776,9 @@
 				704E4B942F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
 				70C0A68A2F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
 				70A017402F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
+				7039BA252F47612900004437 /* ManageGarageSheet.swift in Sources */,
 				70B0CF692F106908003FCD20 /* EmpireTheme.swift in Sources */,
+				7039BA212F475FAC00004437 /* SafeCollection.swift in Sources */,
 				70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */,
 				7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */,
 				7068B0492F42783100D6628C /* KeychainService.swift in Sources */,
@@ -930,7 +946,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 54;
+				CURRENT_PROJECT_VERSION = 58;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -967,7 +983,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 54;
+				CURRENT_PROJECT_VERSION = 58;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

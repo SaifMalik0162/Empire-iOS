@@ -31,6 +31,8 @@ struct VehicleEditorView: View {
 
     @State private var tempName: String
     @State private var tempDescription: String
+    @State private var tempMake: String
+    @State private var tempModel: String
     @State private var tempImageName: String
     @State private var tempHorsepower: Int
     @State private var tempStage: Int
@@ -66,6 +68,8 @@ struct VehicleEditorView: View {
 
         _tempName = State(initialValue: baseCar.name)
         _tempDescription = State(initialValue: baseCar.description)
+        _tempMake = State(initialValue: baseCar.make ?? "")
+        _tempModel = State(initialValue: baseCar.model ?? "")
         _tempImageName = State(initialValue: baseCar.imageName)
         _tempHorsepower = State(initialValue: baseCar.horsepower)
         _tempStage = State(initialValue: baseCar.stage)
@@ -147,6 +151,8 @@ struct VehicleEditorView: View {
 
                         // Basic fields with mint-glass style
                         Group {
+                            GlassField(title: "Make", text: $tempMake)
+                            GlassField(title: "Model", text: $tempModel)
                             GlassField(title: "Name", text: $tempName)
                             StageSelector(stage: $tempStage, isJailbreak: $tempIsJailbreak)
                         }
@@ -306,6 +312,8 @@ struct VehicleEditorView: View {
         var updated = car
         updated.name = tempName
         updated.description = tempDescription
+        updated.make = tempMake
+        updated.model = tempModel
         updated.imageName = tempImageName
         updated.horsepower = tempHorsepower
         updated.stage = tempStage
