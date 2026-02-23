@@ -3,31 +3,31 @@ import XCTest
 
 final class AuthViewModelTests: XCTestCase {
 
+    // Test helpers for token setup/teardown
+    private func writeToken(_ key: String, _ value: String) {
+        let data = value.data(using: .utf8)!
+        _ = KeychainService.shared.save(data, forKey: key)
+    }
+
+    private func clearTokens() {
+        _ = KeychainService.shared.delete(forKey: KeychainService.accessTokenKey)
+        _ = KeychainService.shared.delete(forKey: KeychainService.refreshTokenKey)
+    }
+
     override func setUp() {
         super.setUp()
         // Ensure clean state
-        NetworkManager.shared.clearAuthToken()
+        clearTokens()
     }
 
     override func tearDown() {
-        NetworkManager.shared.clearAuthToken()
+        clearTokens()
         super.tearDown()
     }
 
-    private func writeKeychain(key: String, value: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: value.data(using: .utf8)!,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-        ]
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
-    }
-
     func testCheckAuthStatus_setsAuthenticatedWhenTokenPresent() async {
-        writeKeychain(key: "com.empire.accessToken", value: "fake_access")
-        writeKeychain(key: "com.empire.refreshToken", value: "fake_refresh")
+        writeToken(KeychainService.accessTokenKey, "fake_access")
+        writeToken(KeychainService.refreshTokenKey, "fake_refresh")
 
         let vm = await MainActor.run { AuthViewModel() }
         let isAuth = await MainActor.run { vm.isAuthenticated }
@@ -35,8 +35,8 @@ final class AuthViewModelTests: XCTestCase {
     }
 
     func testLogout_clearsTokensAndState() async {
-        writeKeychain(key: "com.empire.accessToken", value: "fake_access")
-        writeKeychain(key: "com.empire.refreshToken", value: "fake_refresh")
+        writeToken(KeychainService.accessTokenKey, "fake_access")
+        writeToken(KeychainService.refreshTokenKey, "fake_refresh")
 
         let vm = await MainActor.run { AuthViewModel() }
         let isAuth = await MainActor.run { vm.isAuthenticated }
@@ -49,3 +49,4 @@ final class AuthViewModelTests: XCTestCase {
         XCTAssertFalse(isAuthAfter, "AuthViewModel should be not authenticated after logout")
     }
 }
+

@@ -221,6 +221,8 @@
 		7039BA1C2F47521800004437 /* LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStore.swift; sourceTree = "<group>"; };
 		7039BA202F475FAC00004437 /* SafeCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeCollection.swift; sourceTree = "<group>"; };
 		7039BA242F47612900004437 /* ManageGarageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageGarageSheet.swift; sourceTree = "<group>"; };
+		703E6C0C2F4D0391009138E2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		703E6C0D2F4D0423009138E2 /* ErrorResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorResponse.swift; sourceTree = "<group>"; };
 		7042518D2F13397100322849 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		7042518F2F13397100322849 /* BackendModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendModels.swift; sourceTree = "<group>"; };
 		704251912F13397100322849 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
@@ -457,6 +459,8 @@
 				70C60A732F0DAA7C003AE110 /* Products */,
 				70E28F6D2F15CDF80025AAAC /* empire-connect-banner.png */,
 				70E28F6E2F15D3ED0025AAAC /* LICENSE.md */,
+				703E6C0C2F4D0391009138E2 /* PrivacyInfo.xcprivacy */,
+				703E6C0D2F4D0423009138E2 /* ErrorResponse.swift */,
 			);
 			sourceTree = "<group>";
 		};

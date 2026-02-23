@@ -2,6 +2,10 @@ import Foundation
 import Security
 
 final class KeychainService {
+    // Shared key names to avoid drift across tests
+    static let accessTokenKey = "com.empire.accessToken"
+    static let refreshTokenKey = "com.empire.refreshToken"
+    
     static let shared = KeychainService()
     
     private let service = "com.empire.app"
@@ -62,3 +66,4 @@ final class KeychainService {
         return String(data: data, encoding: .utf8)
     }
 }
+
