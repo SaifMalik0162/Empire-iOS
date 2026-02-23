@@ -37,12 +37,12 @@ class NetworkManager {
     // MARK: - Auth Token using KeychainService
     
     var authToken: String? {
-        get { KeychainService.shared.readString(forKey: "authToken") }
+        get { KeychainService.shared.readString(forKey: KeychainService.accessTokenKey) }
         set {
             if let token = newValue {
-                _ = KeychainService.shared.saveString(token, forKey: "authToken")
+                _ = KeychainService.shared.saveString(token, forKey: KeychainService.accessTokenKey)
             } else {
-                _ = KeychainService.shared.delete(forKey: "authToken")
+                _ = KeychainService.shared.delete(forKey: KeychainService.accessTokenKey)
             }
         }
     }
@@ -50,12 +50,12 @@ class NetworkManager {
     // MARK: - Refresh Token support via KeychainService
     
     private var refreshToken: String? {
-        get { KeychainService.shared.readString(forKey: "refreshToken") }
+        get { KeychainService.shared.readString(forKey: KeychainService.refreshTokenKey) }
         set {
             if let v = newValue {
-                _ = KeychainService.shared.saveString(v, forKey: "refreshToken")
+                _ = KeychainService.shared.saveString(v, forKey: KeychainService.refreshTokenKey)
             } else {
-                _ = KeychainService.shared.delete(forKey: "refreshToken")
+                _ = KeychainService.shared.delete(forKey: KeychainService.refreshTokenKey)
             }
         }
     }
@@ -69,7 +69,7 @@ class NetworkManager {
     }
     
     func setAuthToken(_ token: String) {
-        _ = KeychainService.shared.saveString(token, forKey: "authToken")
+        _ = KeychainService.shared.saveString(token, forKey: KeychainService.accessTokenKey)
     }
     
     func clearAuthToken() {
@@ -77,8 +77,8 @@ class NetworkManager {
             let old = authToken ?? "nil"
             print("[Network] clearAuthToken old=\(old)")
         }
-        _ = KeychainService.shared.delete(forKey: "authToken")
-        _ = KeychainService.shared.delete(forKey: "refreshToken")
+        _ = KeychainService.shared.delete(forKey: KeychainService.accessTokenKey)
+        _ = KeychainService.shared.delete(forKey: KeychainService.refreshTokenKey)
         if APIConfig.enableNetworkLogging {
             print("[Network] clearAuthToken new=\(authToken ?? "nil")")
         }
@@ -302,3 +302,4 @@ class NetworkManager {
         }
     }
 }
+
