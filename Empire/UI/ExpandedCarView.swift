@@ -189,12 +189,22 @@ struct CarExpandedCard: View {
                             .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
                             .accessibilityLabel(Text("Car name: \(car.name)"))
 
-                        Text(car.description)
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
-                            .accessibilityLabel(Text("Description: \(car.description)"))
+                        // Show make and model if available, otherwise show description
+                        if let make = car.make, !make.isEmpty, let model = car.model, !model.isEmpty {
+                            Text("\(make) \(model)")
+                                .font(.footnote)
+                                .foregroundStyle(.white.opacity(0.85))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 16)
+                                .accessibilityLabel(Text("\(make) \(model)"))
+                        } else {
+                            Text(car.description)
+                                .font(.footnote)
+                                .foregroundStyle(.white.opacity(0.85))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 16)
+                                .accessibilityLabel(Text("Description: \(car.description)"))
+                        }
                     }
                     .padding(.top, 4)
 
