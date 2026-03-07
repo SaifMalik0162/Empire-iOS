@@ -1,9 +1,11 @@
 import SwiftUI
 import PhotosUI
+import SwiftData
 
 struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.dismiss) private var dismissView
+    @Environment(\.modelContext) private var modelContext
     @State private var showSettings = false
     @State private var showHelpSupport: Bool = false
     @State private var showManageAccount: Bool = false
@@ -11,6 +13,8 @@ struct ProfileView: View {
     @State private var showRewards: Bool = false
     @State private var showRecentBuy: Bool = false
     @State private var animateGradient = false
+    
+    @State private var showManageGarage: Bool = false
     
     @State private var username: String = ""
     @State private var profileImage: String = "profilePic"
@@ -191,6 +195,10 @@ struct ProfileView: View {
                         .onAppear {
                             // Initialize avatar URL if your BackendUser provides one later
                             // Example: if let urlString = authViewModel.currentUser?.avatarURL { avatarURL = URL(string: urlString) }
+                            print("[ProfileView] onAppear")
+                            print("[ProfileView] has AuthVM instanceID: \(authViewModel.instanceID)")
+                            print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
+                            vehiclesVM.setContext(modelContext)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -245,133 +253,6 @@ struct ProfileView: View {
                     }
                     .padding(.horizontal, 16)
                     
-                    // MARK: - Vehicle
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 26)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [
-                                            Color("EmpireMint").opacity(0.6),
-                                            Color.clear
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1.5
-                                )
-                        )
-                        .shadow(color: Color("EmpireMint").opacity(0.3), radius: 14, y: 8)
-                        .frame(height: 140)
-                        .overlay(
-                            VStack(spacing: 10) {
-                                HStack {
-                                    Text("My Garage")
-                                        .foregroundColor(.white)
-                                        .font(.headline.bold())
-                                    Spacer()
-                                }
-                                
-                                HStack(spacing: 14) {
-                                    if vehiclesVM.vehicles.isEmpty {
-                                        Button {
-                                            showAddVehicle = true
-                                        } label: {
-                                            HStack(spacing: 8) {
-                                                Image(systemName: "plus.circle.fill")
-                                                Text("No vehicles added")
-                                            }
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundColor(Color("EmpireMint"))
-                                            .padding(.vertical, 10)
-                                            .frame(maxWidth: .infinity)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                    .fill(Color.white.opacity(0.06))
-                                            )
-                                        }
-                                        .buttonStyle(.plain)
-                                    } else {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .fill(.ultraThinMaterial)
-                                                .frame(width: 120, height: 84)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 16)
-                                                        .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                                                        .blendMode(.screen)
-                                                )
-                                                .clipped()
-
-                                            Image(vehiclesVM.vehicles[selectedVehicleIndex].imageName)
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(width: 120, height: 84)
-                                                .clipShape(RoundedRectangle(cornerRadius: 16))
-
-                                            LinearGradient(
-                                                colors: [Color.black.opacity(0.0), Color.black.opacity(0.25)],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                            .frame(width: 120, height: 84)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16))
-
-                                            LinearGradient(
-                                                gradient: Gradient(stops: [
-                                                    .init(color: .clear, location: 0.0),
-                                                    .init(color: .white.opacity(0.18), location: 0.5),
-                                                    .init(color: .clear, location: 1.0)
-                                                ]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                            .blendMode(.screen)
-                                            .opacity(0.18)
-                                            .blur(radius: 6)
-                                            .rotationEffect(.degrees(16))
-                                            .frame(width: 120, height: 84)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                                        }
-                                        .rotationEffect(.degrees(isJiggling ? 1.8 : 0), anchor: .center)
-                                        .scaleEffect(isJiggling ? 0.98 : 1.0)
-                                        .animation(isJiggling ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true) : .default, value: isJiggling)
-                                        .onLongPressGesture(minimumDuration: 0.35) {
-                                            let gen = UIImpactFeedbackGenerator(style: .medium)
-                                            gen.impactOccurred()
-                                            isJiggling = true
-                                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
-                                                isJiggling = false
-                                            }
-                                            // Present editor if desired in future; for now just jiggle to indicate edit affordance
-                                        }
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(vehiclesVM.vehicles[selectedVehicleIndex].name)
-                                                .foregroundColor(.white)
-                                                .bold()
-                                            if vehiclesVM.vehicles[selectedVehicleIndex].isJailbreak {
-                                                Text("Jailbreak")
-                                                    .font(.caption2.weight(.semibold))
-                                                    .padding(.horizontal, 8)
-                                                    .padding(.vertical, 4)
-                                                    .background(Capsule().fill(Color.purple.opacity(0.18)))
-                                                    .overlay(Capsule().stroke(Color.purple.opacity(0.6), lineWidth: 1))
-                                                    .foregroundStyle(.white)
-                                            }
-                                            
-                                            Text(vehiclesVM.vehicles[selectedVehicleIndex].description)
-                                                .font(.caption2)
-                                                .foregroundColor(.white.opacity(0.7))
-                                        }
-                                        Spacer()
-                                    }
-                                }
-                            }
-                                .padding(14)
-                        )
-                        .padding(.horizontal, 16)
-                    
                     // MARK: - Settings
                     VStack(spacing: 14) {
                         Button { showSettings = true } label: { GlassOptionRow(icon: "gearshape.fill", title: "Settings") }
@@ -403,6 +284,7 @@ struct ProfileView: View {
                     print("[ProfileView] onAppear")
                     print("[ProfileView] has AuthVM instanceID: \(authViewModel.instanceID)")
                     print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
+                    vehiclesVM.setContext(modelContext)
                 }
                 .task {
                     print("[ProfileView] .task appeared")
@@ -432,7 +314,7 @@ struct ProfileView: View {
                         .preferredColorScheme(ColorScheme.dark)
                 }
                 .sheet(isPresented: $showVIP) {
-                    VIPMembershipView()
+                    VIPExperienceView()
                         .preferredColorScheme(.dark)
                 }
                 .sheet(isPresented: $showRewards) {
@@ -448,6 +330,10 @@ struct ProfileView: View {
                         status: "Shipped"
                     )
                     .preferredColorScheme(.dark)
+                }
+                .sheet(isPresented: $showManageGarage) {
+                    ManageGarageSheet(vehiclesVM: vehiclesVM)
+                        .preferredColorScheme(.dark)
                 }
                 .onAppear {
                     Task { await vehiclesVM.loadVehicles() }
@@ -488,4 +374,3 @@ private struct ProfileChip: View {
             .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
     }
 }
-

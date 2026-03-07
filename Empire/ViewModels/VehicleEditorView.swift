@@ -1,15 +1,38 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import SwiftData
+
+private enum ImageStore {
+    static func save(_ data: Data, fileName: String) throws -> URL {
+        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            throw NSError(domain: "ImageStore", code: 1, userInfo: [NSLocalizedDescriptionKey: "Documents directory not found"])
+        }
+        let fileURL = documentsURL.appendingPathComponent(fileName)
+        try data.write(to: fileURL, options: [.atomic])
+        return fileURL
+    }
+
+    static func load(_ fileName: String) -> Data? {
+        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let fileURL = documentsURL.appendingPathComponent(fileName)
+        return try? Data(contentsOf: fileURL)
+    }
+}
 
 struct VehicleEditorView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @Binding var car: Car
     var onSave: (Car) -> Void
 
     @State private var tempName: String
     @State private var tempDescription: String
+    @State private var tempMake: String
+    @State private var tempModel: String
     @State private var tempImageName: String
     @State private var tempHorsepower: Int
     @State private var tempStage: Int
@@ -45,6 +68,8 @@ struct VehicleEditorView: View {
 
         _tempName = State(initialValue: baseCar.name)
         _tempDescription = State(initialValue: baseCar.description)
+        _tempMake = State(initialValue: baseCar.make ?? "")
+        _tempModel = State(initialValue: baseCar.model ?? "")
         _tempImageName = State(initialValue: baseCar.imageName)
         _tempHorsepower = State(initialValue: baseCar.horsepower)
         _tempStage = State(initialValue: baseCar.stage)
@@ -61,8 +86,12 @@ struct VehicleEditorView: View {
         _tempIsJailbreak = State(initialValue: baseCar.isJailbreak)
         _tempVehicleClass = State(initialValue: baseCar.vehicleClass)
 
-        // Load any previously saved photo for this car id.
-        _tempPhotoData = State(initialValue: Self.loadSavedPhotoData(for: car.wrappedValue.id, userKey: currentUserId))
+        // Load photo data from disk using photoFileName if available.
+        if let photoFileName = baseCar.photoFileName, let loadedData = ImageStore.load(photoFileName) {
+            _tempPhotoData = State(initialValue: loadedData)
+        } else {
+            _tempPhotoData = State(initialValue: nil)
+        }
     }
 
     var body: some View {
@@ -91,18 +120,25 @@ struct VehicleEditorView: View {
                                 .frame(height: 180)
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
                                 VStack(spacing: 10) {
-                                    if let data = tempPhotoData, let uiImage = UIImage(data: data) {
+                                    if let data = tempPhotoData {
+                                        if let uiImage = UIImage(data: data) {
+                                            Image(uiImage: uiImage)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(height: 110)
+                                                .opacity(0.95)
+                                        } else {
+                                            // If data is invalid, fallback
+                                            fallbackImageView
+                                        }
+                                    } else if let photoFileName = car.photoFileName, let diskData = ImageStore.load(photoFileName), let uiImage = UIImage(data: diskData) {
                                         Image(uiImage: uiImage)
                                             .resizable()
                                             .scaledToFit()
                                             .frame(height: 110)
                                             .opacity(0.95)
                                     } else {
-                                        Image(tempImageName)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(height: 110)
-                                            .opacity(0.9)
+                                        fallbackImageView
                                     }
                                     Text("Tap to change image")
                                         .font(.caption)
@@ -115,6 +151,8 @@ struct VehicleEditorView: View {
 
                         // Basic fields with mint-glass style
                         Group {
+                            GlassField(title: "Make", text: $tempMake)
+                            GlassField(title: "Model", text: $tempModel)
                             GlassField(title: "Name", text: $tempName)
                             StageSelector(stage: $tempStage, isJailbreak: $tempIsJailbreak)
                         }
@@ -262,10 +300,20 @@ struct VehicleEditorView: View {
         }
     }
 
+    private var fallbackImageView: some View {
+        Image(tempImageName)
+            .resizable()
+            .scaledToFit()
+            .frame(height: 110)
+            .opacity(0.9)
+    }
+
     private func saveAndDismiss() {
         var updated = car
         updated.name = tempName
         updated.description = tempDescription
+        updated.make = tempMake
+        updated.model = tempModel
         updated.imageName = tempImageName
         updated.horsepower = tempHorsepower
         updated.stage = tempStage
@@ -290,11 +338,23 @@ struct VehicleEditorView: View {
 
         updated.isJailbreak = tempIsJailbreak
         updated.vehicleClass = tempVehicleClass
+
+        // Persist photo data to disk and update photoFileName accordingly
+        if let data = tempPhotoData {
+            let filename = "car_\(updated.id.uuidString).jpg"
+            do {
+                _ = try ImageStore.save(data, fileName: filename)
+                updated.photoFileName = filename
+            } catch {
+                // On failure, do not update photoFileName
+            }
+        }
+
         // Persist per-user so edits survive relaunch.
         Self.saveCar(updated, userKey: userStorageKey)
-        if let data = tempPhotoData {
-            Self.savePhotoData(data, for: updated.id, userKey: userStorageKey)
-        }
+
+        LocalStore.shared.upsertCar(updated, context: modelContext, userKey: userStorageKey)
+
         onSave(updated)
         showStageSuggestion = false
         dismiss()
@@ -321,10 +381,6 @@ struct VehicleEditorView: View {
         "saved_car_\(userKey)_\(id.uuidString)"
     }
 
-    private static func carPhotoStorageKey(for id: UUID, userKey: String) -> String {
-        "saved_car_photo_\(userKey)_\(id.uuidString)"
-    }
-
     private static func saveCar(_ car: Car, userKey: String) {
         do {
             let data = try JSONEncoder().encode(car)
@@ -337,14 +393,6 @@ struct VehicleEditorView: View {
     private static func loadSavedCar(for id: UUID, userKey: String) -> Car? {
         guard let data = UserDefaults.standard.data(forKey: carStorageKey(for: id, userKey: userKey)) else { return nil }
         return try? JSONDecoder().decode(Car.self, from: data)
-    }
-
-    private static func savePhotoData(_ data: Data, for id: UUID, userKey: String) {
-        UserDefaults.standard.set(data, forKey: carPhotoStorageKey(for: id, userKey: userKey))
-    }
-
-    private static func loadSavedPhotoData(for id: UUID, userKey: String) -> Data? {
-        UserDefaults.standard.data(forKey: carPhotoStorageKey(for: id, userKey: userKey))
     }
 
     private func labelForClass(_ cls: VehicleClass) -> String {

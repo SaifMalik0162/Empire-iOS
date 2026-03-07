@@ -34,7 +34,10 @@ struct Car: Identifiable, Codable {
     var id: UUID
     var name: String
     var description: String
+    var make: String? = nil
+    var model: String? = nil
     var imageName: String
+    var photoFileName: String? = nil
     var horsepower: Int
     var stage: Int
     var specs: [SpecItem] = []
@@ -42,11 +45,14 @@ struct Car: Identifiable, Codable {
     var isJailbreak: Bool = false
     var vehicleClass: VehicleClass? = nil
 
-    init(id: UUID = UUID(), name: String, description: String, imageName: String, horsepower: Int, stage: Int, specs: [SpecItem] = [], mods: [ModItem] = [], isJailbreak: Bool = false, vehicleClass: VehicleClass? = nil) {
+    init(id: UUID = UUID(), name: String, description: String, make: String? = nil, model: String? = nil, imageName: String, photoFileName: String? = nil, horsepower: Int, stage: Int, specs: [SpecItem] = [], mods: [ModItem] = [], isJailbreak: Bool = false, vehicleClass: VehicleClass? = nil) {
         self.id = id
         self.name = name
         self.description = description
+        self.make = make
+        self.model = model
         self.imageName = imageName
+        self.photoFileName = photoFileName
         self.horsepower = horsepower
         self.stage = stage
         self.specs = specs

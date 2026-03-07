@@ -13,25 +13,16 @@ struct HelpSupportView: View {
                     .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 18) {
+                    VStack(spacing: 14) {
                         section(title: "Quick Help") {
                             HelpGlassCard {
-                                VStack(spacing: 0) {
-                                    HelpRow(icon: "person.2.fill", title: "Contact Support") {
-                                        haptic()
-                                        // Placeholder: open support contact form or mail composer
-                                    }
-                                    Divider().background(Color.white.opacity(0.1))
-                                    HelpRow(icon: "bubble.left.and.bubble.right.fill", title: "Submit Feedback") {
-                                        haptic()
-                                        // Placeholder: open feedback form
-                                    }
-                                    Divider().background(Color.white.opacity(0.1))
-                                    HelpRow(icon: "ladybug.fill", title: "Report a Bug") {
-                                        haptic()
-                                        // Placeholder: open bug report form or issue tracker
-                                    }
-                                }
+                                CompactQuickHelp(
+                                    items: [
+                                        .init(icon: "person.2.fill", title: "Contact Support", action: { haptic() }),
+                                        .init(icon: "bubble.left.and.bubble.right.fill", title: "Submit Feedback", action: { haptic() }),
+                                        .init(icon: "ladybug.fill", title: "Report a Bug", action: { haptic() })
+                                    ]
+                                )
                             }
                         }
 
@@ -121,11 +112,11 @@ struct HelpSupportView: View {
     }
 
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color("EmpireMint"))
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 content()
             }
         }
@@ -146,7 +137,7 @@ private struct HelpGlassCard<Content: View>: View {
 
     var body: some View {
         content
-            .padding(14)
+            .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(.ultraThinMaterial)
@@ -186,6 +177,133 @@ private struct HelpRow: View {
             .overlay(RoundedRectangle(cornerRadius: 14).stroke(LinearGradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct QuickHelpRow: View {
+    let icon: String
+    let title: String
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .overlay(Circle().stroke(Color.white.opacity(0.22), lineWidth: 1))
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(EmpireTheme.mintAdaptive)
+                }
+                .frame(width: 40, height: 40)
+
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .frame(height: 52)
+            .padding(.horizontal, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.white.opacity(0.035))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(LinearGradient(colors: [Color.white.opacity(0.22), Color.white.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct QuickHelpItem: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let action: () -> Void
+}
+
+private struct CompactQuickHelp: View {
+    let items: [QuickHelpItem]
+
+    private let columns: [GridItem] = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .center, spacing: 12) {
+            ForEach(items) { item in
+                CompactQuickHelpPill(icon: item.icon, title: item.title, action: item.action)
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+}
+
+private struct CompactQuickHelpPill: View {
+    let icon: String
+    let title: String
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                        .shadow(color: EmpireTheme.mintCore.opacity(0.15), radius: 6, y: 2)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(EmpireTheme.mintAdaptive)
+                }
+                .frame(width: 36, height: 36)
+
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.white.opacity(0.035))
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(EmpireTheme.mintCore.opacity(0.06), lineWidth: 1)
+                        .blur(radius: 1)
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(LinearGradient(colors: [Color.white.opacity(0.22), Color.white.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+            )
+            .frame(minHeight: 72)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(EmpireTheme.mintCore.opacity(0.12), lineWidth: 0.5)
+                .blendMode(.screen)
+        )
+        .empireParallax(amount: 3)
     }
 }
 

@@ -34,11 +34,30 @@ class NetworkManager {
     static let shared = NetworkManager()
     private init() {}
     
-    private let tokenKey = "authToken"
+    // MARK: - Auth Token using KeychainService
     
     var authToken: String? {
-        get { UserDefaults.standard.string(forKey: tokenKey) }
-        set { UserDefaults.standard.set(newValue, forKey: tokenKey) }
+        get { KeychainService.shared.readString(forKey: KeychainService.accessTokenKey) }
+        set {
+            if let token = newValue {
+                _ = KeychainService.shared.saveString(token, forKey: KeychainService.accessTokenKey)
+            } else {
+                _ = KeychainService.shared.delete(forKey: KeychainService.accessTokenKey)
+            }
+        }
+    }
+    
+    // MARK: - Refresh Token support via KeychainService
+    
+    private var refreshToken: String? {
+        get { KeychainService.shared.readString(forKey: KeychainService.refreshTokenKey) }
+        set {
+            if let v = newValue {
+                _ = KeychainService.shared.saveString(v, forKey: KeychainService.refreshTokenKey)
+            } else {
+                _ = KeychainService.shared.delete(forKey: KeychainService.refreshTokenKey)
+            }
+        }
     }
     
     var isAuthenticated: Bool {
@@ -50,7 +69,7 @@ class NetworkManager {
     }
     
     func setAuthToken(_ token: String) {
-        self.authToken = token
+        _ = KeychainService.shared.saveString(token, forKey: KeychainService.accessTokenKey)
     }
     
     func clearAuthToken() {
@@ -58,17 +77,78 @@ class NetworkManager {
             let old = authToken ?? "nil"
             print("[Network] clearAuthToken old=\(old)")
         }
-        self.authToken = nil
+        _ = KeychainService.shared.delete(forKey: KeychainService.accessTokenKey)
+        _ = KeychainService.shared.delete(forKey: KeychainService.refreshTokenKey)
         if APIConfig.enableNetworkLogging {
             print("[Network] clearAuthToken new=\(authToken ?? "nil")")
         }
     }
+    
+    // MARK: - Refresh Auth Token if needed
+    
+    private struct RefreshRequest: Encodable {
+        let refreshToken: String
+    }
+    private struct RefreshResponse: Decodable {
+        let token: String
+        let refreshToken: String?
+    }
+    
+    func refreshAuthTokenIfNeeded() async throws {
+        guard let rt = refreshToken else {
+            if APIConfig.enableNetworkLogging {
+                print("[Network] No refresh token available, cannot refresh")
+            }
+            throw NetworkError.unauthorized
+        }
+        
+        if APIConfig.enableNetworkLogging {
+            print("[Network] Attempting to refresh auth token")
+        }
+        
+        let refreshRequest = RefreshRequest(refreshToken: rt)
+        
+        do {
+            let refreshResponse: RefreshResponse = try await _request(
+                endpoint: "/auth/refresh",
+                method: .post,
+                body: refreshRequest,
+                requiresAuth: false,
+                didRetry: true // no retry inside refresh
+            )
+            if APIConfig.enableNetworkLogging {
+                print("[Network] Token refreshed successfully")
+            }
+            self.authToken = refreshResponse.token
+            if let newRefreshToken = refreshResponse.refreshToken {
+                self.refreshToken = newRefreshToken
+            }
+        } catch {
+            if APIConfig.enableNetworkLogging {
+                print("[Network] Failed to refresh token: \(error.localizedDescription)")
+            }
+            clearAuthToken()
+            throw NetworkError.unauthorized
+        }
+    }
+    
+    // MARK: - Requests
     
     func request<T: Decodable>(
         endpoint: String,
         method: HTTPMethod = .get,
         body:  Encodable? = nil,
         requiresAuth: Bool = false
+    ) async throws -> T {
+        return try await _request(endpoint: endpoint, method: method, body: body, requiresAuth: requiresAuth, didRetry: false)
+    }
+    
+    private func _request<T: Decodable>(
+        endpoint: String,
+        method: HTTPMethod = .get,
+        body: Encodable? = nil,
+        requiresAuth: Bool = false,
+        didRetry: Bool
     ) async throws -> T {
         
         guard let url = URL(string: APIConfig.baseURL + endpoint) else {
@@ -100,16 +180,14 @@ class NetworkManager {
         
         if APIConfig.enableNetworkLogging {
             print("📡 Status:  \(httpResponse.statusCode)")
-            if let json = String(data: data, encoding: . utf8) {
+            if let json = String(data: data, encoding: .utf8) {
                 print("📄 Response: \(json)")
             }
         }
         
         let statusCode = httpResponse.statusCode
         
-        // Handle different status codes
         if statusCode >= 200 && statusCode < 300 {
-            // Success - decode response
             do {
                 let decoded = try JSONDecoder().decode(T.self, from: data)
                 return decoded
@@ -117,11 +195,20 @@ class NetworkManager {
                 throw NetworkError.decodingError(error)
             }
         } else if statusCode == 401 {
-            // Unauthorized
-            clearAuthToken()
-            throw NetworkError.unauthorized
+            if didRetry {
+                clearAuthToken()
+                throw NetworkError.unauthorized
+            } else {
+                do {
+                    try await refreshAuthTokenIfNeeded()
+                    // Retry original request once after refresh
+                    return try await _request(endpoint: endpoint, method: method, body: body, requiresAuth: requiresAuth, didRetry: true)
+                } catch {
+                    clearAuthToken()
+                    throw NetworkError.unauthorized
+                }
+            }
         } else {
-            // Other errors
             if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
                 throw NetworkError.serverError(errorResponse.message)
             }
@@ -215,3 +302,4 @@ class NetworkManager {
         }
     }
 }
+
