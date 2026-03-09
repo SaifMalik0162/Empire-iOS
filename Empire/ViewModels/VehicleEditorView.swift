@@ -3,6 +3,68 @@ import PhotosUI
 import UIKit
 import SwiftData
 
+// MARK: - Glass Card & Shimmer Components
+
+private struct EditorGlassCard<Content: View>: View {
+    let content: Content
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+    var body: some View {
+        VStack(spacing: 12) {
+            content
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color("EmpireMint").opacity(0.10))
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
+        .shadow(color: Color("EmpireMint").opacity(0.2), radius: 10, x: 0, y: 6)
+    }
+}
+
+private struct EditorShimmerHighlight: View {
+    @State private var phase: CGFloat = -1
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width * 2.5
+            let gradient = LinearGradient(
+                gradient: Gradient(colors: [Color.white.opacity(0), Color.white.opacity(0.15), Color.white.opacity(0)]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            Rectangle()
+                .fill(gradient)
+                .rotationEffect(.degrees(-30))
+                .frame(width: width, height: geo.size.height * 1.5)
+                .offset(x: phase * width)
+                .blendMode(.screen)
+                .onAppear {
+                    withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                        phase = 1
+                    }
+                }
+                .allowsHitTesting(false)
+        }
+        .clipped()
+        .cornerRadius(20)
+    }
+}
+
+// MARK: - ImageStore
 private enum ImageStore {
     static func save(_ data: Data, fileName: String) throws -> URL {
         guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
@@ -29,6 +91,13 @@ struct VehicleEditorView: View {
     @Binding var car: Car
     var onSave: (Car) -> Void
 
+    private enum Step {
+        case details
+        case modsSpecs
+        case stage
+    }
+    @State private var step: Step = .details
+
     @State private var tempName: String
     @State private var tempDescription: String
     @State private var tempMake: String
@@ -38,7 +107,6 @@ struct VehicleEditorView: View {
     @State private var tempStage: Int
     @State private var tempSpecs: [SpecItem]
     @State private var tempMods: [ModItem]
-    @State private var tempIsJailbreak: Bool
     @State private var tempVehicleClass: VehicleClass?
 
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
@@ -48,7 +116,10 @@ struct VehicleEditorView: View {
 
     @State private var selectedModIDs: Set<UUID> = []
     @State private var selectedPresetMods: Set<String> = []
-    @State private var showStageSuggestion: Bool = false
+
+    @State private var stageCarouselSelection: Int = 0
+    @State private var showStageWarning: Bool = false
+    @State private var attemptedStageSelection: Int? = nil
 
     private static let presetSet: Set<String> = [
         "Tune", "Intake", "Headers", "Exhaust", "Forced Induction",
@@ -83,7 +154,6 @@ struct VehicleEditorView: View {
         _selectedPresetMods = State(initialValue: intersecting)
         _selectedModIDs = State(initialValue: Set(baseCar.mods.map { $0.id }))
 
-        _tempIsJailbreak = State(initialValue: baseCar.isJailbreak)
         _tempVehicleClass = State(initialValue: baseCar.vehicleClass)
 
         // Load photo data from disk using photoFileName if available.
@@ -92,221 +162,525 @@ struct VehicleEditorView: View {
         } else {
             _tempPhotoData = State(initialValue: nil)
         }
+
+        _stageCarouselSelection = State(initialValue: baseCar.stage)
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Image with mint-glass style
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 25, style: .continuous)
-                                .fill(Color("EmpireMint").opacity(0.25))
-                                .background(.ultraThinMaterial)
-                                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 25)
-                                        .stroke(
-                                            LinearGradient(
-                                                colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ),
-                                            lineWidth: 1
-                                        )
-                                )
-                                .shadow(color: Color("EmpireMint").opacity(0.3), radius: 10, x: 0, y: 4)
-                                .frame(height: 180)
-                            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
-                                VStack(spacing: 10) {
-                                    if let data = tempPhotoData {
-                                        if let uiImage = UIImage(data: data) {
-                                            Image(uiImage: uiImage)
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(height: 110)
-                                                .opacity(0.95)
-                                        } else {
-                                            // If data is invalid, fallback
-                                            fallbackImageView
-                                        }
-                                    } else if let photoFileName = car.photoFileName, let diskData = ImageStore.load(photoFileName), let uiImage = UIImage(data: diskData) {
-                                        Image(uiImage: uiImage)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(height: 110)
-                                            .opacity(0.95)
-                                    } else {
-                                        fallbackImageView
-                                    }
-                                    Text("Tap to change image")
-                                        .font(.caption)
-                                        .foregroundColor(Color("EmpireMint").opacity(0.7))
-                                }
-                                .padding()
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        // Basic fields with mint-glass style
-                        Group {
-                            GlassField(title: "Make", text: $tempMake)
-                            GlassField(title: "Model", text: $tempModel)
-                            GlassField(title: "Name", text: $tempName)
-                            StageSelector(stage: $tempStage, isJailbreak: $tempIsJailbreak)
-                        }
-
-                        // Specs section with dynamic editing
-                        GlassSection(title: "Specs") {
-                            GlassNumberField(title: "Horsepower", value: $tempHorsepower, suffix: " HP")
-                            ForEach(tempSpecs, id: \.id) { spec in
-                                HStack(spacing: 8) {
-                                    // Key pill
-                                    Text(spec.key.isEmpty ? "Engine" : spec.key)
-                                        .font(.caption.weight(.semibold))
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(Capsule().fill(Color.white.opacity(0.06)))
-                                        .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1))
-                                        .foregroundStyle(.white)
-                                        .contentShape(Capsule())
-                                        .onTapGesture {
-                                            // No-op here; focus will be on value field
-                                        }
-
-                                    // Compact inline value field
-                                    GlassTextField(placeholder: "Value", text: Binding(get: {
-                                        if let idx = tempSpecs.firstIndex(where: { $0.id == spec.id }) { return tempSpecs[idx].value } else { return "" }
-                                    }, set: { newVal in
-                                        if let idx = tempSpecs.firstIndex(where: { $0.id == spec.id }) { tempSpecs[idx].value = newVal }
-                                    }))
-                                }
-                            }
-                        }
-
-                        // Mods section with dynamic editing
-                        GlassSection(title: "Mods") {
-                            QuickAddModsRow(selectedPresets: $selectedPresetMods)
-                            let modGridColumns: [GridItem] = [GridItem(.adaptive(minimum: 140), spacing: 8)]
-                            LazyVGrid(columns: modGridColumns, spacing: 8) {
-                                ForEach(Array(tempMods.enumerated()).filter { !Self.presetSet.contains($0.element.title) }, id: \.element.id) { index, item in
-                                    let id = item.id
-                                    ModPillView(
-                                        title: item.title.isEmpty ? "Untitled Mod" : item.title,
-                                        isMajor: item.isMajor,
-                                        isSelected: selectedModIDs.contains(id),
-                                        onToggleSelect: {
-                                            if selectedModIDs.contains(id) {
-                                                selectedModIDs.remove(id)
-                                            } else {
-                                                selectedModIDs.insert(id)
-                                            }
-                                        },
-                                        onDelete: {
-                                            if let removeIndex = tempMods.firstIndex(where: { $0.id == id }) {
-                                                tempMods.remove(at: removeIndex)
-                                            }
-                                            selectedModIDs.remove(id)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        GlassSection(title: "Vehicle Class") {
-                            Picker("Class", selection: Binding(get: { tempVehicleClass ?? VehicleClass.a_FWD_Tuner }, set: { tempVehicleClass = $0 })) {
-                                ForEach(VehicleClass.allCases) { cls in
-                                    Text(labelForClass(cls))
-                                        .tag(cls)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .tint(Color("EmpireMint"))
-                        }
-                    }
-                    .padding(20)
-                }
-                .onChange(of: selectedPhotoItem) { _, newItem in
-                    guard let newItem else { return }
-                    Task {
-                        if let data = try? await newItem.loadTransferable(type: Data.self) {
-                            await MainActor.run {
-                                self.tempPhotoData = data
-                            }
-                        }
-                    }
-                }
-                .overlay(
-                    Group {
-                        if showStageSuggestion {
-                            // Count selected presets + selected mod pills
-                            let selectedPresetCount = selectedPresetMods.count
-                            let selectedModCount = tempMods.filter { selectedModIDs.contains($0.id) }.count
-                            let totalSelectedCount = selectedPresetCount + selectedModCount
-
-                            // Detect if any selected item (preset or pill) is a tune
-                            let hasTuneFromPresets = selectedPresetMods.contains { $0.localizedCaseInsensitiveContains("tune") }
-                            let hasTuneFromSelectedMods = tempMods.contains { mod in
-                                selectedModIDs.contains(mod.id) && mod.title.localizedCaseInsensitiveContains("tune")
-                            }
-                            let hasTuneAny = hasTuneFromPresets || hasTuneFromSelectedMods
-
-                            StageSuggestionBanner(majorModsCount: totalSelectedCount, hasTune: hasTuneAny) {
-                                let gen = UIImpactFeedbackGenerator(style: .light)
-                                gen.impactOccurred()
-                                // Ensure we're not in Jailbreak and select Stage 2 explicitly
-                                tempIsJailbreak = false
-                                tempStage = 2
-                                withAnimation(.easeOut(duration: 0.25)) { showStageSuggestion = false }
-                            }
-                        }
-                    }
-                )
-                .onChange(of: selectedPresetMods) { _, _ in
-                    let selectedPresetCount = selectedPresetMods.count
-                    let selectedModCount = tempMods.filter { selectedModIDs.contains($0.id) && !Self.presetSet.contains($0.title) }.count
-                    let totalSelectedCount = selectedPresetCount + selectedModCount
-                    let hasTuneAny = selectedPresetMods.contains { $0.localizedCaseInsensitiveContains("tune") } || tempMods.contains { mod in selectedModIDs.contains(mod.id) && mod.title.localizedCaseInsensitiveContains("tune") }
-                    if totalSelectedCount >= 3 && hasTuneAny { showStageSuggestion = true }
-                }
-                .onChange(of: selectedModIDs) { _, _ in
-                    let selectedPresetCount = selectedPresetMods.count
-                    let selectedModCount = tempMods.filter { selectedModIDs.contains($0.id) && !Self.presetSet.contains($0.title) }.count
-                    let totalSelectedCount = selectedPresetCount + selectedModCount
-                    let hasTuneAny = selectedPresetMods.contains { $0.localizedCaseInsensitiveContains("tune") } || tempMods.contains { mod in selectedModIDs.contains(mod.id) && mod.title.localizedCaseInsensitiveContains("tune") }
-                    if totalSelectedCount >= 3 && hasTuneAny { showStageSuggestion = true }
-                }
-            }
-            .navigationTitle("Edit Vehicle")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveAndDismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
-            .background(
                 LinearGradient(
                     colors: [Color.black, Color.black.opacity(0.95)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .ignoresSafeArea()
-            )
+                RadialGradient(
+                    gradient: Gradient(colors: [Color("EmpireMint").opacity(0.10), .clear]), // Reduced opacity
+                    center: .topTrailing,
+                    startRadius: 30,
+                    endRadius: 450
+                )
+                .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 20) {
+                            switch step {
+                            case .details:
+                                stepOneView
+                            case .modsSpecs:
+                                stepTwoView
+                            case .stage:
+                                stepThreeView
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 32)
+                        .padding(.top, 24)
+                    }
+
+                    bottomNavigation
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 16)
+                }
+                .padding(.top, 0)
+            }
+            .navigationTitle("Edit Vehicle")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .buttonStyle(.borderless)
+                    .foregroundColor(Color("EmpireMint"))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .fixedSize(horizontal: true, vertical: true)
+                    .background(
+                        Capsule()
+                            .fill(Color.clear)
+                    )
+                    .frame(maxWidth: 120)
+                }
+            }
         }
     }
 
-    private var fallbackImageView: some View {
-        Image(tempImageName)
-            .resizable()
-            .scaledToFit()
-            .frame(height: 110)
-            .opacity(0.9)
+    // MARK: - Step 1 View (Vehicle Details: Image picker + Make, Model, Name)
+
+    private var stepOneView: some View {
+        VStack(spacing: 24) {
+            
+            EditorGlassCard {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color("EmpireMint").opacity(0.15))
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.25), Color.white.opacity(0.03)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.9
+                                )
+                        )
+                        .shadow(color: Color("EmpireMint").opacity(0.2), radius: 8, x: 0, y: 3)
+                        .frame(width: 110, height: 110)
+
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                        VStack(spacing: 6) {
+                            if let data = tempPhotoData {
+                                if let uiImage = UIImage(data: data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 110, height: 110)
+                                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                        .opacity(0.95)
+                                } else {
+                                    // If data is invalid, fallback
+                                    fallbackImageViewRoundedSquare
+                                }
+                            } else if let photoFileName = car.photoFileName, let diskData = ImageStore.load(photoFileName), let uiImage = UIImage(data: diskData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 110, height: 110)
+                                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                    .opacity(0.95)
+                            } else {
+                                fallbackImageViewRoundedSquare
+                            }
+                            Text("Tap to change image")
+                                .font(.caption)
+                                .foregroundColor(Color("EmpireMint").opacity(0.7))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(8)
+                    }
+                    .buttonStyle(.plain)
+
+                    EditorShimmerHighlight()
+                        .allowsHitTesting(false)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+            }
+
+            // Basic fields card: Make, Model, Name
+            EditorGlassCard {
+                VStack(spacing: 16) {
+                    GlassField(title: "Make", text: $tempMake)
+                    GlassField(title: "Model", text: $tempModel)
+                    GlassField(title: "Name", text: $tempName)
+                }
+            }
+
+            // Vehicle Class card
+            EditorGlassCard {
+                GlassSection(title: "Vehicle Class") {
+                    Picker("Class", selection: Binding(get: { tempVehicleClass ?? VehicleClass.a_FWD_Tuner }, set: { tempVehicleClass = $0 })) {
+                        ForEach(VehicleClass.allCases) { cls in
+                            Text(labelForClass(cls))
+                                .tag(cls)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Color("EmpireMint"))
+                }
+            }
+        }
     }
+
+    // MARK: - Step 2 View (Mods and Specs)
+
+    private var stepTwoView: some View {
+        VStack(spacing: 24) {
+            // Mods card
+            EditorGlassCard {
+                GlassSection(title: "Mods") {
+                    QuickAddModsRow(selectedPresets: $selectedPresetMods)
+                    let modGridColumns: [GridItem] = [GridItem(.adaptive(minimum: 140), spacing: 6)]
+                    LazyVGrid(columns: modGridColumns, spacing: 6) {
+                        ForEach(Array(tempMods.enumerated()).filter { !Self.presetSet.contains($0.element.title) }, id: \.element.id) { index, item in
+                            let id = item.id
+                            ModPillView(
+                                title: item.title.isEmpty ? "Untitled Mod" : item.title,
+                                isMajor: item.isMajor,
+                                isSelected: selectedModIDs.contains(id),
+                                onToggleSelect: {
+                                    if selectedModIDs.contains(id) {
+                                        selectedModIDs.remove(id)
+                                    } else {
+                                        selectedModIDs.insert(id)
+                                    }
+                                },
+                                onDelete: {
+                                    if let removeIndex = tempMods.firstIndex(where: { $0.id == id }) {
+                                        tempMods.remove(at: removeIndex)
+                                    }
+                                    selectedModIDs.remove(id)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Specs card
+            EditorGlassCard {
+                GlassSection(title: "Specs & Horsepower") {
+                    GlassNumberField(title: "Horsepower", value: $tempHorsepower, suffix: " HP")
+                    ForEach(tempSpecs, id: \.id) { spec in
+                        HStack(spacing: 6) {
+                            // Key pill
+                            Text(spec.key.isEmpty ? "Engine" : spec.key)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Capsule().fill(Color.white.opacity(0.04)))
+                                .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                                .foregroundStyle(.white)
+                                .contentShape(Capsule())
+                                .onTapGesture {
+                                }
+
+                            GlassTextField(placeholder: "Value", text: Binding(get: {
+                                if let idx = tempSpecs.firstIndex(where: { $0.id == spec.id }) { return tempSpecs[idx].value } else { return "" }
+                            }, set: { newVal in
+                                if let idx = tempSpecs.firstIndex(where: { $0.id == spec.id }) { tempSpecs[idx].value = newVal }
+                            }))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Step 3 View (Stage selection with justification and approval logic)
+
+    private var stepThreeView: some View {
+        VStack(spacing: 12) {
+            Text("Stage Selection")
+                .font(.title2.weight(.semibold))
+                .foregroundColor(Color("EmpireMint"))
+                .padding(.bottom, 8)
+
+            let suggestedStage = computeSuggestedStage()
+
+            Text("System Suggestion: \(suggestedStageText(for: suggestedStage))")
+                .font(.footnote)
+                .foregroundColor(.white.opacity(0.8))
+                .italic()
+                .padding(.bottom, 8)
+
+            Text("Scroll to view all stage levels")
+                .font(.footnote)
+                .foregroundColor(Color("EmpireMint").opacity(0.7))
+                .padding(.bottom, 4)
+
+            TabView(selection: $stageCarouselSelection) {
+                ForEach(0...3, id: \.self) { s in
+                    StageCarouselCard(
+                        stage: s,
+                        isSelected: s == suggestedStage,
+                        isSuggested: s == suggestedStage,
+                        isPendingApproval: false,
+                        accentColor: stageTint(for: s),
+                        description: stageDescription(for: s),
+                        examples: stageExamples(for: s)
+                    )
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .tag(s)
+                    .onTapGesture {
+                        if s != suggestedStage {
+                            attemptedStageSelection = s
+                            showStageWarning = true
+                            stageCarouselSelection = s
+                        } else {
+                            stageCarouselSelection = s
+                        }
+                    }
+                }
+                StageCarouselCard(
+                    stage: nil,
+                    isSelected: false,
+                    isSuggested: false,
+                    isPendingApproval: false,
+                    accentColor: Color.purple,
+                    description: "Jailbreak mode disables stage selection and allows custom tuning beyond normal stages.",
+                    examples: ["Custom engine swaps", "Extreme modifications"]
+                )
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .tag(4)
+                .onTapGesture {
+                    attemptedStageSelection = 4
+                    showStageWarning = true
+                    stageCarouselSelection = 4
+                }
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(height: 230)
+            .padding(.bottom, 6)
+
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.left")
+                    .foregroundColor(stageCarouselSelection > 0 ? Color("EmpireMint") : Color("EmpireMint").opacity(0.3))
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(stageCarouselSelection < 4 ? Color("EmpireMint") : Color("EmpireMint").opacity(0.3))
+                    .font(.headline)
+            }
+            .padding(.horizontal, 30)
+            .padding(.bottom, 12)
+
+            HStack(spacing: 6) {
+                ForEach(0...4, id: \.self) { idx in
+                    Circle()
+                        .fill(idx == stageCarouselSelection ? Color("EmpireMint") : Color.white.opacity(0.25))
+                        .frame(width: 8, height: 8)
+                }
+            }
+            .padding(.bottom, 12)
+
+            if showStageWarning {
+                EditorGlassCard {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(Color("EmpireMint"))
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Selection doesn't match system suggestion")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(Color("EmpireMint"))
+                            let s = computeSuggestedStage()
+                            let attempted = attemptedStageSelection ?? s
+                            Text("You selected \(attempted == 4 ? "Jailbreak" : (attempted == 0 ? "Stock" : "Stage \(attempted)")). The system analyzed your mods and suggests \(s == 0 ? "Stock" : "Stage \(s)").")
+                                .font(.footnote)
+                                .foregroundColor(.white.opacity(0.85))
+                                .fixedSize(horizontal: false, vertical: true)
+                            Button(action: { showStageWarning = false; stageCarouselSelection = suggestedStage }) {
+                                Text("Okay")
+                                    .font(.footnote.weight(.semibold))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Capsule().fill(Color("EmpireMint")))
+                                    .foregroundColor(.black)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.easeInOut, value: stageCarouselSelection)
+        .animation(.easeInOut, value: tempStage)
+        .onChange(of: tempStage) { oldValue, newValue in
+            let s = computeSuggestedStage()
+            stageCarouselSelection = s
+        }
+        .onAppear {
+            stageCarouselSelection = computeSuggestedStage()
+        }
+    }
+
+    // MARK: - Bottom navigation buttons
+
+    private var bottomNavigation: some View {
+        HStack(spacing: 16) {
+            switch step {
+            case .details:
+                // Step 1: Only Next button
+                Button(action: { step = nextStep(from: step) }) {
+                    Text("Next")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(Color("EmpireMint"))
+                        )
+                        .foregroundColor(.black)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            case .modsSpecs:
+                // Step 2: Back and Next side by side
+                Button(action: { step = previousStep(from: step) }) {
+                    Text("Back")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .stroke(Color("EmpireMint"), lineWidth: 1.3)
+                        )
+                        .foregroundColor(Color("EmpireMint"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button(action: { step = nextStep(from: step) }) {
+                    Text("Next")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(Color("EmpireMint"))
+                        )
+                        .foregroundColor(.black)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            case .stage:
+                // Step 3: Back and Save side by side
+                Button(action: { step = previousStep(from: step) }) {
+                    Text("Back")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .stroke(Color("EmpireMint"), lineWidth: 1.3)
+                        )
+                        .foregroundColor(Color("EmpireMint"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button(action: { saveAndDismiss() }) {
+                    Text("Save")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(canSave() ? Color("EmpireMint") : Color.gray.opacity(0.5))
+                        )
+                        .foregroundColor(canSave() ? .black : Color.white.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .disabled(!canSave())
+            }
+        }
+        .animation(.easeInOut, value: step)
+    }
+    private func previousStep(from step: Step) -> Step {
+        switch step {
+        case .details: return .details
+        case .modsSpecs: return .details
+        case .stage: return .modsSpecs
+        }
+    }
+    private func nextStep(from step: Step) -> Step {
+        switch step {
+        case .details: return .modsSpecs
+        case .modsSpecs: return .stage
+        case .stage: return .stage
+        }
+    }
+
+    private func canSave() -> Bool {
+
+        return true
+    }
+
+    // MARK: - Helper: Compute suggested stage from current selections
+
+    private func computeSuggestedStage() -> Int {
+        // The suggestion is always from mods/specs, never affected by user's manual override including Jailbreak.
+        // So always compute fresh suggestion ignoring tempIsJailbreak and tempStage.
+
+        // Count preset mods and selected mod pills excluding presets
+        let selectedPresetCount = selectedPresetMods.count
+        let selectedModCount = tempMods.filter { selectedModIDs.contains($0.id) && !Self.presetSet.contains($0.title) }.count
+        let totalSelectedCount = selectedPresetCount + selectedModCount
+
+        // Check if any selected mod or preset contains "tune" (case-insensitive)
+        let hasTuneFromPresets = selectedPresetMods.contains { $0.localizedCaseInsensitiveContains("tune") }
+        let hasTuneFromSelectedMods = tempMods.contains { mod in
+            selectedModIDs.contains(mod.id) && mod.title.localizedCaseInsensitiveContains("tune")
+        }
+        let hasTuneAny = hasTuneFromPresets || hasTuneFromSelectedMods
+
+        guard hasTuneAny else {
+            // No tune detected, suggest stage 0 by default
+            return 0
+        }
+
+        if totalSelectedCount >= 6 {
+            return 3
+        } else if totalSelectedCount >= 4 {
+            return 2
+        } else if totalSelectedCount >= 2 {
+            return 1
+        } else {
+            return 0
+        }
+    }
+
+    private func suggestedStageText(for stage: Int) -> String {
+        switch stage {
+        case 0: return "Stock"
+        case 1: return "Stage 1"
+        case 2: return "Stage 2"
+        case 3: return "Stage 3"
+        default: return "Stock"
+        }
+    }
+
+    private func stageDescription(for stage: Int) -> String {
+        switch stage {
+        case 0:
+            return "Stock configuration with factory parts."
+        case 1:
+            return "Mild upgrades for improved performance."
+        case 2:
+            return "Significant modifications including major tuning."
+        case 3:
+            return "Extreme modifications with high performance parts."
+        default:
+            return ""
+        }
+    }
+
+    private func stageExamples(for stage: Int) -> [String] {
+        switch stage {
+        case 0: return ["Factory intake", "Stock exhaust", "No tuning"]
+        case 1: return ["Basic tune", "Performance exhaust", "Upgraded intake"]
+        case 2: return ["Aggressive tuning", "Forced induction", "Built motor"]
+        case 3: return ["Race-level tune", "Full motor swap", "Pro-level forced induction"]
+        default: return []
+        }
+    }
+
+    // MARK: - Save & Dismiss
 
     private func saveAndDismiss() {
         var updated = car
@@ -316,7 +690,6 @@ struct VehicleEditorView: View {
         updated.model = tempModel
         updated.imageName = tempImageName
         updated.horsepower = tempHorsepower
-        updated.stage = tempStage
         updated.specs = tempSpecs
 
         updated.mods = tempMods
@@ -336,7 +709,6 @@ struct VehicleEditorView: View {
             Self.presetSet.contains(item.title) && !selectedPresetMods.contains(item.title)
         }
 
-        updated.isJailbreak = tempIsJailbreak
         updated.vehicleClass = tempVehicleClass
 
         // Persist photo data to disk and update photoFileName accordingly
@@ -350,14 +722,36 @@ struct VehicleEditorView: View {
             }
         }
 
+        // Apply suggested stage directly, no jailbreak or pending overrides
+        let suggested = computeSuggestedStage()
+        updated.stage = suggested
+        updated.isJailbreak = false
+
         // Persist per-user so edits survive relaunch.
         Self.saveCar(updated, userKey: userStorageKey)
 
         LocalStore.shared.upsertCar(updated, context: modelContext, userKey: userStorageKey)
 
         onSave(updated)
-        showStageSuggestion = false
         dismiss()
+    }
+
+    // MARK: - Helpers & fallback
+
+    private var fallbackImageView: some View {
+        Image(tempImageName)
+            .resizable()
+            .scaledToFit()
+            .frame(height: 100)
+            .opacity(0.9)
+    }
+    private var fallbackImageViewRoundedSquare: some View {
+        Image(tempImageName)
+            .resizable()
+            .scaledToFill()
+            .frame(width: 110, height: 110)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .opacity(0.9)
     }
 
     private static func defaultSpecs() -> [SpecItem] {
@@ -410,34 +804,126 @@ struct VehicleEditorView: View {
     }
 }
 
-// MARK: - Subviews styled like mint-glass (similar to ProfileView)
+// MARK: - StageCarouselCard for horizontal carousel UI
+
+private struct StageCarouselCard: View {
+    let stage: Int?
+    let isSelected: Bool
+    let isSuggested: Bool
+    let isPendingApproval: Bool
+    let accentColor: Color
+    let description: String
+    let examples: [String]
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(stageTitle)
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(accentColor)
+                    if isSuggested {
+                        Image(systemName: "star.fill")
+                            .foregroundColor(accentColor)
+                            .font(.caption)
+                            .accessibilityLabel("System Suggestion")
+                    }
+                    Spacer()
+                }
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+                if !examples.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Examples:")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundColor(accentColor.opacity(0.8))
+                        ForEach(examples, id: \.self) { example in
+                            Text("• \(example)")
+                                .font(.footnote)
+                                .foregroundColor(.white.opacity(0.75))
+                        }
+                    }
+                }
+                Spacer()
+            }
+            .padding(16)
+            .frame(width: 260, height: 220)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color("EmpireMint").opacity(isSelected ? 0.35 : 0.14))
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(
+                                isSelected ? accentColor.opacity(0.9) : Color.white.opacity(0.1),
+                                lineWidth: isSelected ? 2 : 1
+                            )
+                    )
+                    .shadow(color: accentColor.opacity(isSelected ? 0.6 : 0), radius: 10, x: 0, y: 6)
+            )
+            if isPendingApproval {
+                Text("Pending Approval")
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.yellow.opacity(0.85))
+                    .foregroundColor(.black)
+                    .clipShape(Capsule())
+                    .padding(10)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var stageTitle: String {
+        if let s = stage {
+            switch s {
+            case 0: return "Stock"
+            case 1: return "Stage 1"
+            case 2: return "Stage 2"
+            case 3: return "Stage 3"
+            default: return "Stage \(s)"
+            }
+        } else {
+            return "Jailbreak"
+        }
+    }
+}
+
+// MARK: - Subviews
 
 private struct GlassSection<Content: View>: View {
     let title: String
     @ViewBuilder var content: Content
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.subheadline.bold())
                 .foregroundColor(Color("EmpireMint"))
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 content
             }
-            .padding(14)
+            .padding(10)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color("EmpireMint").opacity(0.15))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color("EmpireMint").opacity(0.10))
                     .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18)
+                        RoundedRectangle(cornerRadius: 14)
                             .stroke(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.3), Color.white.opacity(0.07)],
+                                    colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 1
+                                lineWidth: 0.9
                             )
                     )
             )
@@ -449,7 +935,7 @@ private struct GlassField: View {
     let title: String
     @Binding var text: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.footnote)
                 .foregroundColor(Color("EmpireMint").opacity(0.9))
@@ -463,22 +949,22 @@ private struct GlassTextField: View {
     @Binding var text: String
     var body: some View {
         TextField(placeholder, text: $text)
-            .padding(14)
+            .padding(10)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color("EmpireMint").opacity(0.15))
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color("EmpireMint").opacity(0.10))
                     .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 12)
                     .stroke(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.3), Color.white.opacity(0.07)],
+                            colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 1
+                        lineWidth: 0.9
                     )
             )
             .foregroundColor(Color("EmpireMint").opacity(0.9))
@@ -492,7 +978,7 @@ private struct GlassStepper: View {
     var suffix: String = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
                     .font(.footnote)
@@ -515,14 +1001,14 @@ private struct GlassNumberField: View {
     @Binding var value: Int
     var suffix: String = ""
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.footnote).foregroundColor(.white.opacity(0.8))
-            HStack {
+            HStack(spacing: 6) {
                 TextField(title, value: $value, formatter: NumberFormatter())
                     .keyboardType(.numberPad)
-                    .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(LinearGradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(LinearGradient(colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.9))
                     .foregroundColor(.white)
                 if !suffix.isEmpty { Text(suffix).foregroundColor(.white.opacity(0.8)).font(.footnote) }
             }
@@ -534,14 +1020,15 @@ private struct QuickAdjustRow: View {
     let adjustments: [Int]
     var onAdjust: (Int) -> Void
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ForEach(adjustments, id: \.self) { delta in
                 Button(action: { onAdjust(delta) }) {
                     Text("+\(delta)")
                         .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(Capsule().fill(.ultraThinMaterial))
-                        .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+                        .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.03)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.9))
                         .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
@@ -554,19 +1041,20 @@ private struct StageSelector: View {
     @Binding var stage: Int
     @Binding var isJailbreak: Bool
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text("Stage").font(.footnote).foregroundColor(.white.opacity(0.8))
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(0...3, id: \.self) { s in
                     Button(action: { isJailbreak = false; stage = s }) {
                         Text(s == 0 ? "Stock" : "Stage \(s)")
                             .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
                             .background(Capsule().fill(.ultraThinMaterial))
                             .overlay(
                                 Capsule().stroke(
-                                    (stage == s && !isJailbreak) ? stageTint(for: s).opacity(0.9) : Color.white.opacity(0.25),
-                                    lineWidth: 1
+                                    (stage == s && !isJailbreak) ? stageTint(for: s).opacity(0.8) : Color.white.opacity(0.2),
+                                    lineWidth: 0.9
                                 )
                             )
                             .foregroundStyle(.white)
@@ -576,9 +1064,10 @@ private struct StageSelector: View {
                 Button(action: { isJailbreak = true }) {
                     Text("Jailbreak")
                         .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(Capsule().fill(.ultraThinMaterial))
-                        .overlay(Capsule().stroke(isJailbreak ? Color.purple.opacity(0.9) : Color.white.opacity(0.25), lineWidth: 1))
+                        .overlay(Capsule().stroke(isJailbreak ? Color.purple.opacity(0.8) : Color.white.opacity(0.2), lineWidth: 0.9))
                         .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
@@ -592,7 +1081,7 @@ private struct QuickAddModsRow: View {
     private let presets: [String] = ["Tune", "Intake", "Headers", "Exhaust", "Forced Induction", "Motor Swap", "Drivetrain Swap", "Transmission Upgrades", "Built Motor"]
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(presets, id: \.self) { (p: String) in
                     let isSelected = selectedPresets.contains(p)
                     Button(action: {
@@ -600,15 +1089,15 @@ private struct QuickAddModsRow: View {
                     }) {
                         Text(p)
                             .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
                             .background(
-                                Capsule().fill(isSelected ? Color.green.opacity(0.22) : Color.white.opacity(0.06))
+                                Capsule().fill(isSelected ? Color.green.opacity(0.18) : Color.white.opacity(0.04))
                             )
                             .overlay(
                                 Capsule().stroke(
-                                    isSelected ? Color.green.opacity(0.9) : Color.white.opacity(0.3),
-                                    lineWidth: 1
+                                    isSelected ? Color.green.opacity(0.8) : Color.white.opacity(0.2),
+                                    lineWidth: 0.9
                                 )
                             )
                             .foregroundStyle(.white)
@@ -645,21 +1134,21 @@ private struct StageSuggestionBanner: View {
                     Button("Apply") { onApply() }
                         .font(.footnote.weight(.semibold))
                 }
-                .padding(12)
+                .padding(10)
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.black.opacity(0.4))
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.black.opacity(0.35))
                         .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(Color.white.opacity(0.06))
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.white.opacity(0.04))
                         )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(AnimatedMintGradient(phase: animatePhase), lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(AnimatedMintGradient(phase: animatePhase), lineWidth: 1.8)
                 )
-                .padding(.horizontal, 24)
-                .shadow(color: Color("EmpireMint").opacity(0.35), radius: 16, x: 0, y: 8)
+                .padding(.horizontal, 20)
+                .shadow(color: Color("EmpireMint").opacity(0.25), radius: 10, x: 0, y: 6)
                 .onAppear {
                     withAnimation(.linear(duration: 2.2).repeatForever(autoreverses: false)) {
                         animatePhase = 1
@@ -674,16 +1163,14 @@ private struct StageSuggestionBanner: View {
 private struct AnimatedMintGradient: ShapeStyle {
     var phase: CGFloat
     func _apply(to shape: inout _ShapeStyle_Shape) {
-        // Compute wrapped locations around phase in [0,1)
         let loc1 = fmod(phase - 0.2 + 1, 1)
         let loc2 = fmod(phase + 0.0 + 1, 1)
         let loc3 = fmod(phase + 0.2 + 1, 1)
 
-        // Pair with colors and sort by location to satisfy SwiftUI's requirement
         let stops = [
-            (location: loc1, color: Color("EmpireMint").opacity(0.2)),
-            (location: loc2, color: Color("EmpireMint").opacity(0.9)),
-            (location: loc3, color: Color("EmpireMint").opacity(0.2))
+            (location: loc1, color: Color("EmpireMint").opacity(0.15)),
+            (location: loc2, color: Color("EmpireMint").opacity(0.7)),
+            (location: loc3, color: Color("EmpireMint").opacity(0.15))
         ].sorted { $0.location < $1.location }
 
         let gradient = LinearGradient(
@@ -715,7 +1202,7 @@ private struct ModRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             GlassTextField(placeholder: "Title", text: $title)
             GlassTextField(placeholder: "Notes", text: $notes)
             Toggle("Major", isOn: $isMajor)
@@ -735,7 +1222,7 @@ private struct ModRowBinding: View {
     var onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             GlassTextField(placeholder: "Title", text: $mod.title)
             GlassTextField(placeholder: "Notes", text: $mod.notes)
             Toggle("Major", isOn: $mod.isMajor)
@@ -758,7 +1245,7 @@ private struct ModPillView: View {
     let onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white)
@@ -777,19 +1264,19 @@ private struct ModPillView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
         .background(
-            Capsule().fill(isSelected ? Color.green.opacity(0.22) : Color.white.opacity(0.06))
+            Capsule().fill(isSelected ? Color.green.opacity(0.18) : Color.white.opacity(0.04)) 
         )
         .overlay(
             Group {
                 if isSelected {
-                    Capsule().stroke(Color.green.opacity(0.9), lineWidth: 1)
+                    Capsule().stroke(Color.green.opacity(0.8), lineWidth: 0.9)
                 } else {
                     Capsule().stroke(
-                        LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                        lineWidth: 1
+                        LinearGradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.03)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 0.9
                     )
                 }
             }
@@ -812,3 +1299,4 @@ private func stageTint(for stage: Int) -> Color {
     default: return .gray
     }
 }
+
