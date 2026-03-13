@@ -1,6 +1,8 @@
 import Foundation
 
 enum SupabaseConfig {
+    private static let cachePrefix = "supabase.config."
+
     static let url: URL = {
         let rawValue = requiredValue(for: "SUPABASE_URL")
         guard let parsedURL = URL(string: rawValue) else {
@@ -16,19 +18,35 @@ enum SupabaseConfig {
 
     private static func requiredValue(for key: String) -> String {
         if let environmentValue = ProcessInfo.processInfo.environment[key],
-           !environmentValue.isEmpty,
-           !environmentValue.hasPrefix("YOUR_"),
-           !environmentValue.hasPrefix("REMOVED_") {
+           isUsableValue(environmentValue) {
+            cache(value: environmentValue, for: key)
             return environmentValue
         }
 
         if let plistValue = Bundle.main.object(forInfoDictionaryKey: key) as? String,
-           !plistValue.isEmpty,
-           !plistValue.hasPrefix("YOUR_"),
-           !plistValue.hasPrefix("REMOVED_") {
+           isUsableValue(plistValue) {
+            cache(value: plistValue, for: key)
             return plistValue
         }
 
-        fatalError("Missing \(key). Set it via Xcode Scheme environment variables or Info.plist local overrides.")
+        if let cachedValue = UserDefaults.standard.string(forKey: cachePrefix + key),
+           isUsableValue(cachedValue) {
+            return cachedValue
+        }
+
+        fatalError("Missing \(key). Set via Configs/Secrets.xcconfig (preferred) or Xcode Scheme environment variables.")
+    }
+
+    private static func cache(value: String, for key: String) {
+        UserDefaults.standard.set(value, forKey: cachePrefix + key)
+    }
+
+    private static func isUsableValue(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        guard !trimmed.hasPrefix("YOUR_") else { return false }
+        guard !trimmed.hasPrefix("REMOVED_") else { return false }
+        guard !trimmed.contains("$(") else { return false }
+        return true
     }
 }
