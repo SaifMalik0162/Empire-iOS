@@ -1,30 +1,17 @@
 import SwiftUI
 import UIKit
-
-// MARK: - Saved Photo Loader (fallback to any uploaded car photo)
-private func loadAnySavedCarPhotoData() -> Data? {
-    let currentUserId = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
-    let defaults = UserDefaults.standard
-    // Try scanning for per-user scoped keys first
-    let all = defaults.dictionaryRepresentation().keys
-    if let key = all.first(where: { $0.hasPrefix("saved_car_photo_\(currentUserId)_") }),
-       let data = defaults.data(forKey: key) {
-        return data
-    }
-    // Fallback: legacy keys without user scoping
-    if let legacyKey = all.first(where: { $0.hasPrefix("saved_car_photo_") }),
-       let data = defaults.data(forKey: legacyKey) {
-        return data
-    }
-    return nil
-}
+import SwiftData
 
 struct HomeView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+
     // MARK: - Meets Data
     @State private var meets: [Meet] = []
     @State private var showSettings: Bool = false
     @State private var isLoadingMeets = false
     @State private var meetsError: String? = nil
+    @State private var featuredUserCarPhotoData: Data? = nil
 
     // MARK: - Data Sources
     private let featuredMerch: [MerchItem] = [
@@ -183,7 +170,7 @@ struct HomeView: View {
                                                 )
 
                                             Group {
-                                                if let data = loadAnySavedCarPhotoData(), let uiImage = UIImage(data: data) {
+                                                if let data = featuredUserCarPhotoData, let uiImage = UIImage(data: data) {
                                                     Image(uiImage: uiImage)
                                                         .resizable()
                                                 } else {
@@ -377,7 +364,43 @@ struct HomeView: View {
                 SettingsView()
                     .preferredColorScheme(.dark)
             }
+            .onAppear {
+                reloadFeaturedUserCarPhoto()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    reloadFeaturedUserCarPhoto()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
+                reloadFeaturedUserCarPhoto()
+            }
         }
+    }
+
+    private func reloadFeaturedUserCarPhoto() {
+        let currentUserId = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
+        let cars = LocalStore.shared.fetchCars(context: modelContext, userKey: currentUserId)
+
+        for car in cars {
+            guard let fileName = car.photoFileName,
+                  let data = loadCarPhotoFromDocuments(fileName: fileName),
+                  UIImage(data: data) != nil else {
+                continue
+            }
+            featuredUserCarPhotoData = data
+            return
+        }
+
+        featuredUserCarPhotoData = nil
+    }
+
+    private func loadCarPhotoFromDocuments(fileName: String) -> Data? {
+        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let fileURL = documentsURL.appendingPathComponent(fileName)
+        return try? Data(contentsOf: fileURL)
     }
 
     private func loadHomeMeets() {
