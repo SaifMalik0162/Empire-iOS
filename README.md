@@ -39,14 +39,16 @@ Empire Connect gives real car culture a proper digital home:
 
 ## 📱 Features
 
-- User authentication  
+- Email/password authentication  
+- Sign in with Apple  
+- Password reset flow  
 - Create and manage vehicle profiles  
 - Upload and display car photos  
-- Vehicle stats and mods tracking  
-- Garage-style vehicle cards  
-- Club-branded UI  
-- Backend API integration  
-- Cloud data persistence  
+- Vehicle specs, mods, and stage tracking  
+- Persistent user-scoped garages with cross-device sync  
+- Username + avatar profile management  
+- Username change cooldown rules  
+- Branded native launch screen and club-themed UI
 
 ---
 
@@ -58,28 +60,41 @@ Empire Connect is built with performance, persistence, and clean UI in mind.
 - **Swift**
 - **SwiftUI**
 - **MVVM architecture**
-- **FileManager**
-- **UserDefaults**
+- **SwiftData** (local cache + offline-friendly persistence)
+- **FileManager** (local image storage)
+- **UserDefaults** (session/app flags)
 
 ### Backend
-- REST API
-- Token-based authentication
-- Vehicle & profile storage
+- **Supabase Auth** (email/password + Apple sign-in)
+- **Supabase PostgREST** (cars/specs/mods/meets/merch/profile data)
+- **Supabase Storage** (car photos + avatars)
+
+### Testing & Observability
+- **XCTest** unit tests for auth/network/merch flows
+- Structured telemetry with performance, error, and crash logging hooks
 
 ---
 
 ## 🛠️ How It Works
 
-1. **Users sign in** and receive a unique account  
-2. **Vehicle data** (make, model, mods, stats) is stored in the backend  
-3. **Images** are linked to vehicles  
-4. **Garage cards** render all saved builds
-5. On app relaunch, data reloads from the API
+1. **Users authenticate** (email/password or Apple) and get a user-scoped session  
+2. **Vehicle data** (make/model/specs/mods/stage) syncs with Supabase tables  
+3. **Photos** are uploaded to Supabase Storage and cached locally for fast display  
+4. **SwiftData** keeps a local cache so garage views remain responsive  
+5. On app open/foreground, the app refreshes and reconciles data from backend
 
 This ensures cars are:
 - Persistent  
 - User-scoped  
 - Offline-safe
+
+---
+
+## ✅ Current Status
+
+- Supabase migration is complete for auth, garage data, merch, meets, and media storage.
+- Cross-device garage sync and profile updates are live.
+- Community-driven featured/feed surfaces are planned next.
 
 ---
 
