@@ -369,11 +369,13 @@ struct VehicleEditorView: View {
                 GlassSection(title: "Specs & Horsepower") {
                     GlassNumberField(title: "Horsepower", value: $tempHorsepower, suffix: " HP")
                     ForEach(tempSpecs, id: \.id) { spec in
-                        HStack(spacing: 6) {
+                        HStack(spacing: 10) {
                             // Key pill
                             Text(spec.key.isEmpty ? "Engine" : spec.key)
                                 .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 8)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+                                .frame(width: 112)
                                 .padding(.vertical, 4)
                                 .background(Capsule().fill(Color.white.opacity(0.04)))
                                 .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
@@ -387,7 +389,9 @@ struct VehicleEditorView: View {
                             }, set: { newVal in
                                 if let idx = tempSpecs.firstIndex(where: { $0.id == spec.id }) { tempSpecs[idx].value = newVal }
                             }))
+                            .frame(maxWidth: .infinity, minHeight: 52)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
@@ -1049,17 +1053,36 @@ private struct GlassNumberField: View {
     @Binding var value: Int
     var suffix: String = ""
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.footnote).foregroundColor(.white.opacity(0.8))
+        VStack(alignment: .center, spacing: 4) {
+            Text(title)
+                .font(.footnote)
+                .foregroundColor(.white.opacity(0.8))
+                .frame(maxWidth: .infinity, alignment: .center)
             HStack(spacing: 6) {
+                if !suffix.isEmpty {
+                    Text(suffix)
+                        .foregroundColor(.clear)
+                        .font(.footnote)
+                        .frame(width: 28, alignment: .leading)
+                        .accessibilityHidden(true)
+                }
                 TextField(title, value: $value, formatter: NumberFormatter())
                     .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
                     .padding(10)
+                    .frame(width: 140)
                     .background(RoundedRectangle(cornerRadius: 10).fill(.ultraThinMaterial))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(LinearGradient(colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.9))
                     .foregroundColor(.white)
-                if !suffix.isEmpty { Text(suffix).foregroundColor(.white.opacity(0.8)).font(.footnote) }
+                if !suffix.isEmpty {
+                    Text(suffix)
+                        .foregroundColor(.white.opacity(0.8))
+                        .font(.footnote)
+                        .frame(width: 28, alignment: .leading)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .offset(x: -6)
         }
     }
 }
