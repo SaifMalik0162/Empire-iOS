@@ -304,6 +304,9 @@ struct ProfileView: View {
                 .task {
                     print("[ProfileView] .task appeared")
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
+                    Task { await vehiclesVM.loadVehicles() }
+                }
                 .padding(.top, 16)
                 .safeAreaInset(edge: .bottom) {
                     Color.clear
