@@ -67,7 +67,7 @@ final class UserVehiclesViewModel: ObservableObject {
         #if DEBUG
         let placeholder = Car(
             name: "Your Car",
-            description: "Tap to edit details",
+            description: "No make/model provided",
             imageName: "car_placeholder",
             horsepower: 0,
             stage: 1,
@@ -86,7 +86,7 @@ final class UserVehiclesViewModel: ObservableObject {
     @MainActor
     func addPlaceholderVehicle() {
         #if DEBUG
-        let placeholder = Car(name: "Your Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
+        let placeholder = Car(name: "Your Car", description: "No make/model provided", imageName: "car_placeholder", horsepower: 0, stage: 1)
         vehicles.append(placeholder)
         persistVehicles()
         syncCarInBackground(placeholder)

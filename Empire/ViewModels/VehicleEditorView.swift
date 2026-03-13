@@ -144,7 +144,10 @@ struct VehicleEditorView: View {
         _tempImageName = State(initialValue: baseCar.imageName)
         _tempHorsepower = State(initialValue: baseCar.horsepower)
         _tempStage = State(initialValue: baseCar.stage)
-        _tempSpecs = State(initialValue: baseCar.specs.isEmpty ? VehicleEditorView.defaultSpecs() : baseCar.specs)
+        let initialSpecs = baseCar.specs.isEmpty
+            ? VehicleEditorView.defaultSpecs()
+            : VehicleEditorView.normalizedSpecs(baseCar.specs)
+        _tempSpecs = State(initialValue: initialSpecs)
         _tempMods = State(initialValue: baseCar.mods)
 
         // Preselect presets based on saved mods titles and select all existing mod pills
@@ -769,6 +772,17 @@ struct VehicleEditorView: View {
             SpecItem(key: "Tires", value: ""),
             SpecItem(key: "Weight", value: "")
         ]
+    }
+
+    private static func normalizedSpecs(_ specs: [SpecItem]) -> [SpecItem] {
+        let preferredSpecOrder: [String] = ["engine", "drivetrain", "transmission", "tires", "weight"]
+        let rank = Dictionary(uniqueKeysWithValues: preferredSpecOrder.enumerated().map { ($1, $0) })
+        return specs.sorted { lhs, rhs in
+            let leftRank = rank[lhs.key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] ?? Int.max
+            let rightRank = rank[rhs.key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] ?? Int.max
+            if leftRank != rightRank { return leftRank < rightRank }
+            return lhs.key.localizedCaseInsensitiveCompare(rhs.key) == .orderedAscending
+        }
     }
 
     private func bindingForMod(id: UUID) -> Binding<ModItem>? {
