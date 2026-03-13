@@ -93,6 +93,27 @@ import SwiftData
             self.shouldPromptAddVehicle = false
         }
     }
+
+    func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws {
+        let user = try await supabaseAuth.loginWithApple(idToken: idToken, nonce: nonce, suggestedUsername: suggestedUsername)
+
+        await MainActor.run {
+            self.currentUser = user
+            self.isAuthenticated = true
+            UserDefaults.standard.set(user.id, forKey: "currentUserId")
+            self.persistCurrentUser(user)
+        }
+
+        self.syncCarsAfterAuth(userId: user.id)
+
+        await MainActor.run {
+            self.shouldPromptAddVehicle = false
+        }
+    }
+
+    func sendPasswordReset(email: String) async throws {
+        try await supabaseAuth.sendPasswordReset(email: email)
+    }
     
     func register(email: String, password: String, username: String) async throws {
         let user = try await supabaseAuth.register(email: email, password: password, username: username)

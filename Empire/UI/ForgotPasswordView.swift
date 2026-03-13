@@ -1,10 +1,13 @@
 import SwiftUI
 
 struct ForgotPasswordView: View {
+    @EnvironmentObject private var authViewModel: AuthViewModel
     @Environment(\.dismiss) var dismiss
     @State private var email: String = ""
     @State private var isSending: Bool = false
     @State private var showValidation: Bool = false
+    @State private var successMessage: String?
+    @State private var errorMessage: String?
     
     @State private var animateGradient = false
     
@@ -66,15 +69,48 @@ struct ForgotPasswordView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 4)
                     }
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red.opacity(0.9))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4)
+                    }
+
+                    if let successMessage {
+                        Text(successMessage)
+                            .font(.footnote)
+                            .foregroundColor(.green.opacity(0.95))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4)
+                    }
                 }
                 
                 Button {
                     showValidation = true
                     guard !email.isEmpty else { return }
+                    let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmedEmail.isEmpty else { return }
+
                     isSending = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        isSending = false
-                        dismiss()
+                    successMessage = nil
+                    errorMessage = nil
+
+                    Task {
+                        do {
+                            try await authViewModel.sendPasswordReset(email: trimmedEmail)
+                            await MainActor.run {
+                                isSending = false
+                                successMessage = "If an account exists, a reset link was sent to \(trimmedEmail)."
+                            }
+                        } catch {
+                            await MainActor.run {
+                                isSending = false
+                                let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                                errorMessage = message.isEmpty ? "Failed to send reset link. Try again." : message
+                            }
+                        }
                     }
                 } label: {
                     HStack(spacing: 10) {
@@ -136,6 +172,7 @@ struct ForgotPasswordView: View {
 
 #Preview {
     ForgotPasswordView()
+    .environmentObject(AuthViewModel())
         .preferredColorScheme(.dark)
 }
 
