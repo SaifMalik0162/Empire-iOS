@@ -1,20 +1,22 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @State private var name = ""
+    @State private var username = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var showPassword = false
     @State private var showConfirmPassword = false
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authViewModel: AuthViewModel
 
     @State private var animateGradient = false
     @State private var showValidation: Bool = false
     @State private var isCreating: Bool = false
+    @State private var errorMessage: String? = nil
 
     private var isFormValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !username.trimmingCharacters(in: .whitespaces).isEmpty &&
         !email.trimmingCharacters(in: .whitespaces).isEmpty &&
         password.count >= 6 &&
         password == confirmPassword
@@ -55,9 +57,9 @@ struct SignUpView: View {
                 // Fields
                 VStack(spacing: 16) {
                     Group {
-                        TextField("Full name", text: $name)
-                            .textContentType(.name)
-                            .autocapitalization(.words)
+                        TextField("Username", text: $username)
+                            .textContentType(.username)
+                            .autocapitalization(.none)
                     }
                     .padding()
                     .background(
@@ -168,13 +170,10 @@ struct SignUpView: View {
 
                 // Create Account Button
                 Button {
-                    let isValid = !name.isEmpty && !email.isEmpty && password.count >= 6 && password == confirmPassword
+                    let isValid = !username.isEmpty && !email.isEmpty && password.count >= 6 && password == confirmPassword
                     showValidation = !isValid
                     if isValid {
-                        isCreating = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                            isCreating = false
-                        }
+                        performRegister()
                     }
                 } label: {
                     HStack {
@@ -196,6 +195,14 @@ struct SignUpView: View {
                 }
                 .disabled(!isFormValid || isCreating)
                 .opacity(isCreating ? 0.8 : (isFormValid ? 1 : 0.55))
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundColor(.red.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                }
 
                 // Footnote
                 Text("By creating an account you agree to our Terms of Service and Privacy Policy.")
@@ -250,6 +257,32 @@ struct SignUpView: View {
             animateGradient.toggle()
         }
     }
+
+    private func performRegister() {
+        isCreating = true
+        errorMessage = nil
+
+        Task {
+            do {
+                let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+                try await authViewModel.register(email: email, password: password, username: normalizedUsername)
+                await MainActor.run {
+                    isCreating = false
+                    dismiss()
+                }
+            } catch let error as NetworkError {
+                await MainActor.run {
+                    isCreating = false
+                    errorMessage = error.errorDescription
+                }
+            } catch {
+                await MainActor.run {
+                    isCreating = false
+                    errorMessage = "Could not create account. Please try again."
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Color Hex Helper
@@ -267,6 +300,7 @@ extension Color {
 
 #Preview {
     SignUpView()
+    .environmentObject(AuthViewModel())
         .preferredColorScheme(.dark)
 }
 

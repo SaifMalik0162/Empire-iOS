@@ -28,15 +28,39 @@
 		7039BA252F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
 		7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
 		7039BA272F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
-		704251942F13397100322849 /* BackendModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518F2F13397100322849 /* BackendModels.swift */; };
+		703F05BE2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */; };
+		703F05BF2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */; };
+		703F05C02F63900800D4EF47 /* SupabaseCarsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */; };
+		703F05C22F63904D00D4EF47 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C12F63904D00D4EF47 /* Auth */; };
+		703F05C42F63904D00D4EF47 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C32F63904D00D4EF47 /* Functions */; };
+		703F05C62F63904D00D4EF47 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C52F63904D00D4EF47 /* PostgREST */; };
+		703F05C82F63904D00D4EF47 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C72F63904D00D4EF47 /* Realtime */; };
+		703F05CA2F63904D00D4EF47 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C92F63904D00D4EF47 /* Storage */; };
+		703F05CC2F63904D00D4EF47 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05CB2F63904D00D4EF47 /* Supabase */; };
+		703F05D62F63910800D4EF47 /* ErrorResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05D52F63910500D4EF47 /* ErrorResponse.swift */; };
+		703F05D72F63910800D4EF47 /* ErrorResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05D52F63910500D4EF47 /* ErrorResponse.swift */; };
+		703F05D82F63910800D4EF47 /* ErrorResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05D52F63910500D4EF47 /* ErrorResponse.swift */; };
+		703F05D92F63911F00D4EF47 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05B92F63492100D4EF47 /* SupabaseConfig.swift */; };
+		703F05DA2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05B92F63492100D4EF47 /* SupabaseConfig.swift */; };
+		703F05DB2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05B92F63492100D4EF47 /* SupabaseConfig.swift */; };
+		703F05DC2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */; };
+		703F05DD2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */; };
+		703F05DE2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */; };
+		703F05DF2F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */; };
+		703F05E02F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */; };
+		703F05E12F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */; };
+		703F05E72F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */; };
+		703F05E82F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */; };
+		703F05E92F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */; };
+		703F05EF2F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
+		703F05F02F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
+		703F05F12F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
 		704251952F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
 		704251962F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
 		704251972F13397100322849 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518D2F13397100322849 /* APIConfig.swift */; };
-		704251982F13397100322849 /* BackendModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518F2F13397100322849 /* BackendModels.swift */; };
 		704251992F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
 		7042519A2F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
 		7042519B2F13397100322849 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518D2F13397100322849 /* APIConfig.swift */; };
-		7042519C2F13397100322849 /* BackendModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518F2F13397100322849 /* BackendModels.swift */; };
 		7042519D2F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
 		7042519E2F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
 		7042519F2F13397100322849 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518D2F13397100322849 /* APIConfig.swift */; };
@@ -181,6 +205,13 @@
 		70E699D62F1496ED001304D6 /* VehicleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E699D52F1496ED001304D6 /* VehicleEditorView.swift */; };
 		70E699D72F1496ED001304D6 /* VehicleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E699D52F1496ED001304D6 /* VehicleEditorView.swift */; };
 		70E699D82F1496ED001304D6 /* VehicleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E699D52F1496ED001304D6 /* VehicleEditorView.swift */; };
+		70F1AA012F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
+		70F1AA022F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
+		70F1AA032F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
+		70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
+		70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
+		70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
+		70FA11012F80000100ABCD01 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 70FA11022F80000100ABCD01 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -222,9 +253,14 @@
 		7039BA202F475FAC00004437 /* SafeCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeCollection.swift; sourceTree = "<group>"; };
 		7039BA242F47612900004437 /* ManageGarageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageGarageSheet.swift; sourceTree = "<group>"; };
 		703E6C0C2F4D0391009138E2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		703E6C0D2F4D0423009138E2 /* ErrorResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorResponse.swift; sourceTree = "<group>"; };
+		703F05B92F63492100D4EF47 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
+		703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
+		703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAuthService.swift; sourceTree = "<group>"; };
+		703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseCarsService.swift; sourceTree = "<group>"; };
+		703F05D52F63910500D4EF47 /* ErrorResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorResponse.swift; sourceTree = "<group>"; };
+		703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMeetsService.swift; sourceTree = "<group>"; };
+		703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMerchService.swift; sourceTree = "<group>"; };
 		7042518D2F13397100322849 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
-		7042518F2F13397100322849 /* BackendModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendModels.swift; sourceTree = "<group>"; };
 		704251912F13397100322849 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		704251922F13397100322849 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
 		704251A92F1339BA00322849 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
@@ -284,6 +320,9 @@
 		70E28F6D2F15CDF80025AAAC /* empire-connect-banner.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "empire-connect-banner.png"; sourceTree = "<group>"; };
 		70E28F6E2F15D3ED0025AAAC /* LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = LICENSE.md; sourceTree = "<group>"; };
 		70E699D52F1496ED001304D6 /* VehicleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleEditorView.swift; sourceTree = "<group>"; };
+		70F1AA002F70000100ABCD01 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		70F1AA052F70000100ABCD01 /* AppTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTelemetry.swift; sourceTree = "<group>"; };
+		70FA11022F80000100ABCD01 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -304,6 +343,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				703F05C62F63904D00D4EF47 /* PostgREST in Frameworks */,
+				703F05C42F63904D00D4EF47 /* Functions in Frameworks */,
+				703F05CC2F63904D00D4EF47 /* Supabase in Frameworks */,
+				703F05C22F63904D00D4EF47 /* Auth in Frameworks */,
+				703F05CA2F63904D00D4EF47 /* Storage in Frameworks */,
+				703F05C82F63904D00D4EF47 /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -328,24 +373,25 @@
 			isa = PBXGroup;
 			children = (
 				7042518D2F13397100322849 /* APIConfig.swift */,
+				703F05B92F63492100D4EF47 /* SupabaseConfig.swift */,
 			);
 			path = Configs;
-			sourceTree = "<group>";
-		};
-		704251902F13397100322849 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				7042518F2F13397100322849 /* BackendModels.swift */,
-			);
-			path = Models;
 			sourceTree = "<group>";
 		};
 		704251932F13397100322849 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				70F1AA002F70000100ABCD01 /* AppLogger.swift */,
+				70F1AA052F70000100ABCD01 /* AppTelemetry.swift */,
+				703F05D52F63910500D4EF47 /* ErrorResponse.swift */,
 				704251912F13397100322849 /* APIService.swift */,
 				704251922F13397100322849 /* NetworkManager.swift */,
 				7068B0482F42783100D6628C /* KeychainService.swift */,
+				703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */,
+				703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */,
+				703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */,
+				703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */,
+				703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -438,6 +484,7 @@
 				70A016FF2F0DF49000A084C2 /* UI */,
 				70A017002F0DF49000A084C2 /* Assets.xcassets */,
 				70A017012F0DF49000A084C2 /* Info.plist */,
+				70FA11022F80000100ABCD01 /* LaunchScreen.storyboard */,
 				7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */,
 			);
 			path = Empire;
@@ -450,7 +497,6 @@
 				70E28F6A2F15C9C90025AAAC /* CONTRIBUTING.md */,
 				70E28F662F15C9980025AAAC /* README.md */,
 				7042518E2F13397100322849 /* Configs */,
-				704251902F13397100322849 /* Models */,
 				704251932F13397100322849 /* Services */,
 				70A017022F0DF49000A084C2 /* Empire */,
 				70C60A842F0DAA7E003AE110 /* EmpireTests */,
@@ -460,7 +506,6 @@
 				70E28F6D2F15CDF80025AAAC /* empire-connect-banner.png */,
 				70E28F6E2F15D3ED0025AAAC /* LICENSE.md */,
 				703E6C0C2F4D0391009138E2 /* PrivacyInfo.xcprivacy */,
-				703E6C0D2F4D0423009138E2 /* ErrorResponse.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -492,6 +537,12 @@
 			);
 			name = Empire;
 			packageProductDependencies = (
+				703F05C12F63904D00D4EF47 /* Auth */,
+				703F05C32F63904D00D4EF47 /* Functions */,
+				703F05C52F63904D00D4EF47 /* PostgREST */,
+				703F05C72F63904D00D4EF47 /* Realtime */,
+				703F05C92F63904D00D4EF47 /* Storage */,
+				703F05CB2F63904D00D4EF47 /* Supabase */,
 			);
 			productName = Empire;
 			productReference = 70C60A722F0DAA7C003AE110 /* Empire.app */;
@@ -575,6 +626,9 @@
 			);
 			mainGroup = 70C60A692F0DAA7C003AE110;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				703F05BC2F638E6700D4EF47 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 70C60A732F0DAA7C003AE110 /* Products */;
 			projectDirPath = "";
@@ -592,6 +646,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70FA11012F80000100ABCD01 /* LaunchScreen.storyboard in Resources */,
 				7036AA612F45562A009F57DB /* VIP.storekit in Resources */,
 				7092F00F2F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
 				70A0171A2F0DF49000A084C2 /* Assets.xcassets in Resources */,
@@ -629,11 +684,13 @@
 				70A0171B2F0DF49000A084C2 /* MeetsView.swift in Sources */,
 				7020AB912F12EEFD0082F480 /* CartView.swift in Sources */,
 				7020AB922F12EEFD0082F480 /* Cart.swift in Sources */,
+				703F05EF2F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
 				7020AB932F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
 				70B0CF6A2F106908003FCD20 /* EmpireTheme.swift in Sources */,
 				70B0CF672F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
 				7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */,
-				704251982F13397100322849 /* BackendModels.swift in Sources */,
+				70F1AA022F70000100ABCD01 /* AppLogger.swift in Sources */,
+				70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				70C0A6842F457D18003F8425 /* VIPJoinView.swift in Sources */,
 				7068B04A2F42783100D6628C /* KeychainService.swift in Sources */,
 				7089A7CB2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
@@ -644,14 +701,17 @@
 				70E699D82F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
 				70A0171E2F0DF49000A084C2 /* HomeView.swift in Sources */,
 				70A0171F2F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
+				703F05DF2F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */,
 				70A017202F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
 				7039BA1E2F47521800004437 /* LocalStore.swift in Sources */,
 				709FF7F42F1AF32900309115 /* VIPMembershipView.swift in Sources */,
 				704E4B922F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
 				70A017212F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
 				707693EE2F42991500009364 /* ExploreFeedView.swift in Sources */,
+				703F05E82F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */,
 				70DF41712F1972590034C5FB /* ManageAccountView.swift in Sources */,
 				70C0A6912F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
+				703F05D92F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
 				70B0CF6D2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
 				70A017232F0DF49000A084C2 /* Models.swift in Sources */,
 				7089A7C82F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
@@ -661,6 +721,7 @@
 				70A2E4082F10ABDA004B950D /* EmpireLogoView.swift in Sources */,
 				70A017272F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
 				70A017282F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
+				703F05DC2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */,
 				70C0A6892F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
 				704251B32F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
 				704251AC2F1339BA00322849 /* AuthViewModel.swift in Sources */,
@@ -675,9 +736,11 @@
 				70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */,
 				7080848C2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
 				70B0CF622F1064D0003FCD20 /* SignUpView.swift in Sources */,
+				703F05C02F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
 				70B0CF572F10646D003FCD20 /* LoginView.swift in Sources */,
 				70A0172D2F0DF49000A084C2 /* ProfileView.swift in Sources */,
 				70A0172E2F0DF49000A084C2 /* StageChip.swift in Sources */,
+				703F05D82F63910800D4EF47 /* ErrorResponse.swift in Sources */,
 				704251B72F134C5E00322849 /* AddVehicleView.swift in Sources */,
 				70DF416E2F196E930034C5FB /* SettingsView.swift in Sources */,
 			);
@@ -692,7 +755,8 @@
 				704251B82F134C5E00322849 /* AddVehicleView.swift in Sources */,
 				70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */,
 				70A017062F0DF49000A084C2 /* CoolRipple.swift in Sources */,
-				7042519C2F13397100322849 /* BackendModels.swift in Sources */,
+				70F1AA032F70000100ABCD01 /* AppLogger.swift in Sources */,
+				70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				7042519D2F13397100322849 /* APIService.swift in Sources */,
 				7042519E2F13397100322849 /* NetworkManager.swift in Sources */,
 				7042519F2F13397100322849 /* APIConfig.swift in Sources */,
@@ -702,17 +766,22 @@
 				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
 				7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */,
 				7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
+				703F05D72F63910800D4EF47 /* ErrorResponse.swift in Sources */,
 				70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
 				70DF416D2F196E930034C5FB /* SettingsView.swift in Sources */,
 				7039BA272F47612900004437 /* ManageGarageSheet.swift in Sources */,
+				703F05BF2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
 				707D0C932F4551AE00521AA5 /* StoreKitManager.swift in Sources */,
 				7089A7C32F1C280900EDB4D5 /* RewardsView.swift in Sources */,
+				703F05E02F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */,
 				704251AB2F1339BA00322849 /* AuthViewModel.swift in Sources */,
 				70A0170A2F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
 				709FF7F52F1AF32900309115 /* VIPMembershipView.swift in Sources */,
 				70A6A7542F1ECCDE00483418 /* TopToast.swift in Sources */,
 				70A0170B2F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
+				703F05E92F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */,
 				704E4B932F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
+				703F05DD2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */,
 				70A0170D2F0DF49000A084C2 /* Models.swift in Sources */,
 				70A0170E2F0DF49000A084C2 /* CarCardView.swift in Sources */,
 				70A2E4062F10ABDA004B950D /* EmpireLogoView.swift in Sources */,
@@ -727,6 +796,7 @@
 				70A017112F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
 				70C0A6882F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
 				70E699D72F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
+				703F05DA2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
 				70B0CF662F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
 				70A017122F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
 				7039BA1D2F47521800004437 /* LocalStore.swift in Sources */,
@@ -737,6 +807,7 @@
 				70A017162F0DF49000A084C2 /* MerchView.swift in Sources */,
 				70A017172F0DF49000A084C2 /* ProfileView.swift in Sources */,
 				70DF41722F1972590034C5FB /* ManageAccountView.swift in Sources */,
+				703F05F12F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
 				704E4B8E2F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				70B0CF582F10646D003FCD20 /* LoginView.swift in Sources */,
 				70C0A68D2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
@@ -750,8 +821,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				70C0A68C2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
+				703F05F02F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
 				70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */,
 				70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */,
+				703F05BE2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
 				704E4B902F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
 				7020AB952F12EEFD0082F480 /* CartView.swift in Sources */,
@@ -771,9 +844,11 @@
 				70A0173C2F0DF49000A084C2 /* EmpireApp.swift in Sources */,
 				70A0173D2F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
 				709FF7F62F1AF32900309115 /* VIPMembershipView.swift in Sources */,
+				703F05D62F63910800D4EF47 /* ErrorResponse.swift in Sources */,
 				70B0CF652F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
 				70E699D62F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
 				70A0173E2F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
+				703F05DB2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
 				704251B92F134C5E00322849 /* AddVehicleView.swift in Sources */,
 				7039BA1F2F47521800004437 /* LocalStore.swift in Sources */,
 				70A0173F2F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
@@ -781,7 +856,9 @@
 				70C0A68A2F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
 				70A017402F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				7039BA252F47612900004437 /* ManageGarageSheet.swift in Sources */,
+				703F05DE2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */,
 				70B0CF692F106908003FCD20 /* EmpireTheme.swift in Sources */,
+				703F05E12F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */,
 				7039BA212F475FAC00004437 /* SafeCollection.swift in Sources */,
 				70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */,
 				7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */,
@@ -797,9 +874,11 @@
 				70DF41702F1972590034C5FB /* ManageAccountView.swift in Sources */,
 				70A017422F0DF49000A084C2 /* MerchView.swift in Sources */,
 				70A017432F0DF49000A084C2 /* ProfileView.swift in Sources */,
+				703F05E72F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */,
 				70B0CF6F2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
 				70C0A6922F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
-				704251942F13397100322849 /* BackendModels.swift in Sources */,
+				70F1AA012F70000100ABCD01 /* AppLogger.swift in Sources */,
+				70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				704251952F13397100322849 /* APIService.swift in Sources */,
 				704251962F13397100322849 /* NetworkManager.swift in Sources */,
 				704251972F13397100322849 /* APIConfig.swift in Sources */,
@@ -949,8 +1028,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 72;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -960,7 +1040,8 @@
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -986,8 +1067,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 72;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -997,7 +1079,8 @@
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -1144,6 +1227,50 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		703F05BC2F638E6700D4EF47 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		703F05C12F63904D00D4EF47 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 703F05BC2F638E6700D4EF47 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		703F05C32F63904D00D4EF47 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 703F05BC2F638E6700D4EF47 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		703F05C52F63904D00D4EF47 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 703F05BC2F638E6700D4EF47 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		703F05C72F63904D00D4EF47 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 703F05BC2F638E6700D4EF47 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		703F05C92F63904D00D4EF47 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 703F05BC2F638E6700D4EF47 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		703F05CB2F63904D00D4EF47 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 703F05BC2F638E6700D4EF47 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 70C60A6A2F0DAA7C003AE110 /* Project object */;
 }

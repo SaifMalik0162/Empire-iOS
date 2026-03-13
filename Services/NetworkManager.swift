@@ -150,69 +150,73 @@ class NetworkManager {
         requiresAuth: Bool = false,
         didRetry: Bool
     ) async throws -> T {
+        let telemetryOperation = "network.request.\(method.rawValue.lowercased())"
+        return try await AppTelemetry.shared.measure(operation: telemetryOperation) {
         
-        guard let url = URL(string: APIConfig.baseURL + endpoint) else {
-            throw NetworkError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = method.rawValue
-        request.timeoutInterval = APIConfig.timeoutInterval
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        if requiresAuth, let token = authToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        
-        if let body = body {
-            request.httpBody = try JSONEncoder().encode(body)
-        }
-        
-        if APIConfig.enableNetworkLogging {
-            print("🌐 \(method.rawValue) \(url)")
-        }
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.serverError("Invalid response")
-        }
-        
-        if APIConfig.enableNetworkLogging {
-            print("📡 Status:  \(httpResponse.statusCode)")
-            if let json = String(data: data, encoding: .utf8) {
-                print("📄 Response: \(json)")
+            guard let url = URL(string: APIConfig.baseURL + endpoint) else {
+                throw NetworkError.invalidURL
             }
-        }
         
-        let statusCode = httpResponse.statusCode
+            var request = URLRequest(url: url)
+            request.httpMethod = method.rawValue
+            request.timeoutInterval = APIConfig.timeoutInterval
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        if statusCode >= 200 && statusCode < 300 {
-            do {
-                let decoded = try JSONDecoder().decode(T.self, from: data)
-                return decoded
-            } catch {
-                throw NetworkError.decodingError(error)
+            if requiresAuth, let token = authToken {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
-        } else if statusCode == 401 {
-            if didRetry {
-                clearAuthToken()
-                throw NetworkError.unauthorized
-            } else {
-                do {
-                    try await refreshAuthTokenIfNeeded()
-                    // Retry original request once after refresh
-                    return try await _request(endpoint: endpoint, method: method, body: body, requiresAuth: requiresAuth, didRetry: true)
-                } catch {
-                    clearAuthToken()
-                    throw NetworkError.unauthorized
+        
+            if let body = body {
+                request.httpBody = try JSONEncoder().encode(body)
+            }
+        
+            if APIConfig.enableNetworkLogging {
+                print("🌐 \(method.rawValue) \(url)")
+            }
+            AppTelemetry.shared.track(event: "network.request.started", metadata: ["method": method.rawValue, "endpoint": endpoint])
+        
+            let (data, response) = try await URLSession.shared.data(for: request)
+        
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.serverError("Invalid response")
+            }
+        
+            if APIConfig.enableNetworkLogging {
+                print("📡 Status:  \(httpResponse.statusCode)")
+                if let json = String(data: data, encoding: .utf8) {
+                    print("📄 Response: \(json)")
                 }
             }
-        } else {
-            if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
-                throw NetworkError.serverError(errorResponse.message)
+            AppTelemetry.shared.track(event: "network.request.finished", metadata: ["statusCode": String(httpResponse.statusCode), "endpoint": endpoint])
+        
+            let statusCode = httpResponse.statusCode
+        
+            if statusCode >= 200 && statusCode < 300 {
+                do {
+                    let decoded = try JSONDecoder().decode(T.self, from: data)
+                    return decoded
+                } catch {
+                    throw NetworkError.decodingError(error)
+                }
+            } else if statusCode == 401 {
+                if didRetry {
+                    clearAuthToken()
+                    throw NetworkError.unauthorized
+                } else {
+                    do {
+                        try await refreshAuthTokenIfNeeded()
+                        return try await _request(endpoint: endpoint, method: method, body: body, requiresAuth: requiresAuth, didRetry: true)
+                    } catch {
+                        clearAuthToken()
+                        throw NetworkError.unauthorized
+                    }
+                }
+            } else {
+                if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                    throw NetworkError.serverError(errorResponse.message)
+                }
+                throw NetworkError.serverError("Error: \(statusCode)")
             }
-            throw NetworkError.serverError("Error: \(statusCode)")
         }
     }
     

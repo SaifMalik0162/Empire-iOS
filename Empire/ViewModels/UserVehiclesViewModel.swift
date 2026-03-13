@@ -2,13 +2,19 @@ import Foundation
 import SwiftUI
 import Combine
 import SwiftData
+import OSLog
 
 final class UserVehiclesViewModel: ObservableObject {
     @Published var vehicles: [Car] = []
     var modelContext: ModelContext? = nil
 
+    private let carsService = SupabaseCarsService()
+    private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "default" }
+
     private var userKey: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "default" }
     private var vehiclesKey: String { "saved_user_vehicles_\(userKey)" }
+    
+    private let logger = Logger(subsystem: "com.empire.app", category: "vehicles-sync")
 
     private func persistVehicles() {
         if let context = modelContext {
@@ -16,6 +22,19 @@ final class UserVehiclesViewModel: ObservableObject {
         } else {
             if let data = try? JSONEncoder().encode(vehicles) {
                 UserDefaults.standard.set(data, forKey: vehiclesKey)
+            }
+        }
+    }
+
+    private func syncCarInBackground(_ car: Car) {
+        Task { [self, car, userId = currentUserId] in
+            do {
+                try await self.retry {
+                    try await self.carsService.upsertCarBundle(car, userId: userId)
+                }
+                self.logger.info("Successfully upserted car with id \(car.id, privacy: .public)")
+            } catch {
+                self.logger.error("Failed to upsert car with id \(car.id, privacy: .public): \(String(describing: error), privacy: .public)")
             }
         }
     }
@@ -48,7 +67,7 @@ final class UserVehiclesViewModel: ObservableObject {
         #if DEBUG
         let placeholder = Car(
             name: "Your Car",
-            description: "Tap to edit details",
+            description: "No make/model provided",
             imageName: "car_placeholder",
             horsepower: 0,
             stage: 1,
@@ -57,6 +76,7 @@ final class UserVehiclesViewModel: ObservableObject {
         )
         vehicles.append(placeholder)
         persistVehicles()
+        syncCarInBackground(placeholder)
         return vehicles.indices.last
         #else
         return nil
@@ -66,16 +86,30 @@ final class UserVehiclesViewModel: ObservableObject {
     @MainActor
     func addPlaceholderVehicle() {
         #if DEBUG
-        let placeholder = Car(name: "Your Car", description: "Tap to edit details", imageName: "car_placeholder", horsepower: 0, stage: 1)
+        let placeholder = Car(name: "Your Car", description: "No make/model provided", imageName: "car_placeholder", horsepower: 0, stage: 1)
         vehicles.append(placeholder)
         persistVehicles()
+        syncCarInBackground(placeholder)
         #endif
     }
 
     @MainActor
     func removeVehicles(at offsets: IndexSet) {
+        let removedCars = offsets.compactMap { vehicles.indices.contains($0) ? vehicles[$0] : nil }
         vehicles.remove(atOffsets: offsets)
         persistVehicles()
+        Task { [self, removedCars] in
+            for car in removedCars {
+                do {
+                    try await self.retry {
+                        try await self.carsService.deleteCar(id: car.id.uuidString)
+                    }
+                    self.logger.info("Successfully deleted car with id \(car.id, privacy: .public)")
+                } catch {
+                    self.logger.error("Failed to delete car with id \(car.id, privacy: .public): \(String(describing: error), privacy: .public)")
+                }
+            }
+        }
     }
     
     @MainActor
@@ -83,11 +117,25 @@ final class UserVehiclesViewModel: ObservableObject {
         guard vehicles.indices.contains(index) else { return }
         vehicles[index] = updated
         persistVehicles()
+        syncCarInBackground(updated)
     }
 
     @MainActor
     func append(_ car: Car) {
         vehicles.append(car)
         persistVehicles()
+        syncCarInBackground(car)
+    }
+    
+    private func retry<T>(times: Int = 3, delay: TimeInterval = 0.8, _ op: @escaping () async throws -> T) async throws -> T {
+        var lastError: Error?
+        for attempt in 1...times {
+            do { return try await op() } catch {
+                lastError = error
+                logger.error("Retry attempt \(attempt) failed: \(String(describing: error), privacy: .public)")
+                if attempt < times { try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+            }
+        }
+        throw lastError ?? URLError(.cannotConnectToHost)
     }
 }

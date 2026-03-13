@@ -4,6 +4,9 @@ import UIKit
 struct CarsView: View {
     // MARK: - User's cars
     @StateObject private var userVehiclesVM = UserVehiclesViewModel()
+    @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var authViewModel: AuthViewModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showAddVehicle: Bool = false
     @State private var editingIndex: Int? = nil
     @State private var showVehicleEditor: Bool = false
@@ -261,7 +264,11 @@ struct CarsView: View {
                 .preferredColorScheme(.dark)
         }
         .onAppear {
-            Task { await userVehiclesVM.loadVehicles() }
+            userVehiclesVM.setContext(modelContext)
+            Task {
+                await authViewModel.refreshCarsFromBackendIfAuthenticated()
+                await userVehiclesVM.loadVehicles()
+            }
             userKey = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
             if let idx = editingIndex, !userVehiclesVM.vehicles.indices.contains(idx) {
                 editingIndex = nil
@@ -269,6 +276,16 @@ struct CarsView: View {
             if let sel = selectedCarIndex, !userVehiclesVM.vehicles.indices.contains(sel) {
                 selectedCarIndex = nil
             }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task {
+                await authViewModel.refreshCarsFromBackendIfAuthenticated()
+                await userVehiclesVM.loadVehicles()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
+            Task { await userVehiclesVM.loadVehicles() }
         }
     }
 }
