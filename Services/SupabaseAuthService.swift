@@ -135,6 +135,11 @@ final class SupabaseAuthService {
     }
 
     // MARK: - Session & User
+    func hasValidSession() async throws -> Bool {
+        guard let session = try await currentSession() else { return false }
+        return !session.isExpired
+    }
+
     func currentSession() async throws -> Session? {
         try await client.auth.session
     }
@@ -200,6 +205,7 @@ final class SupabaseAuthService {
         if let currentProfile,
            let currentUsername = currentProfile.username?.trimmingCharacters(in: .whitespacesAndNewlines),
            currentUsername.caseInsensitiveCompare(normalizedUsername) == .orderedSame {
+            logger.debug("Skipped username update because value is unchanged")
             return try await backendUser(for: user, fallbackEmail: user.email ?? "", fallbackUsername: normalizedUsername)
         }
 
@@ -210,6 +216,7 @@ final class SupabaseAuthService {
             let elapsed = Date().timeIntervalSince(lastChangeAt)
             let remaining = usernameCooldown - elapsed
             if remaining > 0 {
+                logger.notice("Username change blocked by cooldown. Remaining seconds: \(remaining, privacy: .public)")
                 throw AuthProfileError.usernameCooldown(remaining: remaining)
             }
         }

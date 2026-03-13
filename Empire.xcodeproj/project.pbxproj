@@ -208,6 +208,9 @@
 		70F1AA012F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
 		70F1AA022F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
 		70F1AA032F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
+		70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
+		70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
+		70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -317,6 +320,7 @@
 		70E28F6E2F15D3ED0025AAAC /* LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = LICENSE.md; sourceTree = "<group>"; };
 		70E699D52F1496ED001304D6 /* VehicleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleEditorView.swift; sourceTree = "<group>"; };
 		70F1AA002F70000100ABCD01 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		70F1AA052F70000100ABCD01 /* AppTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTelemetry.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -383,6 +387,7 @@
 			isa = PBXGroup;
 			children = (
 				70F1AA002F70000100ABCD01 /* AppLogger.swift */,
+				70F1AA052F70000100ABCD01 /* AppTelemetry.swift */,
 				703F05D52F63910500D4EF47 /* ErrorResponse.swift */,
 				704251912F13397100322849 /* APIService.swift */,
 				704251922F13397100322849 /* NetworkManager.swift */,
@@ -689,6 +694,7 @@
 				70B0CF672F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
 				7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */,
 				70F1AA022F70000100ABCD01 /* AppLogger.swift in Sources */,
+				70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				70C0A6842F457D18003F8425 /* VIPJoinView.swift in Sources */,
 				7068B04A2F42783100D6628C /* KeychainService.swift in Sources */,
 				7089A7CB2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
@@ -754,6 +760,7 @@
 				70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */,
 				70A017062F0DF49000A084C2 /* CoolRipple.swift in Sources */,
 				70F1AA032F70000100ABCD01 /* AppLogger.swift in Sources */,
+				70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				7042519D2F13397100322849 /* APIService.swift in Sources */,
 				7042519E2F13397100322849 /* NetworkManager.swift in Sources */,
 				7042519F2F13397100322849 /* APIConfig.swift in Sources */,
@@ -875,6 +882,7 @@
 				70B0CF6F2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
 				70C0A6922F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
 				70F1AA012F70000100ABCD01 /* AppLogger.swift in Sources */,
+				70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				704251952F13397100322849 /* APIService.swift in Sources */,
 				704251962F13397100322849 /* NetworkManager.swift in Sources */,
 				704251972F13397100322849 /* APIConfig.swift in Sources */,

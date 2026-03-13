@@ -4,6 +4,26 @@ import Combine
 import Supabase
 import SwiftData
 
+protocol AuthServiceProviding {
+    func hasValidSession() async throws -> Bool
+    func currentUser() async throws -> BackendUser?
+    func login(email: String, password: String) async throws -> BackendUser
+    func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws -> BackendUser
+    func sendPasswordReset(email: String) async throws
+    func register(email: String, password: String, username: String) async throws -> BackendUser
+    func logout() async throws
+    func updateAvatarPath(_ avatarPath: String) async throws -> BackendUser
+    func uploadAvatar(imageData: Data) async throws -> BackendUser
+    func updateUsername(_ username: String) async throws -> BackendUser
+}
+
+protocol CarsServiceProviding {
+    func fetchCars(for userId: String) async throws -> [Car]
+}
+
+extension SupabaseAuthService: AuthServiceProviding {}
+extension SupabaseCarsService: CarsServiceProviding {}
+
 @MainActor class AuthViewModel: ObservableObject {
     @Published var isAuthenticated = false
     @Published var currentUser: BackendUser?
@@ -11,9 +31,8 @@ import SwiftData
     @Published var shouldPromptAddVehicle: Bool = false
     let instanceID = UUID()
     
-    private let networkManager = NetworkManager.shared
-    private let supabaseAuth = SupabaseAuthService()
-    private let carsService = SupabaseCarsService()
+    private let supabaseAuth: AuthServiceProviding
+    private let carsService: CarsServiceProviding
     
     private var modelContext: ModelContext? = nil
     
@@ -41,36 +60,48 @@ import SwiftData
         }
     }
     
-    init() {
+    init(
+        authService: AuthServiceProviding = SupabaseAuthService(),
+        carsService: CarsServiceProviding = SupabaseCarsService(),
+        autoCheckStatus: Bool = true
+    ) {
+        self.supabaseAuth = authService
+        self.carsService = carsService
         print("[AuthVM] init: instanceID=\(instanceID)")
-        Task {
-            await checkAuthStatus()
+        if autoCheckStatus {
+            Task {
+                await checkAuthStatus()
+            }
         }
     }
     
     func checkAuthStatus() async {
         print("[AuthVM] checkAuthStatus() start: isLoading(before)=\(isLoading)")
+        AppTelemetry.shared.track(event: "auth.check_status.started")
         isLoading = true
         print("[AuthVM] checkAuthStatus() set isLoading=true")
 
         do {
-            if let session = try await supabaseAuth.currentSession(), !session.isExpired, let backendUser = try await supabaseAuth.currentUser() {
+            if try await supabaseAuth.hasValidSession(), let backendUser = try await supabaseAuth.currentUser() {
                 isAuthenticated = true
                 self.currentUser = backendUser
                 UserDefaults.standard.set(backendUser.id, forKey: "currentUserId")
                 self.persistCurrentUser(backendUser)
                 self.syncCarsAfterAuth(userId: backendUser.id)
+                AppTelemetry.shared.track(event: "auth.check_status.authenticated", metadata: ["userId": backendUser.id])
             } else {
                 isAuthenticated = false
                 self.currentUser = nil
                 self.persistCurrentUser(nil)
                 UserDefaults.standard.removeObject(forKey: "currentUserId")
+                AppTelemetry.shared.track(event: "auth.check_status.unauthenticated")
             }
         } catch {
             isAuthenticated = false
             self.currentUser = nil
             self.persistCurrentUser(nil)
             UserDefaults.standard.removeObject(forKey: "currentUserId")
+            AppTelemetry.shared.record(error: error, context: "auth.check_status")
         }
 
         isLoading = false
@@ -78,7 +109,9 @@ import SwiftData
     }
     
     func login(email: String, password: String) async throws {
-        let user = try await supabaseAuth.login(email: email, password: password)
+        let user = try await AppTelemetry.shared.measure(operation: "auth.login") {
+            try await supabaseAuth.login(email: email, password: password)
+        }
         
         await MainActor.run {
             self.currentUser = user
@@ -92,10 +125,13 @@ import SwiftData
         await MainActor.run {
             self.shouldPromptAddVehicle = false
         }
+        AppTelemetry.shared.track(event: "auth.login.success", metadata: ["userId": user.id])
     }
 
     func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws {
-        let user = try await supabaseAuth.loginWithApple(idToken: idToken, nonce: nonce, suggestedUsername: suggestedUsername)
+        let user = try await AppTelemetry.shared.measure(operation: "auth.login_apple") {
+            try await supabaseAuth.loginWithApple(idToken: idToken, nonce: nonce, suggestedUsername: suggestedUsername)
+        }
 
         await MainActor.run {
             self.currentUser = user
@@ -109,14 +145,20 @@ import SwiftData
         await MainActor.run {
             self.shouldPromptAddVehicle = false
         }
+        AppTelemetry.shared.track(event: "auth.login_apple.success", metadata: ["userId": user.id])
     }
 
     func sendPasswordReset(email: String) async throws {
-        try await supabaseAuth.sendPasswordReset(email: email)
+        try await AppTelemetry.shared.measure(operation: "auth.password_reset") {
+            try await supabaseAuth.sendPasswordReset(email: email)
+        }
+        AppTelemetry.shared.track(event: "auth.password_reset.sent")
     }
     
     func register(email: String, password: String, username: String) async throws {
-        let user = try await supabaseAuth.register(email: email, password: password, username: username)
+        let user = try await AppTelemetry.shared.measure(operation: "auth.register") {
+            try await supabaseAuth.register(email: email, password: password, username: username)
+        }
         
         await MainActor.run {
             self.currentUser = user
@@ -126,6 +168,7 @@ import SwiftData
         }
         
         self.syncCarsAfterAuth(userId: user.id)
+        AppTelemetry.shared.track(event: "auth.register.success", metadata: ["userId": user.id])
     }
     
     func logout() {
@@ -134,6 +177,7 @@ import SwiftData
         Task {
             try? await supabaseAuth.logout()
         }
+        AppTelemetry.shared.track(event: "auth.logout")
         
         print("[AuthVM] logout: clearing in-memory state")
         self.currentUser = nil
@@ -160,23 +204,30 @@ import SwiftData
             }
         } catch {
             print("[AuthVM] ❌ Failed to update avatar path: \(error)")
+            AppTelemetry.shared.record(error: error, context: "auth.update_avatar_path")
         }
     }
 
     func updateAvatar(imageData: Data) async throws {
-        let updatedUser = try await supabaseAuth.uploadAvatar(imageData: imageData)
+        let updatedUser = try await AppTelemetry.shared.measure(operation: "auth.update_avatar") {
+            try await supabaseAuth.uploadAvatar(imageData: imageData)
+        }
         await MainActor.run {
             self.currentUser = updatedUser
             self.persistCurrentUser(updatedUser)
         }
+        AppTelemetry.shared.track(event: "auth.update_avatar.success")
     }
 
     func updateUsername(_ username: String) async throws {
-        let updatedUser = try await supabaseAuth.updateUsername(username)
+        let updatedUser = try await AppTelemetry.shared.measure(operation: "auth.update_username") {
+            try await supabaseAuth.updateUsername(username)
+        }
         await MainActor.run {
             self.currentUser = updatedUser
             self.persistCurrentUser(updatedUser)
         }
+        AppTelemetry.shared.track(event: "auth.update_username.success")
     }
 
     func avatarPublicURLString(from avatarPath: String?) -> String? {

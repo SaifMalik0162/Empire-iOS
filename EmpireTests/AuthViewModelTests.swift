@@ -2,51 +2,78 @@ import XCTest
 @testable import Empire
 
 final class AuthViewModelTests: XCTestCase {
+    func testCheckAuthStatus_authenticatedWhenSessionValidAndUserExists() async {
+        let auth = MockAuthService()
+        auth.hasValidSessionValue = true
+        auth.currentUserValue = BackendUser(id: "u1", username: "saif", email: "saif@example.com", avatarPath: nil)
+        let cars = MockCarsService()
 
-    // Test helpers for token setup/teardown
-    private func writeToken(_ key: String, _ value: String) {
-        let data = value.data(using: .utf8)!
-        _ = KeychainService.shared.save(data, forKey: key)
+        let vm = await MainActor.run {
+            AuthViewModel(authService: auth, carsService: cars, autoCheckStatus: false)
+        }
+
+        await vm.checkAuthStatus()
+
+        let isAuthenticated = await MainActor.run { vm.isAuthenticated }
+        XCTAssertTrue(isAuthenticated)
+        XCTAssertEqual(cars.fetchCalls, 1)
     }
 
-    private func clearTokens() {
-        _ = KeychainService.shared.delete(forKey: KeychainService.accessTokenKey)
-        _ = KeychainService.shared.delete(forKey: KeychainService.refreshTokenKey)
+    func testCheckAuthStatus_unauthenticatedWhenNoValidSession() async {
+        let auth = MockAuthService()
+        auth.hasValidSessionValue = false
+        auth.currentUserValue = nil
+
+        let vm = await MainActor.run {
+            AuthViewModel(authService: auth, carsService: MockCarsService(), autoCheckStatus: false)
+        }
+
+        await vm.checkAuthStatus()
+
+        let isAuthenticated = await MainActor.run { vm.isAuthenticated }
+        XCTAssertFalse(isAuthenticated)
     }
 
-    override func setUp() {
-        super.setUp()
-        // Ensure clean state
-        clearTokens()
+    func testUpdateUsername_updatesCurrentUser() async throws {
+        let auth = MockAuthService()
+        auth.updatedUsernameResult = BackendUser(id: "u2", username: "oldname", email: "u2@example.com", avatarPath: nil)
+
+        let vm = await MainActor.run {
+            AuthViewModel(authService: auth, carsService: MockCarsService(), autoCheckStatus: false)
+        }
+
+        try await vm.updateUsername("newname")
+
+        let user = await MainActor.run { vm.currentUser }
+        XCTAssertEqual(user?.username, "newname")
     }
+}
 
-    override func tearDown() {
-        clearTokens()
-        super.tearDown()
+private final class MockAuthService: AuthServiceProviding {
+    var hasValidSessionValue = false
+    var currentUserValue: BackendUser?
+    var updatedUsernameResult: BackendUser = .init(id: "id", username: "user", email: "u@example.com", avatarPath: nil)
+
+    func hasValidSession() async throws -> Bool { hasValidSessionValue }
+    func currentUser() async throws -> BackendUser? { currentUserValue }
+    func login(email: String, password: String) async throws -> BackendUser { updatedUsernameResult }
+    func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws -> BackendUser { updatedUsernameResult }
+    func sendPasswordReset(email: String) async throws {}
+    func register(email: String, password: String, username: String) async throws -> BackendUser { updatedUsernameResult }
+    func logout() async throws {}
+    func updateAvatarPath(_ avatarPath: String) async throws -> BackendUser { updatedUsernameResult }
+    func uploadAvatar(imageData: Data) async throws -> BackendUser { updatedUsernameResult }
+    func updateUsername(_ username: String) async throws -> BackendUser {
+        BackendUser(id: updatedUsernameResult.id, username: username, email: updatedUsernameResult.email, avatarPath: updatedUsernameResult.avatarPath)
     }
+}
 
-    func testCheckAuthStatus_setsAuthenticatedWhenTokenPresent() async {
-        writeToken(KeychainService.accessTokenKey, "fake_access")
-        writeToken(KeychainService.refreshTokenKey, "fake_refresh")
+private final class MockCarsService: CarsServiceProviding {
+    var fetchCalls = 0
 
-        let vm = await MainActor.run { AuthViewModel() }
-        let isAuth = await MainActor.run { vm.isAuthenticated }
-        XCTAssertTrue(isAuth, "AuthViewModel should be authenticated when NetworkManager has tokens")
-    }
-
-    func testLogout_clearsTokensAndState() async {
-        writeToken(KeychainService.accessTokenKey, "fake_access")
-        writeToken(KeychainService.refreshTokenKey, "fake_refresh")
-
-        let vm = await MainActor.run { AuthViewModel() }
-        let isAuth = await MainActor.run { vm.isAuthenticated }
-        XCTAssertTrue(isAuth)
-
-        await MainActor.run { vm.logout() }
-
-        XCTAssertFalse(NetworkManager.shared.isAuthenticated, "NetworkManager should report not authenticated after logout")
-        let isAuthAfter = await MainActor.run { vm.isAuthenticated }
-        XCTAssertFalse(isAuthAfter, "AuthViewModel should be not authenticated after logout")
+    func fetchCars(for userId: String) async throws -> [Car] {
+        fetchCalls += 1
+        return []
     }
 }
 
