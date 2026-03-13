@@ -29,9 +29,6 @@ struct EmpireApp: App {
                         EmpireAddVehicleView(vm: vehiclesVM)
                             .preferredColorScheme(.dark)
                     }
-                if authViewModel.isLoading {
-                    EmpireSplashView()
-                }
             }
             .preferredColorScheme(.dark)
             .fullScreenCover(isPresented: Binding(get: { !authViewModel.isAuthenticated && !authViewModel.isLoading }, set: { _ in })) {

@@ -36,6 +36,7 @@ public struct EmpireLogoView: View {
             case .original:
                 return AnyView(
                     image
+                        .renderingMode(.original)
                         .resizable()
                         .scaledToFit()
                         .frame(width: size, height: size)
