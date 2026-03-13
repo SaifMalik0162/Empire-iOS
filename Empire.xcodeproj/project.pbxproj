@@ -376,13 +376,6 @@
 			path = Configs;
 			sourceTree = "<group>";
 		};
-		704251902F13397100322849 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
 		704251932F13397100322849 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -501,7 +494,6 @@
 				70E28F6A2F15C9C90025AAAC /* CONTRIBUTING.md */,
 				70E28F662F15C9980025AAAC /* README.md */,
 				7042518E2F13397100322849 /* Configs */,
-				704251902F13397100322849 /* Models */,
 				704251932F13397100322849 /* Services */,
 				70A017022F0DF49000A084C2 /* Empire */,
 				70C60A842F0DAA7E003AE110 /* EmpireTests */,

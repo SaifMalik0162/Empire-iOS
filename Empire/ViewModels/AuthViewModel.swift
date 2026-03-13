@@ -56,7 +56,9 @@ extension SupabaseCarsService: CarsServiceProviding {}
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
         if isAuthenticated, let userId = currentUser?.id {
-            syncCarsAfterAuth(userId: userId)
+            Task {
+                await syncCarsFromBackend(userId: userId)
+            }
         }
     }
     
@@ -87,7 +89,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
                 self.currentUser = backendUser
                 UserDefaults.standard.set(backendUser.id, forKey: "currentUserId")
                 self.persistCurrentUser(backendUser)
-                self.syncCarsAfterAuth(userId: backendUser.id)
+                await self.syncCarsFromBackend(userId: backendUser.id)
                 AppTelemetry.shared.track(event: "auth.check_status.authenticated", metadata: ["userId": backendUser.id])
             } else {
                 isAuthenticated = false
@@ -120,7 +122,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             self.persistCurrentUser(user)
         }
         
-        self.syncCarsAfterAuth(userId: user.id)
+        await self.syncCarsFromBackend(userId: user.id)
         
         await MainActor.run {
             self.shouldPromptAddVehicle = false
@@ -140,7 +142,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             self.persistCurrentUser(user)
         }
 
-        self.syncCarsAfterAuth(userId: user.id)
+        await self.syncCarsFromBackend(userId: user.id)
 
         await MainActor.run {
             self.shouldPromptAddVehicle = false
@@ -167,7 +169,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             self.persistCurrentUser(user)
         }
         
-        self.syncCarsAfterAuth(userId: user.id)
+        await self.syncCarsFromBackend(userId: user.id)
         AppTelemetry.shared.track(event: "auth.register.success", metadata: ["userId": user.id])
     }
     
@@ -237,23 +239,32 @@ extension SupabaseCarsService: CarsServiceProviding {}
         return "\(base)/storage/v1/object/public/avatars/\(encodedPath)"
     }
     
-    private func syncCarsAfterAuth(userId: String) {
-        Task {
-            do {
-                let cars = try await carsService.fetchCars(for: userId)
-                if let context = self.modelContext {
-                    LocalStore.shared.replaceAllCars(cars, context: context, userKey: userId)
-                    print("[AuthVM] 🔄 Synced cars from Supabase and replaced local store: count=\(cars.count)")
-                } else {
-                    print("[AuthVM] ⚠️ ModelContext not set. Cannot sync cars to local store.")
-                }
-            } catch {
-                print("[AuthVM] ❌ Failed to sync cars from Supabase: \(error)")
+    func refreshCarsFromBackendIfAuthenticated() async {
+        guard let userId = currentUser?.id, isAuthenticated else { return }
+        await syncCarsFromBackend(userId: userId)
+    }
+
+    private func syncCarsFromBackend(userId: String) async {
+        do {
+            let cars = try await carsService.fetchCars(for: userId)
+            if let context = self.modelContext {
+                LocalStore.shared.replaceAllCars(cars, context: context, userKey: userId)
+                print("[AuthVM] 🔄 Synced cars from Supabase and replaced local store: count=\(cars.count)")
+                NotificationCenter.default.post(
+                    name: .empireCarsDidSync,
+                    object: nil,
+                    userInfo: ["userId": userId, "count": cars.count]
+                )
+            } else {
+                print("[AuthVM] ⚠️ ModelContext not set. Cannot sync cars to local store.")
             }
+        } catch {
+            print("[AuthVM] ❌ Failed to sync cars from Supabase: \(error)")
         }
     }
 }
 
 extension Notification.Name {
     static let empireRequestDismiss = Notification.Name("EmpireRequestDismiss")
+    static let empireCarsDidSync = Notification.Name("EmpireCarsDidSync")
 }
