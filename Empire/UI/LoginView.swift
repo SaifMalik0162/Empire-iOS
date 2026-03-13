@@ -1,4 +1,6 @@
 import SwiftUI
+import AuthenticationServices
+import CryptoKit
 
 struct LoginView: View {
     @State private var email: String = ""
@@ -7,6 +9,7 @@ struct LoginView: View {
     @State private var showSignUp = false
     @State private var showForgotPassword = false
     @State private var showMainApp: Bool = false
+    @State private var appleNonce: String = ""
 
     @EnvironmentObject var authViewModel: AuthViewModel
 
@@ -139,27 +142,21 @@ struct LoginView: View {
                 }
                 .padding(.vertical, 8)
                 
-                // Apple Sign-in placeholder button
-                Button {
-                    // no action yet
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "applelogo")
-                            .font(.title2)
-                        Text("Sign in with Apple")
-                            .fontWeight(.medium)
-                    }
-                    .foregroundColor(EmpireTheme.mintCore)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(EmpireTheme.mintCore.opacity(0.7), lineWidth: 1.5)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: EmpireTheme.mintCore.opacity(0.15), radius: 6, x: 0, y: 3)
-                    )
+                SignInWithAppleButton(.signIn) { request in
+                    let nonce = randomNonceString()
+                    appleNonce = nonce
+                    request.requestedScopes = [.fullName, .email]
+                    request.nonce = sha256(nonce)
+                } onCompletion: { result in
+                    handleAppleSignIn(result)
                 }
-                .buttonStyle(.plain)
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(EmpireTheme.mintCore.opacity(0.35), lineWidth: 1)
+                )
                 
                 Spacer(minLength: 10)
                 
@@ -189,9 +186,11 @@ struct LoginView: View {
         }
         .sheet(isPresented: $showSignUp) {
             SignUpView()
+                .environmentObject(authViewModel)
         }
         .sheet(isPresented: $showForgotPassword) {
             ForgotPasswordView()
+                .environmentObject(authViewModel)
         }
         .fullScreenCover(isPresented: $showMainApp) {
             EmpireTabView()
@@ -227,7 +226,8 @@ struct LoginView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "An unexpected error occurred"
+                    let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    errorMessage = message.isEmpty ? "An unexpected error occurred" : message
                     isLoading = false
                     
                     let errorGenerator = UINotificationFeedbackGenerator()
@@ -244,6 +244,92 @@ struct LoginView: View {
             .onAppear {
                 animateGradient = true
             }
+    }
+
+    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .failure(let error):
+            let nsError = error as NSError
+            if nsError.domain == ASAuthorizationError.errorDomain,
+               nsError.code == ASAuthorizationError.canceled.rawValue {
+                return
+            }
+            errorMessage = error.localizedDescription
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                errorMessage = "Failed to read Apple credential."
+                return
+            }
+            guard let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8),
+                  !appleNonce.isEmpty else {
+                errorMessage = "Failed to process Apple identity token."
+                return
+            }
+
+            let fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+                .compactMap { $0 }
+                .joined(separator: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let suggestedUsername = fullName.isEmpty ? nil : fullName
+
+            performAppleLogin(idToken: idToken, nonce: appleNonce, suggestedUsername: suggestedUsername)
+        }
+    }
+
+    private func performAppleLogin(idToken: String, nonce: String, suggestedUsername: String?) {
+        isLoading = true
+        errorMessage = nil
+
+        Task {
+            do {
+                try await authViewModel.loginWithApple(idToken: idToken, nonce: nonce, suggestedUsername: suggestedUsername)
+                await MainActor.run {
+                    isLoading = false
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+            } catch {
+                await MainActor.run {
+                    let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    errorMessage = message.isEmpty ? "Apple sign in failed." : message
+                    isLoading = false
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
+            }
+        }
+    }
+
+    private func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+
+        while remainingLength > 0 {
+            var randoms: [UInt8] = Array(repeating: 0, count: 16)
+            let errorCode = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+            if errorCode != errSecSuccess {
+                return UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            }
+
+            for random in randoms {
+                if remainingLength == 0 {
+                    break
+                }
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
+            }
+        }
+
+        return result
+    }
+
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        return hashed.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
 

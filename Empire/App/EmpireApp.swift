@@ -10,12 +10,17 @@ struct EmpireApp: App {
     
     @Environment(\.dismiss) private var dismiss
     @State private var dismissObserver: AnyCancellable? = nil
+
+    init() {
+        AppTelemetry.shared.configure()
+    }
     
     var body: some Scene {
         WindowGroup {
             ZStack {
                 ContextBridge { context in
                     vehiclesVM.setContext(context)
+                    authViewModel.setModelContext(context)
                 }
                 EmpireTabView()
                     .environmentObject(authViewModel)
@@ -24,9 +29,6 @@ struct EmpireApp: App {
                         EmpireAddVehicleView(vm: vehiclesVM)
                             .preferredColorScheme(.dark)
                     }
-                if authViewModel.isLoading {
-                    EmpireSplashView()
-                }
             }
             .preferredColorScheme(.dark)
             .fullScreenCover(isPresented: Binding(get: { !authViewModel.isAuthenticated && !authViewModel.isLoading }, set: { _ in })) {

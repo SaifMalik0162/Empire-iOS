@@ -9,6 +9,8 @@ final class CarEntity {
     @Attribute(.unique) var id: UUID
     var name: String
     var carDescription: String
+    var make: String?
+    var model: String?
     var imageName: String
     var photoFileName: String?
     var horsepower: Int
@@ -23,6 +25,8 @@ final class CarEntity {
     init(id: UUID = UUID(),
          name: String,
          carDescription: String,
+            make: String? = nil,
+            model: String? = nil,
          imageName: String,
          photoFileName: String? = nil,
          horsepower: Int,
@@ -35,6 +39,8 @@ final class CarEntity {
         self.id = id
         self.name = name
         self.carDescription = carDescription
+        self.make = make
+        self.model = model
         self.imageName = imageName
         self.photoFileName = photoFileName
         self.horsepower = horsepower
@@ -97,14 +103,34 @@ final class MerchItemEntity {
 // MARK: - Mapping helpers between domain structs and SwiftData models
 
 extension CarEntity {
+    private static let preferredSpecOrder: [String] = [
+        "engine",
+        "drivetrain",
+        "transmission",
+        "tires",
+        "weight"
+    ]
+
+    private static func orderedSpecs(_ specs: [SpecItem]) -> [SpecItem] {
+        let rank = Dictionary(uniqueKeysWithValues: preferredSpecOrder.enumerated().map { ($1, $0) })
+        return specs.sorted { lhs, rhs in
+            let leftRank = rank[lhs.key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] ?? Int.max
+            let rightRank = rank[rhs.key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] ?? Int.max
+            if leftRank != rightRank { return leftRank < rightRank }
+            return lhs.key.localizedCaseInsensitiveCompare(rhs.key) == .orderedAscending
+        }
+    }
+
     func toDomain() -> Car {
-        let specsDomain: [SpecItem] = specs.map { SpecItem(id: $0.id, key: $0.key, value: $0.value) }
+        let specsDomain = Self.orderedSpecs(specs.map { SpecItem(id: $0.id, key: $0.key, value: $0.value) })
         let modsDomain: [ModItem] = mods.map { ModItem(id: $0.id, title: $0.title, notes: $0.notes, isMajor: $0.isMajor) }
         let vehicleClass: VehicleClass? = vehicleClassRaw.flatMap { VehicleClass(rawValue: $0) }
         return Car(
             id: id,
             name: name,
             description: carDescription,
+            make: make,
+            model: model,
             imageName: imageName,
             photoFileName: photoFileName,
             horsepower: horsepower,
@@ -117,12 +143,14 @@ extension CarEntity {
     }
 
     static func fromDomain(_ car: Car, userKey: String) -> CarEntity {
-        let specEntities = car.specs.map { SpecItemEntity(id: $0.id, key: $0.key, value: $0.value) }
+        let specEntities = orderedSpecs(car.specs).map { SpecItemEntity(id: $0.id, key: $0.key, value: $0.value) }
         let modEntities = car.mods.map { ModItemEntity(id: $0.id, title: $0.title, notes: $0.notes, isMajor: $0.isMajor) }
         return CarEntity(
             id: car.id,
             name: car.name,
             carDescription: car.description,
+            make: car.make,
+            model: car.model,
             imageName: car.imageName,
             photoFileName: car.photoFileName,
             horsepower: car.horsepower,
@@ -138,6 +166,8 @@ extension CarEntity {
     func update(from car: Car, userKey: String) {
         self.name = car.name
         self.carDescription = car.description
+        self.make = car.make
+        self.model = car.model
         self.imageName = car.imageName
         self.photoFileName = car.photoFileName
         self.horsepower = car.horsepower
@@ -146,7 +176,7 @@ extension CarEntity {
         self.vehicleClassRaw = car.vehicleClass?.rawValue
         self.userKey = userKey
         // Replace specs/mods to keep it simple in 
-        self.specs = car.specs.map { SpecItemEntity(id: $0.id, key: $0.key, value: $0.value) }
+        self.specs = Self.orderedSpecs(car.specs).map { SpecItemEntity(id: $0.id, key: $0.key, value: $0.value) }
         self.mods = car.mods.map { ModItemEntity(id: $0.id, title: $0.title, notes: $0.notes, isMajor: $0.isMajor) }
     }
 }
