@@ -14,13 +14,20 @@ final class SupabaseMerchService {
     private let supabaseClient: SupabaseClient = SupabaseClientProvider.shared
 
     func fetchMerch() async throws -> [MerchItem] {
-        let rows: [SBMerchRow] = try await supabaseClient
-            .from("merch_items")
-            .select()
-            .order("updated_at", ascending: false)
-            .execute()
-            .value
-        return rows.map { r in
+        let rows: [SBMerchRow] = try await AppTelemetry.shared.measure(operation: "merch.fetch") {
+            try await supabaseClient
+                .from("merch_items")
+                .select()
+                .order("updated_at", ascending: false)
+                .execute()
+                .value
+        }
+        AppTelemetry.shared.track(event: "merch.fetch.success", metadata: ["count": String(rows.count)])
+        return Self.mapRowsToMerchItems(rows)
+    }
+
+    static func mapRowsToMerchItems(_ rows: [SBMerchRow]) -> [MerchItem] {
+        rows.map { r in
             let cat = MerchCategory(rawValue: r.category) ?? .apparel
             return MerchItem(name: r.name, price: r.price_string, imageName: r.image_name, category: cat)
         }

@@ -10,6 +10,10 @@ struct EmpireApp: App {
     
     @Environment(\.dismiss) private var dismiss
     @State private var dismissObserver: AnyCancellable? = nil
+
+    init() {
+        AppTelemetry.shared.configure()
+    }
     
     var body: some Scene {
         WindowGroup {
