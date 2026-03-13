@@ -15,6 +15,10 @@
 			</array>
 		</dict>
 	</array>
+	<key>SUPABASE_URL</key>
+	<string>YOUR_SUPABASE_URL</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>YOUR_SUPABASE_ANON_KEY</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 </dict>
