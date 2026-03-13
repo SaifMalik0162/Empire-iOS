@@ -45,6 +45,45 @@ final class SupabaseAuthService {
         return BackendUser(id: user.id.uuidString, username: username, email: user.email ?? email)
     }
 
+    func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws -> BackendUser {
+        let response = try await client.auth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(
+                provider: .apple,
+                idToken: idToken,
+                nonce: nonce
+            )
+        )
+        let user = response.user
+
+        if let suggestedUsername, !suggestedUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            do {
+                _ = try await client
+                    .from("profiles")
+                    .upsert([
+                        "id": user.id.uuidString,
+                        "username": suggestedUsername
+                    ], onConflict: "id")
+                    .execute()
+            } catch {
+                logger.warning("Profile upsert after Apple sign-in failed for user \(user.id.uuidString, privacy: .public): \(String(describing: error), privacy: .public)")
+            }
+        }
+
+        let username = (try? await fetchUsername(userID: user.id.uuidString))
+            ?? suggestedUsername
+            ?? user.email
+            ?? "Apple User"
+
+        return BackendUser(id: user.id.uuidString, username: username, email: user.email ?? "")
+    }
+
+    func sendPasswordReset(email: String) async throws {
+        try await client.auth.resetPasswordForEmail(
+            email,
+            redirectTo: SupabaseConfig.passwordResetRedirectURL
+        )
+    }
+
     // MARK: - Logout
     func logout() async throws {
         try await client.auth.signOut()
