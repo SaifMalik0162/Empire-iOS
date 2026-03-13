@@ -22,6 +22,12 @@ struct MeetsView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 60)
+                    } else if let meetsError {
+                        Text(meetsError)
+                            .font(.caption)
+                            .foregroundColor(.red.opacity(0.9))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 60)
                     } else if meets.isEmpty {
                         emptyMeetsView
                     } else {
@@ -105,28 +111,20 @@ extension MeetsView {
         meetsError = nil
         
         Task {
+            let service = SupabaseMeetsService()
             do {
-                print("🔄 Loading meets...")
-                let backendMeets = try await APIService.shared.getAllMeets()
-                print("✅ Loaded \(backendMeets.count) meets from backend")
-                
+                let items = try await service.fetchUpcomingMeets()
                 await MainActor.run {
-                    let formatter = ISO8601DateFormatter()
-                    meets = backendMeets.map { backendMeet in
-                        let date = formatter.date(from: backendMeet.meetDate) ?? Date()
-                        return Meet(
-                            title: backendMeet.title,
-                            city: backendMeet.location,
-                            date: date
-                        )
-                    }
-                    isLoadingMeets = false
+                    self.meets = items
+                    self.isLoadingMeets = false
+                    self.meetsError = nil
                 }
             } catch {
                 await MainActor.run {
-                    print("❌ Error loading meets:  \(error)")
-                    meetsError = "Failed to load meets"
-                    isLoadingMeets = false
+                    self.meets = []
+                    self.isLoadingMeets = false
+                    let msg = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    self.meetsError = msg.isEmpty ? "Failed to load meets" : msg
                 }
             }
         }

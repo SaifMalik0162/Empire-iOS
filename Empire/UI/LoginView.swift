@@ -189,6 +189,7 @@ struct LoginView: View {
         }
         .sheet(isPresented: $showSignUp) {
             SignUpView()
+                .environmentObject(authViewModel)
         }
         .sheet(isPresented: $showForgotPassword) {
             ForgotPasswordView()
@@ -227,7 +228,8 @@ struct LoginView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "An unexpected error occurred"
+                    let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    errorMessage = message.isEmpty ? "An unexpected error occurred" : message
                     isLoading = false
                     
                     let errorGenerator = UINotificationFeedbackGenerator()
