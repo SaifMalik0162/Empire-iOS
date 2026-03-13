@@ -227,6 +227,12 @@ struct VehicleEditorView: View {
                 }
             }
         }
+        .onChange(of: selectedPhotoItem) { _, newValue in
+            guard let newValue else { return }
+            Task {
+                await loadSelectedPhoto(from: newValue)
+            }
+        }
     }
 
     // MARK: - Step 1 View (Vehicle Details: Image picker + Make, Model, Name)
@@ -715,7 +721,8 @@ struct VehicleEditorView: View {
         if let data = tempPhotoData {
             let filename = "car_\(updated.id.uuidString).jpg"
             do {
-                _ = try ImageStore.save(data, fileName: filename)
+                let compressed = compressForLocalStorage(data) ?? data
+                _ = try ImageStore.save(compressed, fileName: filename)
                 updated.photoFileName = filename
             } catch {
                 // On failure, do not update photoFileName
@@ -801,6 +808,33 @@ struct VehicleEditorView: View {
         case .electricHybrid: return "E - Electric & Hybrid"
         case .trackOnly: return "T - Track-Only"
         }
+    }
+
+    private func loadSelectedPhoto(from item: PhotosPickerItem) async {
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else { return }
+            await MainActor.run {
+                self.tempPhotoData = compressForLocalStorage(data) ?? data
+            }
+        } catch {
+            // Ignore picker errors and keep previous image state.
+        }
+    }
+
+    private func compressForLocalStorage(_ data: Data) -> Data? {
+        let maxBytes = 1_500_000
+        guard data.count > maxBytes else { return data }
+        guard let image = UIImage(data: data) else { return data }
+
+        var compression: CGFloat = 0.94
+        var result = image.jpegData(compressionQuality: compression)
+
+        while let current = result, current.count > maxBytes, compression > 0.5 {
+            compression -= 0.08
+            result = image.jpegData(compressionQuality: compression)
+        }
+
+        return result ?? data
     }
 }
 

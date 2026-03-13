@@ -16,6 +16,7 @@ struct EmpireApp: App {
             ZStack {
                 ContextBridge { context in
                     vehiclesVM.setContext(context)
+                    authViewModel.setModelContext(context)
                 }
                 EmpireTabView()
                     .environmentObject(authViewModel)

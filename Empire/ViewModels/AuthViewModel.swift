@@ -1,13 +1,8 @@
-//
-//  AuthViewModel.swift
-//  Empire
-//
-//  Created by Vishwa Sivakumar on 2026-01-10.
-//
-
 import Foundation
 import SwiftUI
 import Combine
+import Supabase
+import SwiftData
 
 @MainActor class AuthViewModel: ObservableObject {
     @Published var isAuthenticated = false
@@ -17,6 +12,10 @@ import Combine
     let instanceID = UUID()
     
     private let networkManager = NetworkManager.shared
+    private let supabaseAuth = SupabaseAuthService()
+    private let carsService = SupabaseCarsService()
+    
+    private var modelContext: ModelContext? = nil
     
     private let userDefaultsUserKey = "currentUser"
 
@@ -35,30 +34,39 @@ import Combine
         return try? JSONDecoder().decode(BackendUser.self, from: data)
     }
     
-    init() {
-        print("[AuthVM] init: instanceID=\(instanceID)")
-        checkAuthStatus()
+    func setModelContext(_ context: ModelContext) {
+        self.modelContext = context
+        if isAuthenticated, let userId = currentUser?.id {
+            syncCarsAfterAuth(userId: userId)
+        }
     }
     
-    func checkAuthStatus() {
+    init() {
+        print("[AuthVM] init: instanceID=\(instanceID)")
+        Task {
+            await checkAuthStatus()
+        }
+    }
+    
+    func checkAuthStatus() async {
         print("[AuthVM] checkAuthStatus() start: isLoading(before)=\(isLoading)")
         isLoading = true
         print("[AuthVM] checkAuthStatus() set isLoading=true")
 
-        print("[AuthVM] checkAuthStatus() evaluating token presence...")
-        if networkManager.isAuthenticated {
-            print("[AuthVM] ✅ Found stored token, user is authenticated")
-            isAuthenticated = true
-
-            // Try to restore a previously persisted user first
-            if let restored = restoreCurrentUser() {
-                self.currentUser = restored
-                UserDefaults.standard.set(restored.id, forKey: "currentUserId")
-                print("[AuthVM] Restored user from disk: \(restored.username)")
-                // TODO: When APIService exposes a current-user endpoint, refresh profile here.
+        do {
+            if let _ = try await supabaseAuth.currentSession(), let backendUser = try await supabaseAuth.currentUser() {
+                isAuthenticated = true
+                self.currentUser = backendUser
+                UserDefaults.standard.set(backendUser.id, forKey: "currentUserId")
+                self.persistCurrentUser(backendUser)
+                self.syncCarsAfterAuth(userId: backendUser.id)
+            } else {
+                isAuthenticated = false
+                self.currentUser = nil
+                self.persistCurrentUser(nil)
+                UserDefaults.standard.removeObject(forKey: "currentUserId")
             }
-        } else {
-            print("[AuthVM] ❌ No token found, user needs to log in")
+        } catch {
             isAuthenticated = false
             self.currentUser = nil
             self.persistCurrentUser(nil)
@@ -70,52 +78,42 @@ import Combine
     }
     
     func login(email: String, password: String) async throws {
-        let response = try await APIService.shared.login(email: email, password: password)
+        let user = try await supabaseAuth.login(email: email, password: password)
         
         await MainActor.run {
-            if response.success {
-                self.currentUser = response.user
-                self.isAuthenticated = true
-                if let user = response.user {
-                    UserDefaults.standard.set(user.id, forKey: "currentUserId")
-                    self.persistCurrentUser(user)
-                }
-                print("[AuthVM] ✅ User logged in:  \(response.user?.username ?? "unknown")")
-            }
+            self.currentUser = user
+            self.isAuthenticated = true
+            UserDefaults.standard.set(user.id, forKey: "currentUserId")
+            self.persistCurrentUser(user)
         }
         
-        Task { @MainActor in
-            // TODO: Implement vehicle check when APIService.getMyVehicles is available
+        self.syncCarsAfterAuth(userId: user.id)
+        
+        await MainActor.run {
             self.shouldPromptAddVehicle = false
         }
     }
     
     func register(email: String, password: String, username: String) async throws {
-        let response = try await APIService.shared.register(
-            email: email,
-            password: password,
-            username: username
-        )
+        let user = try await supabaseAuth.register(email: email, password: password, username: username)
         
         await MainActor.run {
-            if response.success {
-                self.currentUser = response.user
-                self.isAuthenticated = true
-                if let user = response.user {
-                    UserDefaults.standard.set(user.id, forKey: "currentUserId")
-                    self.persistCurrentUser(user)
-                }
-                print("[AuthVM] ✅ User registered: \(response.user?.username ?? "unknown")")
-            }
+            self.currentUser = user
+            self.isAuthenticated = true
+            UserDefaults.standard.set(user.id, forKey: "currentUserId")
+            self.persistCurrentUser(user)
         }
+        
+        self.syncCarsAfterAuth(userId: user.id)
     }
     
     func logout() {
         print("[AuthVM] 🚪 logout() called: before state isAuthenticated=\(self.isAuthenticated), isLoading=\(self.isLoading), user=\(self.currentUser?.username ?? "nil")")
-        print("[AuthVM] logout: calling APIService.shared.logout()")
-        APIService.shared.logout()
-        print("[AuthVM] logout: calling NetworkManager.shared.clearAuthToken()")
-        NetworkManager.shared.clearAuthToken()
+        
+        Task {
+            try? await supabaseAuth.logout()
+        }
+        
         print("[AuthVM] logout: clearing in-memory state")
         self.currentUser = nil
         self.isAuthenticated = false
@@ -126,14 +124,31 @@ import Combine
         print("[AuthVM] logout: posting empireRequestDismiss notification")
         NotificationCenter.default.post(name: .empireRequestDismiss, object: nil)
         print("[AuthVM] logout: invoking checkAuthStatus()")
-        self.checkAuthStatus()
-        print("[AuthVM] ✅ logout() finished: after state isAuthenticated=\(self.isAuthenticated), isLoading=\(self.isLoading)")
+        Task {
+            await self.checkAuthStatus()
+            print("[AuthVM] ✅ logout() finished: after state isAuthenticated=\(self.isAuthenticated), isLoading=\(self.isLoading)")
+        }
     }
     
     func updateAvatar(withURL urlString: String) async {
-        // TODO: Implement avatar update when APIService.updateAvatar is available
         await MainActor.run {
             print("⚠️ Skipping avatar update: APIService.updateAvatar not implemented")
+        }
+    }
+    
+    private func syncCarsAfterAuth(userId: String) {
+        Task {
+            do {
+                let cars = try await carsService.fetchCars(for: userId)
+                if let context = self.modelContext {
+                    LocalStore.shared.replaceAllCars(cars, context: context, userKey: userId)
+                    print("[AuthVM] 🔄 Synced cars from Supabase and replaced local store: count=\(cars.count)")
+                } else {
+                    print("[AuthVM] ⚠️ ModelContext not set. Cannot sync cars to local store.")
+                }
+            } catch {
+                print("[AuthVM] ❌ Failed to sync cars from Supabase: \(error)")
+            }
         }
     }
 }

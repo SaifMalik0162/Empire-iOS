@@ -64,12 +64,18 @@ struct MerchView: View {
                     newArrivals = byCategory[.banners] ?? []
                 }
 
-                // 2) Fetch fresh data (placeholder: use MerchCatalog) and cache it
-                let freshAll = MerchCatalog.featured + MerchCatalog.bestSellers + MerchCatalog.newArrivals
-                LocalStore.shared.cacheMerch(freshAll, context: modelContext)
-                featured = MerchCatalog.featured
-                bestSellers = MerchCatalog.bestSellers
-                newArrivals = MerchCatalog.newArrivals
+                // 2) Fetch fresh data from SupabaseMerchService and cache it
+                do {
+                    let service = SupabaseMerchService()
+                    let freshAll = try await service.fetchMerch()
+                    LocalStore.shared.cacheMerch(freshAll, context: modelContext)
+                    let grouped = Dictionary(grouping: freshAll, by: { $0.category })
+                    featured = grouped[.apparel] ?? []
+                    bestSellers = grouped[.accessories] ?? []
+                    newArrivals = grouped[.banners] ?? []
+                } catch {
+                    // Keep cached values on failure
+                }
             }
         }
     }

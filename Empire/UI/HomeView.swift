@@ -96,7 +96,7 @@ struct HomeView: View {
                                             .foregroundColor(.white.opacity(0.7))
                                     } else {
                                         VStack(spacing: 10) {
-                                            ForEach(Array(meets.prefix(2))) { meet in
+                                            ForEach(Array(meets.prefix(1))) { meet in
                                                 HStack(spacing: 12) {
                                                     // Accent orb
                                                     ZStack {
@@ -384,21 +384,22 @@ struct HomeView: View {
         if isLoadingMeets { return }
         isLoadingMeets = true
         meetsError = nil
+
         Task {
+            let service = SupabaseMeetsService()
             do {
-                let backendMeets = try await APIService.shared.getAllMeets()
+                let items = try await service.fetchUpcomingMeets()
                 await MainActor.run {
-                    let formatter = ISO8601DateFormatter()
-                    meets = backendMeets.map { backendMeet in
-                        let date = formatter.date(from: backendMeet.meetDate) ?? Date()
-                        return Meet(title: backendMeet.title, city: backendMeet.location, date: date)
-                    }
-                    isLoadingMeets = false
+                    self.meets = items
+                    self.isLoadingMeets = false
+                    self.meetsError = nil
                 }
             } catch {
                 await MainActor.run {
-                    meetsError = "Failed to load meets"
-                    isLoadingMeets = false
+                    self.meets = []
+                    self.isLoadingMeets = false
+                    let msg = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    self.meetsError = msg.isEmpty ? "Failed to load meets" : msg
                 }
             }
         }
