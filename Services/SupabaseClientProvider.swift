@@ -5,7 +5,10 @@ enum SupabaseClientProvider {
     static let client: SupabaseClient = {
         let client = SupabaseClient(
             supabaseURL: SupabaseConfig.url,
-            supabaseKey: SupabaseConfig.anonKey
+            supabaseKey: SupabaseConfig.anonKey,
+            options: SupabaseClientOptions(
+                auth: .init(emitLocalSessionAsInitialSession: true)
+            )
         )
         return client
     }()
