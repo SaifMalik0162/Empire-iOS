@@ -61,12 +61,12 @@ extension SupabaseCarsService: CarsServiceProviding {}
     }
     
     init(
-        authService: AuthServiceProviding = SupabaseAuthService(),
-        carsService: CarsServiceProviding = SupabaseCarsService(),
+        authService: AuthServiceProviding? = nil,
+        carsService: CarsServiceProviding? = nil,
         autoCheckStatus: Bool = true
     ) {
-        self.supabaseAuth = authService
-        self.carsService = carsService
+        self.supabaseAuth = authService ?? SupabaseAuthService()
+        self.carsService = carsService ?? SupabaseCarsService()
         print("[AuthVM] init: instanceID=\(instanceID)")
         if autoCheckStatus {
             Task {
