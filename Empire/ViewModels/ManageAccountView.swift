@@ -1,9 +1,15 @@
 import SwiftUI
+import PhotosUI
 
 struct ManageAccountView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var authViewModel: AuthViewModel
     @State private var tempName: String = ""
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var isSavingName = false
+    @State private var isUploadingAvatar = false
+    @State private var errorMessage: String?
+    @State private var successMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -36,9 +42,9 @@ struct ManageAccountView: View {
                                 Button {
                                     let gen = UIImpactFeedbackGenerator(style: .light)
                                     gen.impactOccurred()
-                                    // TODO: Wire to backend to save display name
+                                    saveDisplayName()
                                 } label: {
-                                    Text("Save")
+                                    Text(isSavingName ? "Saving..." : "Save")
                                         .font(.caption.weight(.semibold))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
@@ -47,6 +53,19 @@ struct ManageAccountView: View {
                                         .foregroundStyle(.white)
                                 }
                                 .buttonStyle(.plain)
+                                .disabled(isSavingName)
+
+                                if let errorMessage {
+                                    Text(errorMessage)
+                                        .font(.caption)
+                                        .foregroundStyle(.red.opacity(0.9))
+                                }
+
+                                if let successMessage {
+                                    Text(successMessage)
+                                        .font(.caption)
+                                        .foregroundStyle(.green.opacity(0.95))
+                                }
                             }
                             .padding(.top, 2)
                         }
@@ -57,12 +76,8 @@ struct ManageAccountView: View {
                                     .foregroundStyle(Color("EmpireMint"))
                                 HStack(spacing: 12) {
                                     avatarView
-                                    Button {
-                                        let gen = UIImpactFeedbackGenerator(style: .light)
-                                        gen.impactOccurred()
-                                        // TODO: Hook up PhotosPicker and upload avatar
-                                    } label: {
-                                        Text("Upload New Avatar")
+                                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                        Text(isUploadingAvatar ? "Uploading..." : "Upload New Avatar")
                                             .font(.caption.weight(.semibold))
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 8)
@@ -70,7 +85,7 @@ struct ManageAccountView: View {
                                             .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
                                             .foregroundStyle(.white)
                                     }
-                                    .buttonStyle(.plain)
+                                    .disabled(isUploadingAvatar)
                                     Spacer()
                                 }
                             }
@@ -91,6 +106,10 @@ struct ManageAccountView: View {
             }
         }
         .onAppear { tempName = displayName }
+        .onChange(of: selectedPhotoItem) { _, newValue in
+            guard let item = newValue else { return }
+            uploadAvatar(from: item)
+        }
         .preferredColorScheme(.dark)
     }
 
@@ -109,16 +128,102 @@ struct ManageAccountView: View {
 
     private var avatarView: some View {
         Group {
-            Image(systemName: "person.crop.circle.fill")
-                .resizable()
-                .scaledToFit()
-                .foregroundColor(Color("EmpireMint"))
-                .padding(8)
+            if let urlString = authViewModel.avatarPublicURLString(from: authViewModel.currentUser?.avatarPath),
+               let avatarURL = URL(string: urlString) {
+                AsyncImage(url: avatarURL) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView().tint(Color("EmpireMint"))
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundColor(Color("EmpireMint"))
+                            .padding(8)
+                    @unknown default:
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundColor(Color("EmpireMint"))
+                            .padding(8)
+                    }
+                }
+            } else {
+                Image(systemName: "person.crop.circle.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundColor(Color("EmpireMint"))
+                    .padding(8)
+            }
         }
         .frame(width: 56, height: 56)
         .background(.ultraThinMaterial)
         .clipShape(Circle())
         .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+    }
+
+    private func saveDisplayName() {
+        let normalized = tempName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else {
+            errorMessage = "Display name cannot be empty."
+            successMessage = nil
+            return
+        }
+
+        isSavingName = true
+        errorMessage = nil
+        successMessage = nil
+
+        Task {
+            do {
+                try await authViewModel.updateUsername(normalized)
+                await MainActor.run {
+                    tempName = displayName
+                    isSavingName = false
+                    successMessage = "Display name updated."
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+            } catch {
+                await MainActor.run {
+                    isSavingName = false
+                    let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    errorMessage = message.isEmpty ? "Could not update display name." : message
+                    successMessage = nil
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
+            }
+        }
+    }
+
+    private func uploadAvatar(from item: PhotosPickerItem) {
+        isUploadingAvatar = true
+        errorMessage = nil
+        successMessage = nil
+
+        Task {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    throw NSError(domain: "ManageAccountView", code: 1)
+                }
+                try await authViewModel.updateAvatar(imageData: data)
+                await MainActor.run {
+                    isUploadingAvatar = false
+                    successMessage = "Avatar updated."
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+            } catch {
+                await MainActor.run {
+                    isUploadingAvatar = false
+                    errorMessage = "Could not upload avatar."
+                    successMessage = nil
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
+            }
+        }
     }
 }
 

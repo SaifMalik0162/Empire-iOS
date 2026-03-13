@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @State private var name = ""
+    @State private var username = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
@@ -16,7 +16,7 @@ struct SignUpView: View {
     @State private var errorMessage: String? = nil
 
     private var isFormValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !username.trimmingCharacters(in: .whitespaces).isEmpty &&
         !email.trimmingCharacters(in: .whitespaces).isEmpty &&
         password.count >= 6 &&
         password == confirmPassword
@@ -57,9 +57,9 @@ struct SignUpView: View {
                 // Fields
                 VStack(spacing: 16) {
                     Group {
-                        TextField("Full name", text: $name)
-                            .textContentType(.name)
-                            .autocapitalization(.words)
+                        TextField("Username", text: $username)
+                            .textContentType(.username)
+                            .autocapitalization(.none)
                     }
                     .padding()
                     .background(
@@ -170,7 +170,7 @@ struct SignUpView: View {
 
                 // Create Account Button
                 Button {
-                    let isValid = !name.isEmpty && !email.isEmpty && password.count >= 6 && password == confirmPassword
+                    let isValid = !username.isEmpty && !email.isEmpty && password.count >= 6 && password == confirmPassword
                     showValidation = !isValid
                     if isValid {
                         performRegister()
@@ -264,7 +264,8 @@ struct SignUpView: View {
 
         Task {
             do {
-                try await authViewModel.register(email: email, password: password, username: name)
+                let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+                try await authViewModel.register(email: email, password: password, username: normalizedUsername)
                 await MainActor.run {
                     isCreating = false
                     dismiss()

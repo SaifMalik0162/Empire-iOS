@@ -53,6 +53,13 @@ struct ProfileView: View {
         }
         return username
     }
+
+    private var emailLineText: String {
+        if let user = authViewModel.currentUser, !user.email.isEmpty {
+            return user.email
+        }
+        return "No email"
+    }
     
     private func performLogoutNow() {
         print("[ProfileView] 🔘 Logout button tapped")
@@ -159,9 +166,16 @@ struct ProfileView: View {
                                         await MainActor.run {
                                             selectedImageData = data
                                         }
-                                        // TODO: When API is available, upload avatar to backend here using selectedImageData
-                                        // Example:
-                                        // try await APIService.shared.uploadAvatar(data: data)
+                                        do {
+                                            try await authViewModel.updateAvatar(imageData: data)
+                                            await MainActor.run {
+                                                if let urlString = authViewModel.avatarPublicURLString(from: authViewModel.currentUser?.avatarPath) {
+                                                    avatarURL = URL(string: urlString)
+                                                }
+                                            }
+                                        } catch {
+                                            print("[ProfileView] ❌ Avatar upload failed: \(error)")
+                                        }
                                     }
                                 }
                             }
@@ -169,7 +183,7 @@ struct ProfileView: View {
                             Text(displayName)
                                 .font(.title3.bold())
                                 .foregroundColor(.white)
-                            Text("@saifm")
+                            Text(emailLineText)
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.65))
                             
@@ -193,11 +207,12 @@ struct ProfileView: View {
                         }
                         .padding(18)
                         .onAppear {
-                            // Initialize avatar URL if your BackendUser provides one later
-                            // Example: if let urlString = authViewModel.currentUser?.avatarURL { avatarURL = URL(string: urlString) }
                             print("[ProfileView] onAppear")
                             print("[ProfileView] has AuthVM instanceID: \(authViewModel.instanceID)")
                             print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
+                            if let urlString = authViewModel.avatarPublicURLString(from: authViewModel.currentUser?.avatarPath) {
+                                avatarURL = URL(string: urlString)
+                            }
                             vehiclesVM.setContext(modelContext)
                         }
                     }

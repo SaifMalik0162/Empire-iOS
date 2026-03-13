@@ -54,7 +54,7 @@ import SwiftData
         print("[AuthVM] checkAuthStatus() set isLoading=true")
 
         do {
-            if let _ = try await supabaseAuth.currentSession(), let backendUser = try await supabaseAuth.currentUser() {
+            if let session = try await supabaseAuth.currentSession(), !session.isExpired, let backendUser = try await supabaseAuth.currentUser() {
                 isAuthenticated = true
                 self.currentUser = backendUser
                 UserDefaults.standard.set(backendUser.id, forKey: "currentUserId")
@@ -152,9 +152,38 @@ import SwiftData
     }
     
     func updateAvatar(withURL urlString: String) async {
-        await MainActor.run {
-            print("⚠️ Skipping avatar update: APIService.updateAvatar not implemented")
+        do {
+            let updatedUser = try await supabaseAuth.updateAvatarPath(urlString)
+            await MainActor.run {
+                self.currentUser = updatedUser
+                self.persistCurrentUser(updatedUser)
+            }
+        } catch {
+            print("[AuthVM] ❌ Failed to update avatar path: \(error)")
         }
+    }
+
+    func updateAvatar(imageData: Data) async throws {
+        let updatedUser = try await supabaseAuth.uploadAvatar(imageData: imageData)
+        await MainActor.run {
+            self.currentUser = updatedUser
+            self.persistCurrentUser(updatedUser)
+        }
+    }
+
+    func updateUsername(_ username: String) async throws {
+        let updatedUser = try await supabaseAuth.updateUsername(username)
+        await MainActor.run {
+            self.currentUser = updatedUser
+            self.persistCurrentUser(updatedUser)
+        }
+    }
+
+    func avatarPublicURLString(from avatarPath: String?) -> String? {
+        guard let avatarPath, !avatarPath.isEmpty else { return nil }
+        let base = SupabaseConfig.url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let encodedPath = avatarPath.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? avatarPath
+        return "\(base)/storage/v1/object/public/avatars/\(encodedPath)"
     }
     
     private func syncCarsAfterAuth(userId: String) {
