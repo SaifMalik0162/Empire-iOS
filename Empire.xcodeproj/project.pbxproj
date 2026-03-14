@@ -196,9 +196,6 @@
 		70C0A6902F457D5D003F8425 /* VIPExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */; };
 		70C0A6912F457D5D003F8425 /* VIPExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */; };
 		70C0A6922F457D5D003F8425 /* VIPExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */; };
-		70C411862F64AF2900BF8EF8 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 70C411852F64AF2900BF8EF8 /* Secrets.xcconfig */; };
-		70C411872F64AF2900BF8EF8 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 70C411852F64AF2900BF8EF8 /* Secrets.xcconfig */; };
-		70C411882F64AF2900BF8EF8 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 70C411852F64AF2900BF8EF8 /* Secrets.xcconfig */; };
 		70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416B2F196E930034C5FB /* SettingsView.swift */; };
 		70DF416D2F196E930034C5FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416B2F196E930034C5FB /* SettingsView.swift */; };
 		70DF416E2F196E930034C5FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416B2F196E930034C5FB /* SettingsView.swift */; };
@@ -314,7 +311,6 @@
 		70C0A6872F457D1D003F8425 /* VIPWelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VIPWelcomeView.swift; sourceTree = "<group>"; };
 		70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VIPDashboardView.swift; sourceTree = "<group>"; };
 		70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VIPExperienceView.swift; sourceTree = "<group>"; };
-		70C411852F64AF2900BF8EF8 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		70C60A722F0DAA7C003AE110 /* Empire.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Empire.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A812F0DAA7E003AE110 /* EmpireTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A8B2F0DAA7E003AE110 /* EmpireUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -380,7 +376,6 @@
 				7049BB102F80000100ABCD01 /* AppConfig.xcconfig */,
 				7042518D2F13397100322849 /* APIConfig.swift */,
 				703F05B92F63492100D4EF47 /* SupabaseConfig.swift */,
-				70C411852F64AF2900BF8EF8 /* Secrets.xcconfig */,
 			);
 			path = Configs;
 			sourceTree = "<group>";
@@ -527,7 +522,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
-
 /* Begin PBXNativeTarget section */
 		70C60A712F0DAA7C003AE110 /* Empire */ = {
 			isa = PBXNativeTarget;
@@ -654,7 +648,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				70FA11012F80000100ABCD01 /* LaunchScreen.storyboard in Resources */,
-				70C411872F64AF2900BF8EF8 /* Secrets.xcconfig in Resources */,
 				7036AA612F45562A009F57DB /* VIP.storekit in Resources */,
 				7092F00F2F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
 				70A0171A2F0DF49000A084C2 /* Assets.xcassets in Resources */,
@@ -665,7 +658,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70C411862F64AF2900BF8EF8 /* Secrets.xcconfig in Resources */,
 				7036AA622F45562A009F57DB /* VIP.storekit in Resources */,
 				7092F0102F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
 				70A017042F0DF49000A084C2 /* Assets.xcassets in Resources */,
@@ -676,7 +668,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70C411882F64AF2900BF8EF8 /* Secrets.xcconfig in Resources */,
 				7036AA632F45562A009F57DB /* VIP.storekit in Resources */,
 				7092F00E2F0E3FFF00D39106 /* empire 360.mp4 in Resources */,
 				70A017302F0DF49000A084C2 /* Assets.xcassets in Resources */,
