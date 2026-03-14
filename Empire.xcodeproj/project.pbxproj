@@ -511,6 +511,7 @@
 			);
 			sourceTree = "<group>";
 		};
+		70C60A732F0DAA7C003AE110 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				70C60A722F0DAA7C003AE110 /* Empire.app */,
@@ -531,6 +532,7 @@
 				70C60A702F0DAA7C003AE110 /* Resources */,
 				704E4BBC2F11EE2D00AB0A5D /* Embed Foundation Extensions */,
 			);
+			buildRules = (
 			);
 			dependencies = (
 			);
