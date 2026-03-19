@@ -169,6 +169,15 @@
 		70A6A7522F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
 		70A6A7532F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
 		70A6A7542F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
+		70AAC85F2F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */; };
+		70AAC8602F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */; };
+		70AAC8612F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */; };
+		70AAC8632F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */; };
+		70AAC8642F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */; };
+		70AAC8652F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */; };
+		70AAC8672F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
+		70AAC8682F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
+		70AAC8692F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
 		70B0CF572F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
 		70B0CF582F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
 		70B0CF592F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
@@ -302,6 +311,9 @@
 		70A017012F0DF49000A084C2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireLogoView.swift; sourceTree = "<group>"; };
 		70A6A7512F1ECCDD00483418 /* TopToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopToast.swift; sourceTree = "<group>"; };
+		70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetsParticipation.swift; sourceTree = "<group>"; };
+		70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMeetsParticipationService.swift; sourceTree = "<group>"; };
+		70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCheckInView.swift; sourceTree = "<group>"; };
 		70B0CF552F10634F003FCD20 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		70B0CF602F1064D0003FCD20 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		70B0CF642F1067F0003FCD20 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
@@ -392,6 +404,7 @@
 				703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */,
 				703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */,
 				703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */,
+				70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */,
 				703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */,
 				703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */,
 			);
@@ -474,6 +487,8 @@
 				7039BA1C2F47521800004437 /* LocalStore.swift */,
 				7039BA202F475FAC00004437 /* SafeCollection.swift */,
 				7039BA242F47612900004437 /* ManageGarageSheet.swift */,
+				70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */,
+				70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -690,6 +705,7 @@
 				7020AB932F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
 				70B0CF6A2F106908003FCD20 /* EmpireTheme.swift in Sources */,
 				70B0CF672F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
+				70AAC8602F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */,
 				7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */,
 				70F1AA022F70000100ABCD01 /* AppLogger.swift in Sources */,
 				70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */,
@@ -715,6 +731,7 @@
 				70C0A6912F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
 				703F05D92F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
 				70B0CF6D2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
+				70AAC8632F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
 				70A017232F0DF49000A084C2 /* Models.swift in Sources */,
 				7089A7C82F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
 				70A017242F0DF49000A084C2 /* CarCardView.swift in Sources */,
@@ -737,6 +754,7 @@
 				70C0A68E2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
 				70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */,
 				7080848C2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
+				70AAC8692F6B864000BB4A58 /* QRCheckInView.swift in Sources */,
 				70B0CF622F1064D0003FCD20 /* SignUpView.swift in Sources */,
 				703F05C02F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
 				70B0CF572F10646D003FCD20 /* LoginView.swift in Sources */,
@@ -763,9 +781,11 @@
 				7042519E2F13397100322849 /* NetworkManager.swift in Sources */,
 				7042519F2F13397100322849 /* APIConfig.swift in Sources */,
 				7068B04B2F42783100D6628C /* KeychainService.swift in Sources */,
+				70AAC8682F6B864000BB4A58 /* QRCheckInView.swift in Sources */,
 				70C0A6902F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
 				7039BA222F475FAC00004437 /* SafeCollection.swift in Sources */,
 				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
+				70AAC8642F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
 				7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */,
 				7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				703F05D72F63910800D4EF47 /* ErrorResponse.swift in Sources */,
@@ -787,6 +807,7 @@
 				70A0170D2F0DF49000A084C2 /* Models.swift in Sources */,
 				70A0170E2F0DF49000A084C2 /* CarCardView.swift in Sources */,
 				70A2E4062F10ABDA004B950D /* EmpireLogoView.swift in Sources */,
+				70AAC8612F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */,
 				70C0A6852F457D18003F8425 /* VIPJoinView.swift in Sources */,
 				70A0170F2F0DF49000A084C2 /* CarsView.swift in Sources */,
 				70A017102F0DF49000A084C2 /* EmpireApp.swift in Sources */,
@@ -857,6 +878,7 @@
 				704E4B942F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
 				70C0A68A2F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
 				70A017402F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
+				70AAC8672F6B864000BB4A58 /* QRCheckInView.swift in Sources */,
 				7039BA252F47612900004437 /* ManageGarageSheet.swift in Sources */,
 				703F05DE2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */,
 				70B0CF692F106908003FCD20 /* EmpireTheme.swift in Sources */,
@@ -865,6 +887,7 @@
 				70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */,
 				7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */,
 				7068B0492F42783100D6628C /* KeychainService.swift in Sources */,
+				70AAC8652F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
 				70C0A6862F457D18003F8425 /* VIPJoinView.swift in Sources */,
 				70B0CF612F1064D0003FCD20 /* SignUpView.swift in Sources */,
 				70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
@@ -884,6 +907,7 @@
 				704251952F13397100322849 /* APIService.swift in Sources */,
 				704251962F13397100322849 /* NetworkManager.swift in Sources */,
 				704251972F13397100322849 /* APIConfig.swift in Sources */,
+				70AAC85F2F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */,
 				70A017442F0DF49000A084C2 /* StageChip.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1035,7 +1059,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 80;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1077,7 +1101,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 80;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
