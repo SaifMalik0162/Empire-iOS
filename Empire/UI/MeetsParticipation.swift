@@ -13,15 +13,20 @@ final class MeetsViewModel: ObservableObject {
     @Published var notifyOn: [UUID: Bool] = [:]
     @Published var calendarSaved: [UUID: Bool] = [:]
 
-    private let service: any MeetsParticipationService  // existential, Swift 5.7+
-    private let logger = Logger(subsystem: "com.empire.app", category: "meets-participation")
-
-    private static let notifyDefaultsKey  = "empire.meets.notifyOn"
-    private static let calendarDefaultsKey = "empire.meets.calendarSaved"
+    private let _service: (any MeetsParticipationService)?
 
     nonisolated init(service: (any MeetsParticipationService)? = nil) {
-        self.service = service ?? SupabaseMeetsParticipationService()
+        self._service = service
     }
+
+    private var service: any MeetsParticipationService {
+        _service ?? SupabaseMeetsParticipationService()
+    }
+
+    private let logger = Logger(subsystem: "com.empire.app", category: "meets-participation")
+
+    private static let notifyDefaultsKey   = "empire.meets.notifyOn"
+    private static let calendarDefaultsKey = "empire.meets.calendarSaved"
 
     // MARK: - Load
 
@@ -181,7 +186,8 @@ protocol MeetsParticipationService: Sendable {
 // MARK: - Supabase Implementation
 
 struct SupabaseMeetsParticipationService: MeetsParticipationService {
-    private let client: SupabaseClient = SupabaseClientProvider.client
+
+    private var client: SupabaseClient { SupabaseClientProvider.client }
     private let logger = Logger(subsystem: "com.empire.app", category: "supabase-participation")
 
     // MARK: - Codable row types

@@ -219,6 +219,10 @@ private struct MeetsHeader: View {
     let meets: [Meet]
     @Binding var showMap: Bool
 
+    private var hasLocations: Bool {
+        meets.contains { $0.latitude != nil && $0.longitude != nil }
+    }
+
     var body: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
@@ -230,7 +234,7 @@ private struct MeetsHeader: View {
                     .foregroundStyle(.white.opacity(0.65))
             }
             Spacer()
-            HStack(spacing: 10) {
+            if hasLocations {
                 HeaderChip(systemName: "map.fill", label: "Map") {
                     showMap = true
                 }
@@ -649,28 +653,28 @@ private struct MeetsMapSheet: View {
     let meets: [Meet]
     @Environment(\.dismiss) private var dismiss
 
-    @State private var region: MKCoordinateRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 43.7, longitude: -79.4),
-        span: MKCoordinateSpan(latitudeDelta: 3, longitudeDelta: 3)
-    )
+    @State private var position: MapCameraPosition = .automatic
 
     private var annotations: [MeetAnnotation] {
         meets.compactMap { meet in
             guard let lat = meet.latitude, let lon = meet.longitude else { return nil }
-            return MeetAnnotation(meet: meet, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))
+            return MeetAnnotation(
+                meet: meet,
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            )
         }
     }
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Map(coordinateRegion: $region, annotationItems: annotations) { ann in
-                    MapAnnotation(coordinate: ann.coordinate) {
+            Map(position: $position) {
+                ForEach(annotations) { ann in
+                    Annotation(ann.meet.city, coordinate: ann.coordinate) {
                         MeetMapPin(title: ann.meet.city)
                     }
                 }
-                .ignoresSafeArea(edges: .bottom)
             }
+            .ignoresSafeArea(edges: .bottom)
             .navigationTitle("Meet Locations")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -680,26 +684,26 @@ private struct MeetsMapSheet: View {
                         .foregroundStyle(Color("EmpireMint"))
                 }
             }
-            .onAppear { fitRegion() }
+            .onAppear { fitCamera() }
         }
         .preferredColorScheme(.dark)
     }
 
-    private func fitRegion() {
+    private func fitCamera() {
         guard !annotations.isEmpty else { return }
         let lats = annotations.map { $0.coordinate.latitude }
         let lons = annotations.map { $0.coordinate.longitude }
         let minLat = lats.min()!, maxLat = lats.max()!
         let minLon = lons.min()!, maxLon = lons.max()!
         let center = CLLocationCoordinate2D(
-            latitude: (minLat + maxLat) / 2,
+            latitude:  (minLat + maxLat) / 2,
             longitude: (minLon + maxLon) / 2
         )
         let span = MKCoordinateSpan(
-            latitudeDelta: max((maxLat - minLat) * 1.5, 0.5),
+            latitudeDelta:  max((maxLat - minLat) * 1.5, 0.5),
             longitudeDelta: max((maxLon - minLon) * 1.5, 0.5)
         )
-        region = MKCoordinateRegion(center: center, span: span)
+        position = .region(MKCoordinateRegion(center: center, span: span))
     }
 }
 
