@@ -17,5 +17,9 @@
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Empire Connect saves meet events to your calendar.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Empire Connect uses your camera to scan meet check-in QR codes.</string>
 </dict>
 </plist>

@@ -16,11 +16,32 @@ enum EmpireTab: CaseIterable, Hashable {
 }
 
 // MARK: - Meet
-struct Meet: Identifiable {
-    let id = UUID()
+// `id` is now a stored property with a default value so callers that already
+// rely on `Meet(title:city:date:latitude:longitude:)` continue to compile,
+// while SupabaseMeetsService can inject a stable Supabase-derived UUID.
+struct Meet: Identifiable, Hashable {
+    let id: UUID
     let title: String
     let city: String
     let date: Date
+    let latitude: Double?
+    let longitude: Double?
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        city: String,
+        date: Date,
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.city = city
+        self.date = date
+        self.latitude = latitude
+        self.longitude = longitude
+    }
 
     var dateString: String {
         let formatter = DateFormatter()

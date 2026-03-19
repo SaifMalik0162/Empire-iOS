@@ -36,34 +36,6 @@ private struct EditorGlassCard<Content: View>: View {
     }
 }
 
-private struct EditorShimmerHighlight: View {
-    @State private var phase: CGFloat = -1
-    var body: some View {
-        GeometryReader { geo in
-            let width = geo.size.width * 2.5
-            let gradient = LinearGradient(
-                gradient: Gradient(colors: [Color.white.opacity(0), Color.white.opacity(0.15), Color.white.opacity(0)]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            Rectangle()
-                .fill(gradient)
-                .rotationEffect(.degrees(-30))
-                .frame(width: width, height: geo.size.height * 1.5)
-                .offset(x: phase * width)
-                .blendMode(.screen)
-                .onAppear {
-                    withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
-                        phase = 1
-                    }
-                }
-                .allowsHitTesting(false)
-        }
-        .clipped()
-        .cornerRadius(20)
-    }
-}
-
 // MARK: - ImageStore
 private enum ImageStore {
     static func save(_ data: Data, fileName: String) throws -> URL {
@@ -295,10 +267,6 @@ struct VehicleEditorView: View {
                         .padding(8)
                     }
                     .buttonStyle(.plain)
-
-                    EditorShimmerHighlight()
-                        .allowsHitTesting(false)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)

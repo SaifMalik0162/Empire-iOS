@@ -164,13 +164,24 @@ struct ProfileView: View {
                                 Task {
                                     if let data = try? await item.loadTransferable(type: Data.self) {
                                         await MainActor.run {
+                                            // Show the picked image immediately
                                             selectedImageData = data
                                         }
                                         do {
                                             try await authViewModel.updateAvatar(imageData: data)
+                                            // Rebuild URL with cache-busting so AsyncImage fetches fresh content
                                             await MainActor.run {
-                                                if let urlString = authViewModel.avatarPublicURLString(from: authViewModel.currentUser?.avatarPath) {
-                                                    avatarURL = URL(string: urlString)
+                                                if let base = authViewModel.avatarPublicURLString(from: authViewModel.currentUser?.avatarPath),
+                                                   var components = URLComponents(string: base) {
+                                                    var queryItems = components.queryItems ?? []
+                                                    // Remove any existing cache-busting param first
+                                                    queryItems.removeAll { $0.name == "t" }
+                                                    queryItems.append(URLQueryItem(name: "t", value: String(Int(Date().timeIntervalSince1970))))
+                                                    components.queryItems = queryItems
+                                                    avatarURL = components.url
+                                                } else {
+                                                    // Fallback: clear URL so AsyncImage prefers the in-memory selectedImageData
+                                                    avatarURL = nil
                                                 }
                                             }
                                         } catch {

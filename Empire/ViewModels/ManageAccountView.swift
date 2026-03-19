@@ -282,19 +282,30 @@ private struct GlassRow: View {
 }
 
 private struct ShimmerMask: View {
-    @State private var phase: CGFloat = 0
     var body: some View {
-        LinearGradient(gradient: Gradient(stops: [
-            .init(color: .clear, location: 0.0),
-            .init(color: .white.opacity(0.25), location: 0.45),
-            .init(color: .clear, location: 0.9)
-        ]), startPoint: .topLeading, endPoint: .bottomTrailing)
-        .scaleEffect(x: 1.6)
-        .offset(x: -120 + phase * 240)
-        .onAppear { withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 } }
-        .blendMode(.screen)
-        .opacity(0.5)
-        .allowsHitTesting(false)
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let phase = CGFloat(fmod(t / 3.5, 1.0))
+
+            Rectangle()
+                .fill(Color.white.opacity(0.0))
+                .overlay(
+                    LinearGradient(
+                        gradient: Gradient(stops: [
+                            .init(color: .clear, location: max(0, phase - 0.25)),
+                            .init(color: .white.opacity(0.25), location: phase),
+                            .init(color: .clear, location: min(1, phase + 0.25))
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blendMode(.screen)
+                .opacity(0.5)
+                .compositingGroup()
+                .drawingGroup(opaque: false, colorMode: .linear)
+                .allowsHitTesting(false)
+        }
     }
 }
 
