@@ -118,7 +118,7 @@ struct CarsView: View {
             }
 
             // MARK: - Expanded community car overlay (legacy static cards)
-            if let selected = selectedCommunityIndex {
+            if selectedCommunityIndex != nil {
                 Rectangle()
                     .fill(Color.black.opacity(0.45))
                     .ignoresSafeArea()
