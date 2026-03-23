@@ -55,6 +55,15 @@
 		703F05EF2F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
 		703F05F02F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
 		703F05F12F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
+		7040A91F2F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
+		7040A9202F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
+		7040A9212F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
+		7040A9232F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
+		7040A9242F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
+		7040A9252F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
+		7040A9272F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
+		7040A9282F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
+		7040A9292F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
 		704251952F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
 		704251962F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
 		704251972F13397100322849 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518D2F13397100322849 /* APIConfig.swift */; };
@@ -272,6 +281,9 @@
 		703F05D52F63910500D4EF47 /* ErrorResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorResponse.swift; sourceTree = "<group>"; };
 		703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMeetsService.swift; sourceTree = "<group>"; };
 		703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMerchService.swift; sourceTree = "<group>"; };
+		7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseCommunityService.swift; sourceTree = "<group>"; };
+		7040A9222F6E5EC400220213 /* CommunityViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityViewModel.swift; sourceTree = "<group>"; };
+		7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareToFeedSheet.swift; sourceTree = "<group>"; };
 		7042518D2F13397100322849 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		704251912F13397100322849 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		704251922F13397100322849 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
@@ -399,6 +411,7 @@
 		704251932F13397100322849 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */,
 				70F1AA002F70000100ABCD01 /* AppLogger.swift */,
 				70F1AA052F70000100ABCD01 /* AppTelemetry.swift */,
 				703F05D52F63910500D4EF47 /* ErrorResponse.swift */,
@@ -418,6 +431,7 @@
 		704251AA2F1339BA00322849 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				7040A9222F6E5EC400220213 /* CommunityViewModel.swift */,
 				704251A92F1339BA00322849 /* AuthViewModel.swift */,
 				704251B22F134C5C00322849 /* UserVehiclesViewModel.swift */,
 				704251B62F134C5E00322849 /* AddVehicleView.swift */,
@@ -449,6 +463,7 @@
 		70A016FF2F0DF49000A084C2 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */,
 				70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */,
 				704E4B912F11E5A800AB0A5D /* MerchListView.swift */,
 				70A016EC2F0DF49000A084C2 /* CarCardView.swift */,
@@ -714,6 +729,7 @@
 				7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */,
 				70F1AA022F70000100ABCD01 /* AppLogger.swift in Sources */,
 				70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */,
+				7040A9242F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
 				70C0A6842F457D18003F8425 /* VIPJoinView.swift in Sources */,
 				7068B04A2F42783100D6628C /* KeychainService.swift in Sources */,
 				7089A7CB2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
@@ -753,6 +769,7 @@
 				704E4B8F2F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				70A017292F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
 				70A6A7532F1ECCDE00483418 /* TopToast.swift in Sources */,
+				7040A9272F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */,
 				70A0172A2F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				70A0172B2F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				70AFDB142F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */,
@@ -769,6 +786,7 @@
 				703F05D82F63910800D4EF47 /* ErrorResponse.swift in Sources */,
 				704251B72F134C5E00322849 /* AddVehicleView.swift in Sources */,
 				70DF416E2F196E930034C5FB /* SettingsView.swift in Sources */,
+				7040A9212F6E540000220213 /* SupabaseCommunityService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -790,7 +808,10 @@
 				70AAC8682F6B864000BB4A58 /* QRCheckInView.swift in Sources */,
 				70C0A6902F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
 				7039BA222F475FAC00004437 /* SafeCollection.swift in Sources */,
+				7040A9202F6E540000220213 /* SupabaseCommunityService.swift in Sources */,
+				7040A9232F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
 				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
+				7040A9292F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */,
 				70AAC8642F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
 				7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */,
 				7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
@@ -853,6 +874,7 @@
 				70C0A68C2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
 				70AFDB152F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */,
 				703F05F02F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
+				7040A9252F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
 				70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */,
 				70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */,
 				703F05BE2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
@@ -893,11 +915,13 @@
 				703F05E12F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */,
 				7039BA212F475FAC00004437 /* SafeCollection.swift in Sources */,
 				70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */,
+				7040A91F2F6E540000220213 /* SupabaseCommunityService.swift in Sources */,
 				7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */,
 				7068B0492F42783100D6628C /* KeychainService.swift in Sources */,
 				70AAC8652F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
 				70C0A6862F457D18003F8425 /* VIPJoinView.swift in Sources */,
 				70B0CF612F1064D0003FCD20 /* SignUpView.swift in Sources */,
+				7040A9282F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */,
 				70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				704251B52F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
 				7089A7C72F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
