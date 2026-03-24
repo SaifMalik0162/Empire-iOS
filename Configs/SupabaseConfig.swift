@@ -23,10 +23,12 @@ enum SupabaseConfig {
             return environmentValue
         }
 
-        if let plistValue = Bundle.main.object(forInfoDictionaryKey: key) as? String,
-           isUsableValue(plistValue) {
-            cache(value: plistValue, for: key)
-            return plistValue
+        for bundle in candidateBundles() {
+            if let plistValue = bundle.object(forInfoDictionaryKey: key) as? String,
+               isUsableValue(plistValue) {
+                cache(value: plistValue, for: key)
+                return plistValue
+            }
         }
 
         if let cachedValue = UserDefaults.standard.string(forKey: cachePrefix + key),
@@ -39,6 +41,17 @@ enum SupabaseConfig {
 
     private static func cache(value: String, for key: String) {
         UserDefaults.standard.set(value, forKey: cachePrefix + key)
+    }
+
+    private static func candidateBundles() -> [Bundle] {
+        var bundles: [Bundle] = [Bundle.main]
+        bundles.append(contentsOf: Bundle.allBundles)
+        bundles.append(contentsOf: Bundle.allFrameworks)
+
+        var seen = Set<ObjectIdentifier>()
+        return bundles.filter { bundle in
+            seen.insert(ObjectIdentifier(bundle)).inserted
+        }
     }
 
     private static func isUsableValue(_ value: String) -> Bool {
