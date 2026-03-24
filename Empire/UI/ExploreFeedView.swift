@@ -745,6 +745,8 @@ struct CommunityProfilePostsView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var vm: CommunityViewModel
     @State private var currentHeaderCar: Car? = nil
+    @State private var pendingDeletePost: CommunityPost? = nil
+    @State private var isDeleteMode = false
 
     private let carsService = SupabaseCarsService()
 
@@ -814,7 +816,11 @@ struct CommunityProfilePostsView: View {
                                     ForEach(vm.posts) { post in
                                         CommunityProfileGridTile(
                                             post: post,
-                                            photoURL: vm.photoURL(for: post)
+                                            photoURL: vm.photoURL(for: post),
+                                            showsDeleteButton: isOwnProfile && isDeleteMode,
+                                            onDelete: {
+                                                pendingDeletePost = post
+                                            }
                                         )
                                         .onAppear {
                                             if post.id == vm.posts.last?.id {
@@ -848,12 +854,56 @@ struct CommunityProfilePostsView: View {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
+                if isOwnProfile, !vm.posts.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(isDeleteMode ? "Done" : "Delete") {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                                isDeleteMode.toggle()
+                            }
+                        }
+                        .foregroundStyle(isDeleteMode ? Color("EmpireMint") : .red.opacity(0.9))
+                        .fontWeight(.semibold)
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Delete this post?",
+                isPresented: Binding(
+                    get: { pendingDeletePost != nil },
+                    set: { if !$0 { pendingDeletePost = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    guard let post = pendingDeletePost else { return }
+                    Task { await vm.deletePost(postId: post.id) }
+                    pendingDeletePost = nil
+                    if vm.posts.count <= 1 {
+                        isDeleteMode = false
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    pendingDeletePost = nil
+                }
+            } message: {
+                if let pendingDeletePost {
+                    Text("This will permanently remove \(pendingDeletePost.carName) from the community feed.")
+                }
             }
         }
         .preferredColorScheme(.dark)
         .task {
             await vm.refresh()
             await refreshHeaderCar()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
+            Task {
+                await vm.refresh()
+                await refreshHeaderCar()
+                if vm.posts.isEmpty {
+                    isDeleteMode = false
+                }
+            }
         }
     }
 
@@ -996,6 +1046,11 @@ struct CommunityProfilePostsView: View {
             : "There aren't any public community posts from this driver yet."
     }
 
+    private var isOwnProfile: Bool {
+        userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            == currentUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
     private func profileMetric(value: String, label: String) -> some View {
         VStack(alignment: .trailing, spacing: 1) {
             Text(value)
@@ -1072,6 +1127,8 @@ struct CommunityProfilePostsView: View {
 private struct CommunityProfileGridTile: View {
     let post: CommunityPost
     let photoURL: URL?
+    var showsDeleteButton = false
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -1162,6 +1219,22 @@ private struct CommunityProfileGridTile: View {
                     lineWidth: 1.2
                 )
         )
+        .overlay(alignment: .topTrailing) {
+            if showsDeleteButton {
+                Button(role: .destructive) {
+                    onDelete?()
+                } label: {
+                    Image(systemName: "trash.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(8)
+                        .background(Circle().fill(Color.red.opacity(0.9)))
+                        .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
+                }
+                .buttonStyle(.plain)
+                .padding(10)
+            }
+        }
         .shadow(color: Color.black.opacity(0.3), radius: 12, y: 8)
     }
 

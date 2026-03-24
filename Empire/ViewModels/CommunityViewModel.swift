@@ -125,6 +125,7 @@ final class CommunityViewModel: ObservableObject {
         totalPostsCount = max(0, totalPostsCount - 1)
         do {
             try await service.deletePost(post: post)
+            NotificationCenter.default.post(name: .empireCommunityDidPost, object: nil)
         } catch {
             logger.error("deletePost failed: \(String(describing: error), privacy: .public)")
         }
