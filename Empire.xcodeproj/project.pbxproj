@@ -7,32 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8B2F12EEB30082F480 /* Cart.swift */; };
-		7020AB8E2F12EEBB0082F480 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */; };
-		7020AB902F12EECA0082F480 /* CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8F2F12EECA0082F480 /* CartView.swift */; };
 		7020AB912F12EEFD0082F480 /* CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8F2F12EECA0082F480 /* CartView.swift */; };
 		7020AB922F12EEFD0082F480 /* Cart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8B2F12EEB30082F480 /* Cart.swift */; };
 		7020AB932F12EEFD0082F480 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */; };
-		7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */; };
-		7020AB952F12EEFD0082F480 /* CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8F2F12EECA0082F480 /* CartView.swift */; };
-		7020AB962F12EEFD0082F480 /* Cart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8B2F12EEB30082F480 /* Cart.swift */; };
-		7029E8F42F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
 		7029E8F52F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
-		7029E8F62F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
 		7036AA612F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
 		7036AA622F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
 		7036AA632F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
-		7039BA1D2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
 		7039BA1E2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
-		7039BA1F2F47521800004437 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA1C2F47521800004437 /* LocalStore.swift */; };
-		7039BA212F475FAC00004437 /* SafeCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA202F475FAC00004437 /* SafeCollection.swift */; };
-		7039BA222F475FAC00004437 /* SafeCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA202F475FAC00004437 /* SafeCollection.swift */; };
 		7039BA232F475FAC00004437 /* SafeCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA202F475FAC00004437 /* SafeCollection.swift */; };
-		7039BA252F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
 		7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
-		7039BA272F47612900004437 /* ManageGarageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7039BA242F47612900004437 /* ManageGarageSheet.swift */; };
-		703F05BE2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */; };
-		703F05BF2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */; };
 		703F05C02F63900800D4EF47 /* SupabaseCarsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BD2F63900800D4EF47 /* SupabaseCarsService.swift */; };
 		703F05C22F63904D00D4EF47 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C12F63904D00D4EF47 /* Auth */; };
 		703F05C42F63904D00D4EF47 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C32F63904D00D4EF47 /* Functions */; };
@@ -40,103 +24,35 @@
 		703F05C82F63904D00D4EF47 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C72F63904D00D4EF47 /* Realtime */; };
 		703F05CA2F63904D00D4EF47 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05C92F63904D00D4EF47 /* Storage */; };
 		703F05CC2F63904D00D4EF47 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 703F05CB2F63904D00D4EF47 /* Supabase */; };
-		703F05D62F63910800D4EF47 /* ErrorResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05D52F63910500D4EF47 /* ErrorResponse.swift */; };
-		703F05D72F63910800D4EF47 /* ErrorResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05D52F63910500D4EF47 /* ErrorResponse.swift */; };
 		703F05D82F63910800D4EF47 /* ErrorResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05D52F63910500D4EF47 /* ErrorResponse.swift */; };
 		703F05D92F63911F00D4EF47 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05B92F63492100D4EF47 /* SupabaseConfig.swift */; };
-		703F05DA2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05B92F63492100D4EF47 /* SupabaseConfig.swift */; };
-		703F05DB2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05B92F63492100D4EF47 /* SupabaseConfig.swift */; };
 		703F05DC2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */; };
-		703F05DD2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */; };
-		703F05DE2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BA2F63492300D4EF47 /* SupabaseClientProvider.swift */; };
 		703F05DF2F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */; };
-		703F05E02F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */; };
-		703F05E12F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05BB2F63492900D4EF47 /* SupabaseAuthService.swift */; };
-		703F05E72F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */; };
 		703F05E82F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */; };
-		703F05E92F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */; };
 		703F05EF2F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
-		703F05F02F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
-		703F05F12F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
-		7040A91F2F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
-		7040A9202F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
 		7040A9212F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
-		7040A9232F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
 		7040A9242F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
-		7040A9252F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
 		7040A9272F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
-		7040A9282F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
-		7040A9292F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
-		704251952F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
-		704251962F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
-		704251972F13397100322849 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518D2F13397100322849 /* APIConfig.swift */; };
 		704251992F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
 		7042519A2F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
 		7042519B2F13397100322849 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518D2F13397100322849 /* APIConfig.swift */; };
-		7042519D2F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
-		7042519E2F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
-		7042519F2F13397100322849 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518D2F13397100322849 /* APIConfig.swift */; };
-		704251AB2F1339BA00322849 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251A92F1339BA00322849 /* AuthViewModel.swift */; };
 		704251AC2F1339BA00322849 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251A92F1339BA00322849 /* AuthViewModel.swift */; };
-		704251AD2F1339BA00322849 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251A92F1339BA00322849 /* AuthViewModel.swift */; };
 		704251B32F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251B22F134C5C00322849 /* UserVehiclesViewModel.swift */; };
-		704251B42F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251B22F134C5C00322849 /* UserVehiclesViewModel.swift */; };
-		704251B52F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251B22F134C5C00322849 /* UserVehiclesViewModel.swift */; };
 		704251B72F134C5E00322849 /* AddVehicleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251B62F134C5E00322849 /* AddVehicleView.swift */; };
-		704251B82F134C5E00322849 /* AddVehicleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251B62F134C5E00322849 /* AddVehicleView.swift */; };
-		704251B92F134C5E00322849 /* AddVehicleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251B62F134C5E00322849 /* AddVehicleView.swift */; };
-		704E4B8E2F11E5A000AB0A5D /* MerchGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */; };
 		704E4B8F2F11E5A000AB0A5D /* MerchGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */; };
-		704E4B902F11E5A000AB0A5D /* MerchGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B8D2F11E5A000AB0A5D /* MerchGridView.swift */; };
 		704E4B922F11E5AB00AB0A5D /* MerchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B912F11E5A800AB0A5D /* MerchListView.swift */; };
-		704E4B932F11E5AB00AB0A5D /* MerchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B912F11E5A800AB0A5D /* MerchListView.swift */; };
-		704E4B942F11E5AB00AB0A5D /* MerchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E4B912F11E5A800AB0A5D /* MerchListView.swift */; };
-		7068B0492F42783100D6628C /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7068B0482F42783100D6628C /* KeychainService.swift */; };
 		7068B04A2F42783100D6628C /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7068B0482F42783100D6628C /* KeychainService.swift */; };
-		7068B04B2F42783100D6628C /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7068B0482F42783100D6628C /* KeychainService.swift */; };
-		707693EC2F42991500009364 /* ExploreFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707693EB2F42991400009364 /* ExploreFeedView.swift */; };
-		707693ED2F42991500009364 /* ExploreFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707693EB2F42991400009364 /* ExploreFeedView.swift */; };
 		707693EE2F42991500009364 /* ExploreFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707693EB2F42991400009364 /* ExploreFeedView.swift */; };
 		707D0C922F4551AE00521AA5 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707D0C912F4551AE00521AA5 /* StoreKitManager.swift */; };
-		707D0C932F4551AE00521AA5 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707D0C912F4551AE00521AA5 /* StoreKitManager.swift */; };
-		707D0C942F4551AE00521AA5 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707D0C912F4551AE00521AA5 /* StoreKitManager.swift */; };
 		7080848C2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
-		7080848D2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
-		7080848E2F197DAF0035A23E /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7080848B2F197D1B0035A23E /* HelpSupportView.swift */; };
-		7089A7C32F1C280900EDB4D5 /* RewardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C22F1C280900EDB4D5 /* RewardsView.swift */; };
 		7089A7C42F1C280900EDB4D5 /* RewardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C22F1C280900EDB4D5 /* RewardsView.swift */; };
-		7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C22F1C280900EDB4D5 /* RewardsView.swift */; };
-		7089A7C72F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C62F1C2B5800EDB4D5 /* RecentBuyView.swift */; };
 		7089A7C82F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C62F1C2B5800EDB4D5 /* RecentBuyView.swift */; };
-		7089A7C92F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7C62F1C2B5800EDB4D5 /* RecentBuyView.swift */; };
 		7089A7CB2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7CA2F1C2DD800EDB4D5 /* MerchCatalog.swift */; };
-		7089A7CC2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7CA2F1C2DD800EDB4D5 /* MerchCatalog.swift */; };
-		7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7089A7CA2F1C2DD800EDB4D5 /* MerchCatalog.swift */; };
 		7092F00E2F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
 		7092F00F2F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
 		7092F0102F0E3FFF00D39106 /* empire 360.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7092F00D2F0E3FFF00D39106 /* empire 360.mp4 */; };
 		709FF7F42F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
-		709FF7F52F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
-		709FF7F62F1AF32900309115 /* VIPMembershipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 709FF7F32F1AF32800309115 /* VIPMembershipView.swift */; };
 		70A017042F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
-		70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
-		70A017062F0DF49000A084C2 /* CoolRipple.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EE2F0DF49000A084C2 /* CoolRipple.swift */; };
-		70A017082F0DF49000A084C2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F42F0DF49000A084C2 /* HomeView.swift */; };
-		70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EF2F0DF49000A084C2 /* EmpireAppView.swift */; };
-		70A0170A2F0DF49000A084C2 /* ExpandedCarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */; };
-		70A0170B2F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F62F0DF49000A084C2 /* LiquidGlassTabBar.swift */; };
-		70A0170D2F0DF49000A084C2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F92F0DF49000A084C2 /* Models.swift */; };
-		70A0170E2F0DF49000A084C2 /* CarCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EC2F0DF49000A084C2 /* CarCardView.swift */; };
-		70A0170F2F0DF49000A084C2 /* CarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016ED2F0DF49000A084C2 /* CarsView.swift */; };
-		70A017102F0DF49000A084C2 /* EmpireApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016E92F0DF49000A084C2 /* EmpireApp.swift */; };
-		70A017112F0DF49000A084C2 /* EmpireTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F12F0DF49000A084C2 /* EmpireTabView.swift */; };
-		70A017122F0DF49000A084C2 /* GlassOptionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */; };
-		70A017132F0DF49000A084C2 /* ProfileStatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FA2F0DF49000A084C2 /* ProfileStatCard.swift */; };
-		70A017142F0DF49000A084C2 /* EmpireSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F02F0DF49000A084C2 /* EmpireSplashView.swift */; };
-		70A017152F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */; };
-		70A017162F0DF49000A084C2 /* MerchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F82F0DF49000A084C2 /* MerchView.swift */; };
-		70A017172F0DF49000A084C2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FB2F0DF49000A084C2 /* ProfileView.swift */; };
-		70A017182F0DF49000A084C2 /* StageChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FC2F0DF49000A084C2 /* StageChip.swift */; };
 		70A0171A2F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
 		70A0171B2F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
 		70A0171C2F0DF49000A084C2 /* CoolRipple.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EE2F0DF49000A084C2 /* CoolRipple.swift */; };
@@ -157,87 +73,27 @@
 		70A0172D2F0DF49000A084C2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FB2F0DF49000A084C2 /* ProfileView.swift */; };
 		70A0172E2F0DF49000A084C2 /* StageChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FC2F0DF49000A084C2 /* StageChip.swift */; };
 		70A017302F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
-		70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F72F0DF49000A084C2 /* MeetsView.swift */; };
-		70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EE2F0DF49000A084C2 /* CoolRipple.swift */; };
-		70A017342F0DF49000A084C2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F42F0DF49000A084C2 /* HomeView.swift */; };
-		70A017352F0DF49000A084C2 /* EmpireAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EF2F0DF49000A084C2 /* EmpireAppView.swift */; };
-		70A017362F0DF49000A084C2 /* ExpandedCarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */; };
-		70A017372F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F62F0DF49000A084C2 /* LiquidGlassTabBar.swift */; };
-		70A017392F0DF49000A084C2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F92F0DF49000A084C2 /* Models.swift */; };
-		70A0173A2F0DF49000A084C2 /* CarCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016EC2F0DF49000A084C2 /* CarCardView.swift */; };
-		70A0173B2F0DF49000A084C2 /* CarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016ED2F0DF49000A084C2 /* CarsView.swift */; };
-		70A0173C2F0DF49000A084C2 /* EmpireApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016E92F0DF49000A084C2 /* EmpireApp.swift */; };
-		70A0173D2F0DF49000A084C2 /* EmpireTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F12F0DF49000A084C2 /* EmpireTabView.swift */; };
-		70A0173E2F0DF49000A084C2 /* GlassOptionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */; };
-		70A0173F2F0DF49000A084C2 /* ProfileStatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FA2F0DF49000A084C2 /* ProfileStatCard.swift */; };
-		70A017402F0DF49000A084C2 /* EmpireSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F02F0DF49000A084C2 /* EmpireSplashView.swift */; };
-		70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */; };
-		70A017422F0DF49000A084C2 /* MerchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016F82F0DF49000A084C2 /* MerchView.swift */; };
-		70A017432F0DF49000A084C2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FB2F0DF49000A084C2 /* ProfileView.swift */; };
-		70A017442F0DF49000A084C2 /* StageChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FC2F0DF49000A084C2 /* StageChip.swift */; };
-		70A2E4062F10ABDA004B950D /* EmpireLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */; };
-		70A2E4072F10ABDA004B950D /* EmpireLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */; };
 		70A2E4082F10ABDA004B950D /* EmpireLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */; };
-		70A6A7522F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
 		70A6A7532F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
-		70A6A7542F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
-		70AAC85F2F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */; };
 		70AAC8602F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */; };
-		70AAC8612F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */; };
 		70AAC8632F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */; };
-		70AAC8642F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */; };
-		70AAC8652F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */; };
-		70AAC8672F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
-		70AAC8682F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
 		70AAC8692F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
-		70AFDB132F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */; };
 		70AFDB142F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */; };
-		70AFDB152F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */; };
 		70B0CF572F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
-		70B0CF582F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
-		70B0CF592F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
-		70B0CF612F1064D0003FCD20 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF602F1064D0003FCD20 /* SignUpView.swift */; };
 		70B0CF622F1064D0003FCD20 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF602F1064D0003FCD20 /* SignUpView.swift */; };
-		70B0CF632F1064D0003FCD20 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF602F1064D0003FCD20 /* SignUpView.swift */; };
-		70B0CF652F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF642F1067F0003FCD20 /* ForgotPasswordView.swift */; };
-		70B0CF662F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF642F1067F0003FCD20 /* ForgotPasswordView.swift */; };
 		70B0CF672F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF642F1067F0003FCD20 /* ForgotPasswordView.swift */; };
-		70B0CF692F106908003FCD20 /* EmpireTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF682F106908003FCD20 /* EmpireTheme.swift */; };
 		70B0CF6A2F106908003FCD20 /* EmpireTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF682F106908003FCD20 /* EmpireTheme.swift */; };
-		70B0CF6B2F106908003FCD20 /* EmpireTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF682F106908003FCD20 /* EmpireTheme.swift */; };
 		70B0CF6D2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */; };
-		70B0CF6E2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */; };
-		70B0CF6F2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */; };
 		70C0A6842F457D18003F8425 /* VIPJoinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6832F457D18003F8425 /* VIPJoinView.swift */; };
-		70C0A6852F457D18003F8425 /* VIPJoinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6832F457D18003F8425 /* VIPJoinView.swift */; };
-		70C0A6862F457D18003F8425 /* VIPJoinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6832F457D18003F8425 /* VIPJoinView.swift */; };
-		70C0A6882F457D1D003F8425 /* VIPWelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6872F457D1D003F8425 /* VIPWelcomeView.swift */; };
 		70C0A6892F457D1D003F8425 /* VIPWelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6872F457D1D003F8425 /* VIPWelcomeView.swift */; };
-		70C0A68A2F457D1D003F8425 /* VIPWelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6872F457D1D003F8425 /* VIPWelcomeView.swift */; };
-		70C0A68C2F457D2C003F8425 /* VIPDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */; };
-		70C0A68D2F457D2C003F8425 /* VIPDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */; };
 		70C0A68E2F457D2C003F8425 /* VIPDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */; };
-		70C0A6902F457D5D003F8425 /* VIPExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */; };
 		70C0A6912F457D5D003F8425 /* VIPExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */; };
-		70C0A6922F457D5D003F8425 /* VIPExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */; };
-		70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416B2F196E930034C5FB /* SettingsView.swift */; };
-		70DF416D2F196E930034C5FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416B2F196E930034C5FB /* SettingsView.swift */; };
 		70DF416E2F196E930034C5FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416B2F196E930034C5FB /* SettingsView.swift */; };
-		70DF41702F1972590034C5FB /* ManageAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416F2F1972590034C5FB /* ManageAccountView.swift */; };
 		70DF41712F1972590034C5FB /* ManageAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416F2F1972590034C5FB /* ManageAccountView.swift */; };
-		70DF41722F1972590034C5FB /* ManageAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416F2F1972590034C5FB /* ManageAccountView.swift */; };
-		70E699D62F1496ED001304D6 /* VehicleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E699D52F1496ED001304D6 /* VehicleEditorView.swift */; };
-		70E699D72F1496ED001304D6 /* VehicleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E699D52F1496ED001304D6 /* VehicleEditorView.swift */; };
 		70E699D82F1496ED001304D6 /* VehicleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E699D52F1496ED001304D6 /* VehicleEditorView.swift */; };
-		70F1AA012F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
 		70F1AA022F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
-		70F1AA032F70000100ABCD01 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA002F70000100ABCD01 /* AppLogger.swift */; };
-		70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
 		70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
-		70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
-		70F2AA012F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
 		70F2AA032F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
-		70F2AA042F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
 		70FA11012F80000100ABCD01 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 70FA11022F80000100ABCD01 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
@@ -806,78 +662,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				707693EC2F42991500009364 /* ExploreFeedView.swift in Sources */,
-				7020AB902F12EECA0082F480 /* CartView.swift in Sources */,
-				704251B82F134C5E00322849 /* AddVehicleView.swift in Sources */,
-				70A017052F0DF49000A084C2 /* MeetsView.swift in Sources */,
-				70A017062F0DF49000A084C2 /* CoolRipple.swift in Sources */,
-				70F1AA032F70000100ABCD01 /* AppLogger.swift in Sources */,
-				70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */,
-				7042519D2F13397100322849 /* APIService.swift in Sources */,
-				7042519E2F13397100322849 /* NetworkManager.swift in Sources */,
-				70F2AA042F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */,
-				7042519F2F13397100322849 /* APIConfig.swift in Sources */,
-				7068B04B2F42783100D6628C /* KeychainService.swift in Sources */,
-				70AAC8682F6B864000BB4A58 /* QRCheckInView.swift in Sources */,
-				70C0A6902F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
-				7039BA222F475FAC00004437 /* SafeCollection.swift in Sources */,
-				7040A9202F6E540000220213 /* SupabaseCommunityService.swift in Sources */,
-				7040A9232F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
-				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
-				7040A9292F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */,
-				70AAC8642F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
-				7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */,
-				7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
-				703F05D72F63910800D4EF47 /* ErrorResponse.swift in Sources */,
-				70A017092F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
-				70DF416D2F196E930034C5FB /* SettingsView.swift in Sources */,
-				7039BA272F47612900004437 /* ManageGarageSheet.swift in Sources */,
-				703F05BF2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
-				707D0C932F4551AE00521AA5 /* StoreKitManager.swift in Sources */,
-				7089A7C32F1C280900EDB4D5 /* RewardsView.swift in Sources */,
-				703F05E02F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */,
-				704251AB2F1339BA00322849 /* AuthViewModel.swift in Sources */,
-				70A0170A2F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
-				709FF7F52F1AF32900309115 /* VIPMembershipView.swift in Sources */,
-				70A6A7542F1ECCDE00483418 /* TopToast.swift in Sources */,
-				70A0170B2F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
-				703F05E92F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */,
-				704E4B932F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
-				703F05DD2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */,
-				70A0170D2F0DF49000A084C2 /* Models.swift in Sources */,
-				70A0170E2F0DF49000A084C2 /* CarCardView.swift in Sources */,
-				70A2E4062F10ABDA004B950D /* EmpireLogoView.swift in Sources */,
-				70AAC8612F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */,
-				70C0A6852F457D18003F8425 /* VIPJoinView.swift in Sources */,
-				70A0170F2F0DF49000A084C2 /* CarsView.swift in Sources */,
-				70A017102F0DF49000A084C2 /* EmpireApp.swift in Sources */,
-				70B0CF632F1064D0003FCD20 /* SignUpView.swift in Sources */,
-				704251B42F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
-				7080848D2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
-				70B0CF6B2F106908003FCD20 /* EmpireTheme.swift in Sources */,
-				70B0CF6E2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
-				70A017112F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
-				70C0A6882F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
-				7029E8F62F71F10E00F44189 /* CommentSheetView.swift in Sources */,
-				70E699D72F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
-				703F05DA2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
-				70B0CF662F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
-				70A017122F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
-				7039BA1D2F47521800004437 /* LocalStore.swift in Sources */,
-				70A017132F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
-				70A017142F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
-				7089A7C92F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
-				70A017152F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
-				70A017162F0DF49000A084C2 /* MerchView.swift in Sources */,
-				70A017172F0DF49000A084C2 /* ProfileView.swift in Sources */,
-				70DF41722F1972590034C5FB /* ManageAccountView.swift in Sources */,
-				703F05F12F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
-				704E4B8E2F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
-				70B0CF582F10646D003FCD20 /* LoginView.swift in Sources */,
-				70C0A68D2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
-				70A017182F0DF49000A084C2 /* StageChip.swift in Sources */,
-				70AFDB132F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */,
-				7020AB8E2F12EEBB0082F480 /* ProductDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -885,78 +669,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70C0A68C2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
-				70AFDB152F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */,
-				703F05F02F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
-				7040A9252F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
-				70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */,
-				70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */,
-				703F05BE2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
-				704E4B902F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
-				7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
-				7029E8F42F71F10E00F44189 /* CommentSheetView.swift in Sources */,
-				7020AB952F12EEFD0082F480 /* CartView.swift in Sources */,
-				7089A7CC2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
-				7020AB962F12EEFD0082F480 /* Cart.swift in Sources */,
-				70A017342F0DF49000A084C2 /* HomeView.swift in Sources */,
-				704251AD2F1339BA00322849 /* AuthViewModel.swift in Sources */,
-				70A2E4072F10ABDA004B950D /* EmpireLogoView.swift in Sources */,
-				70A017352F0DF49000A084C2 /* EmpireAppView.swift in Sources */,
-				70A017362F0DF49000A084C2 /* ExpandedCarView.swift in Sources */,
-				70A017372F0DF49000A084C2 /* LiquidGlassTabBar.swift in Sources */,
-				70A017392F0DF49000A084C2 /* Models.swift in Sources */,
-				707D0C942F4551AE00521AA5 /* StoreKitManager.swift in Sources */,
-				70A0173A2F0DF49000A084C2 /* CarCardView.swift in Sources */,
-				70A0173B2F0DF49000A084C2 /* CarsView.swift in Sources */,
-				707693ED2F42991500009364 /* ExploreFeedView.swift in Sources */,
-				70A0173C2F0DF49000A084C2 /* EmpireApp.swift in Sources */,
-				70A0173D2F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
-				709FF7F62F1AF32900309115 /* VIPMembershipView.swift in Sources */,
-				703F05D62F63910800D4EF47 /* ErrorResponse.swift in Sources */,
-				70B0CF652F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
-				70E699D62F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
-				70A0173E2F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
-				703F05DB2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
-				704251B92F134C5E00322849 /* AddVehicleView.swift in Sources */,
-				7039BA1F2F47521800004437 /* LocalStore.swift in Sources */,
-				70A0173F2F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
-				704E4B942F11E5AB00AB0A5D /* MerchListView.swift in Sources */,
-				70C0A68A2F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
-				70A017402F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
-				70AAC8672F6B864000BB4A58 /* QRCheckInView.swift in Sources */,
-				7039BA252F47612900004437 /* ManageGarageSheet.swift in Sources */,
-				703F05DE2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */,
-				70B0CF692F106908003FCD20 /* EmpireTheme.swift in Sources */,
-				703F05E12F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */,
-				7039BA212F475FAC00004437 /* SafeCollection.swift in Sources */,
-				70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */,
-				7040A91F2F6E540000220213 /* SupabaseCommunityService.swift in Sources */,
-				7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */,
-				7068B0492F42783100D6628C /* KeychainService.swift in Sources */,
-				70AAC8652F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
-				70C0A6862F457D18003F8425 /* VIPJoinView.swift in Sources */,
-				70B0CF612F1064D0003FCD20 /* SignUpView.swift in Sources */,
-				7040A9282F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */,
-				70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
-				704251B52F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
-				7089A7C72F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
-				7080848E2F197DAF0035A23E /* HelpSupportView.swift in Sources */,
-				70B0CF592F10646D003FCD20 /* LoginView.swift in Sources */,
-				70A6A7522F1ECCDE00483418 /* TopToast.swift in Sources */,
-				70DF41702F1972590034C5FB /* ManageAccountView.swift in Sources */,
-				70A017422F0DF49000A084C2 /* MerchView.swift in Sources */,
-				70A017432F0DF49000A084C2 /* ProfileView.swift in Sources */,
-				703F05E72F6391F300D4EF47 /* SupabaseMeetsService.swift in Sources */,
-				70B0CF6F2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
-				70C0A6922F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
-				70F1AA012F70000100ABCD01 /* AppLogger.swift in Sources */,
-				70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */,
-				704251952F13397100322849 /* APIService.swift in Sources */,
-				704251962F13397100322849 /* NetworkManager.swift in Sources */,
-				70F2AA012F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */,
-				704251972F13397100322849 /* APIConfig.swift in Sources */,
-				70AAC85F2F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */,
-				70A017442F0DF49000A084C2 /* StageChip.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1107,7 +819,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 104;
+				CURRENT_PROJECT_VERSION = 105;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1149,7 +861,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 104;
+				CURRENT_PROJECT_VERSION = 105;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

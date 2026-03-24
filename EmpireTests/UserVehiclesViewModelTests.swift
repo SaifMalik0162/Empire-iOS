@@ -1,6 +1,7 @@
 import XCTest
 @testable import Empire
 
+@MainActor
 final class UserVehiclesViewModelTests: XCTestCase {
 
     let userIdKey = "currentUserId"
