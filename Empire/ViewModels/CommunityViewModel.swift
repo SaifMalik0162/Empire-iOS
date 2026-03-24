@@ -10,12 +10,20 @@ final class CommunityViewModel: ObservableObject {
     @Published var isLoadingMore = false
     @Published var errorMessage: String? = nil
     @Published var hasMore = true
+    @Published var totalPostsCount = 0
 
     private let service = SupabaseCommunityService()
     private let logger = Logger(subsystem: "com.empire.app", category: "community-vm")
     private let pageSize = 40
     private var currentOffset = 0
+    private let authorUserId: String?
     private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "" }
+
+    init(userId: String? = nil) {
+        self.authorUserId = userId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ? userId?.trimmingCharacters(in: .whitespacesAndNewlines)
+            : nil
+    }
 
     // MARK: - Fetch
 
@@ -27,8 +35,18 @@ final class CommunityViewModel: ObservableObject {
         hasMore = true
 
         do {
-            let fetched = try await service.fetchFeed(currentUserId: currentUserId, limit: pageSize, offset: 0)
+            async let fetchedTask = service.fetchFeed(
+                currentUserId: currentUserId,
+                limit: pageSize,
+                offset: 0,
+                authorUserId: authorUserId
+            )
+            async let totalTask = service.countPosts(authorUserId: authorUserId)
+
+            let fetched = try await fetchedTask
+            let total = try await totalTask
             posts = fetched
+            totalPostsCount = total
             currentOffset = fetched.count
             hasMore = fetched.count == pageSize
         } catch {
@@ -43,7 +61,12 @@ final class CommunityViewModel: ObservableObject {
         guard !isLoading, !isLoadingMore, hasMore else { return }
         isLoadingMore = true
         do {
-            let fetched = try await service.fetchFeed(currentUserId: currentUserId, limit: pageSize, offset: currentOffset)
+            let fetched = try await service.fetchFeed(
+                currentUserId: currentUserId,
+                limit: pageSize,
+                offset: currentOffset,
+                authorUserId: authorUserId
+            )
             posts.append(contentsOf: fetched)
             currentOffset += fetched.count
             hasMore = fetched.count == pageSize
@@ -55,13 +78,16 @@ final class CommunityViewModel: ObservableObject {
 
     // MARK: - Share
 
-    /// Returns the new post so callers can optimistically prepend it.
     func sharePost(car: Car, caption: String?, photoData: Data?) async throws -> CommunityPost {
         let userId = currentUserId
-        guard !userId.isEmpty else { throw NSError(domain: "Community", code: 2, userInfo: [NSLocalizedDescriptionKey: "Not signed in."]) }
-
+        guard !userId.isEmpty else {
+            throw NSError(domain: "Community", code: 2, userInfo: [NSLocalizedDescriptionKey: "Not signed in."])
+        }
         let post = try await service.sharePost(car: car, caption: caption, currentUserId: userId, photoData: photoData)
         posts.insert(post, at: 0)
+        if authorUserId == nil || authorUserId == userId {
+            totalPostsCount += 1
+        }
         NotificationCenter.default.post(name: .empireCommunityDidPost, object: nil)
         return post
     }
@@ -90,20 +116,34 @@ final class CommunityViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Delete
+    // MARK: - Delete post
 
     func deletePost(postId: UUID) async {
         guard let idx = posts.firstIndex(where: { $0.id == postId }) else { return }
         posts.remove(at: idx)
+        totalPostsCount = max(0, totalPostsCount - 1)
         do {
             try await service.deletePost(postId: postId)
         } catch {
             logger.error("deletePost failed: \(String(describing: error), privacy: .public)")
-            // Could re-insert post here; for now leave removed for simplicity
         }
     }
 
-    // MARK: - Public URL helper
+    // MARK: - Comment count helpers (called by CommentSheetView)
+
+    /// Optimistically bumps the comment count for a post after a successful insert.
+    func incrementCommentCount(postId: UUID) {
+        guard let idx = posts.firstIndex(where: { $0.id == postId }) else { return }
+        posts[idx].commentsCount += 1
+    }
+
+    /// Optimistically decrements the comment count for a post after a successful delete.
+    func decrementCommentCount(postId: UUID) {
+        guard let idx = posts.firstIndex(where: { $0.id == postId }) else { return }
+        posts[idx].commentsCount = max(0, posts[idx].commentsCount - 1)
+    }
+
+    // MARK: - Public URL helpers
 
     func photoURL(for post: CommunityPost) -> URL? {
         guard let path = post.photoPath else { return nil }

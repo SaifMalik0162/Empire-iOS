@@ -1,9 +1,8 @@
 import Foundation
 import Supabase
 import UIKit
-import OSLog
 
-// MARK: - Domain model
+// MARK: - Domain models
 
 struct CommunityPost: Identifiable, Equatable {
     let id: UUID
@@ -19,12 +18,24 @@ struct CommunityPost: Identifiable, Equatable {
     let isJailbreak: Bool
     let vehicleClass: String?
     var likesCount: Int
+    var commentsCount: Int
     let createdAt: Date
 
     var username: String?
     var avatarPath: String?
 
     var isLiked: Bool = false
+}
+
+struct PostComment: Identifiable, Equatable {
+    let id: UUID
+    let postId: UUID
+    let userId: String
+    let body: String
+    let createdAt: Date
+
+    var username: String?
+    var avatarPath: String?
 }
 
 // MARK: - Supabase row shapes
@@ -43,6 +54,7 @@ private struct SBCommunityPostRow: Codable {
     let is_jailbreak: Bool
     let vehicle_class: String?
     let likes_count: Int
+    let comments_count: Int?
     let created_at: String
 }
 
@@ -65,10 +77,33 @@ private struct SBLikeRow: Codable {
     let user_id: String
 }
 
+private struct SBLikeInsert: Encodable {
+    let post_id: UUID
+    let user_id: UUID
+}
+
 private struct SBProfileRow: Codable {
     let id: String
     let username: String?
     let avatar_path: String?
+}
+
+private struct SBCommentRow: Codable {
+    let id: String
+    let post_id: String
+    let user_id: String
+    let body: String
+    let created_at: String
+}
+
+private struct SBInsertComment: Encodable {
+    let post_id: String
+    let user_id: String
+    let body: String
+}
+
+private struct SBCommentCountRow: Codable {
+    let post_id: String
 }
 
 // MARK: - Service
@@ -76,7 +111,7 @@ private struct SBProfileRow: Codable {
 final class SupabaseCommunityService {
     private let client = SupabaseClientProvider.client
     private let photosBucket = "car-photos"
-    private let logger = Logger(subsystem: "com.empire.app", category: "community")
+    private let avatarsBucket = "avatars"
 
     private let isoFull: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -85,13 +120,24 @@ final class SupabaseCommunityService {
     }()
     private let isoBasic = ISO8601DateFormatter()
 
-    // MARK: Fetch feed
+    // MARK: - Fetch feed
 
-    /// Fetches the most recent posts (latest first). Enriches with profile info and like state for currentUserId.
-    func fetchFeed(currentUserId: String, limit: Int = 40, offset: Int = 0) async throws -> [CommunityPost] {
-        let rows: [SBCommunityPostRow] = try await client
+    func fetchFeed(
+        currentUserId: String,
+        limit: Int = 40,
+        offset: Int = 0,
+        authorUserId: String? = nil
+    ) async throws -> [CommunityPost] {
+        let baseQuery = client
             .from("community_posts")
             .select()
+        let filteredQuery = if let authorUserId, !authorUserId.isEmpty {
+            baseQuery.eq("user_id", value: authorUserId)
+        } else {
+            baseQuery
+        }
+
+        let rows: [SBCommunityPostRow] = try await filteredQuery
             .order("created_at", ascending: false)
             .range(from: offset, to: offset + limit - 1)
             .execute()
@@ -99,24 +145,59 @@ final class SupabaseCommunityService {
 
         guard !rows.isEmpty else { return [] }
 
-        // Fetch liked post IDs for current user
         let postIds = rows.map { $0.id }
+        let postUUIDs = postIds.compactMap(UUID.init(uuidString:))
+
+        // Liked post IDs for current user
         let likedIds: Set<String>
         do {
-            let likes: [SBLikeRow] = try await client
-                .from("post_likes")
-                .select("post_id, user_id")
-                .eq("user_id", value: currentUserId)
-                .in("post_id", values: postIds)
-                .execute()
-                .value
+            let likes: [SBLikeRow]
+            if let userUUID = UUID(uuidString: currentUserId) {
+                likes = try await client
+                    .from("post_likes")
+                    .select("post_id, user_id")
+                    .eq("user_id", value: userUUID)
+                    .in("post_id", values: postIds)
+                    .execute()
+                    .value
+            } else {
+                likes = try await client
+                    .from("post_likes")
+                    .select("post_id, user_id")
+                    .eq("user_id", value: currentUserId)
+                    .in("post_id", values: postIds)
+                    .execute()
+                    .value
+            }
             likedIds = Set(likes.map { $0.post_id })
         } catch {
-            logger.warning("Could not fetch liked IDs: \(String(describing: error), privacy: .public)")
             likedIds = []
         }
 
-        // Fetch profiles for all poster user IDs
+        let commentsByPostId: [String: Int]
+        do {
+            let commentRows: [SBCommentCountRow]
+            if postUUIDs.count == postIds.count, !postUUIDs.isEmpty {
+                commentRows = try await client
+                    .from("post_comments")
+                    .select("post_id")
+                    .in("post_id", values: postUUIDs)
+                    .execute()
+                    .value
+            } else {
+                commentRows = try await client
+                    .from("post_comments")
+                    .select("post_id")
+                    .in("post_id", values: postIds)
+                    .execute()
+                    .value
+            }
+            commentsByPostId = Dictionary(commentRows.map { ($0.post_id, 1) }, uniquingKeysWith: +)
+        } catch {
+            commentsByPostId = [:]
+        }
+
+        // Profiles for all poster user IDs
         let userIds = Array(Set(rows.map { $0.user_id }))
         let profilesByUserId: [String: SBProfileRow]
         do {
@@ -128,7 +209,6 @@ final class SupabaseCommunityService {
                 .value
             profilesByUserId = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
         } catch {
-            logger.warning("Could not fetch profiles: \(String(describing: error), privacy: .public)")
             profilesByUserId = [:]
         }
 
@@ -149,6 +229,7 @@ final class SupabaseCommunityService {
                 isJailbreak: row.is_jailbreak,
                 vehicleClass: row.vehicle_class,
                 likesCount: row.likes_count,
+                commentsCount: commentsByPostId[row.id] ?? row.comments_count ?? 0,
                 createdAt: date,
                 username: profile?.username,
                 avatarPath: profile?.avatar_path
@@ -158,13 +239,25 @@ final class SupabaseCommunityService {
         }
     }
 
-    // MARK: Share post
+    func countPosts(authorUserId: String? = nil) async throws -> Int {
+        let baseQuery = client
+            .from("community_posts")
+            .select("id", head: true, count: .exact)
+        let filteredQuery = if let authorUserId, !authorUserId.isEmpty {
+            baseQuery.eq("user_id", value: authorUserId)
+        } else {
+            baseQuery
+        }
 
-    /// Shares a car to the community feed. Uploads photo if photoData provided.
+        let response = try await filteredQuery.execute()
+        return response.count ?? 0
+    }
+
+    // MARK: - Share post
+
     func sharePost(car: Car, caption: String?, currentUserId: String, photoData: Data?) async throws -> CommunityPost {
         var photoPath: String? = nil
 
-        // Upload photo to Supabase Storage if provided
         if let data = photoData {
             let compressed = compressImageData(data, maxBytes: 900_000) ?? data
             let path = "\(currentUserId.lowercased())/community_\(UUID().uuidString).jpg"
@@ -177,19 +270,14 @@ final class SupabaseCommunityService {
                         upsert: false
                     ))
                 photoPath = path
-                logger.info("✅ Photo uploaded to: \(path, privacy: .public)")
             } catch {
-                logger.error("🔴 Photo upload failed: \(String(describing: error), privacy: .public)")
-                print("🔴 Photo upload failed: \(error)")
-                // Continue without photo rather than failing the whole post
             }
         }
 
-        // Fall back to existing car photo path if no new upload
         if photoPath == nil, let existingFileName = car.photoFileName {
             let existing = "\(currentUserId.lowercased())/\(car.id.uuidString).jpg"
             photoPath = existing
-            _ = existingFileName // suppress unused warning
+            _ = existingFileName
         }
 
         let insert = SBInsertPost(
@@ -231,30 +319,48 @@ final class SupabaseCommunityService {
             isJailbreak: row.is_jailbreak,
             vehicleClass: row.vehicle_class,
             likesCount: 0,
+            commentsCount: 0,
             createdAt: date
         )
     }
 
-    // MARK: Like / Unlike
+    // MARK: - Like / Unlike
 
     func likePost(postId: UUID, userId: String) async throws {
-        let row = SBLikeRow(post_id: postId.uuidString, user_id: userId)
-        _ = try await client
-            .from("post_likes")
-            .upsert(row, onConflict: "post_id, user_id")
-            .execute()
+        if let userUUID = UUID(uuidString: userId) {
+            let row = SBLikeInsert(post_id: postId, user_id: userUUID)
+            _ = try await client
+                .from("post_likes")
+                .upsert(row, onConflict: "post_id, user_id")
+                .execute()
+        } else {
+            let row = SBLikeRow(post_id: postId.uuidString, user_id: userId)
+            _ = try await client
+                .from("post_likes")
+                .upsert(row, onConflict: "post_id, user_id")
+                .execute()
+        }
     }
 
     func unlikePost(postId: UUID, userId: String) async throws {
-        _ = try await client
-            .from("post_likes")
-            .delete()
-            .eq("post_id", value: postId.uuidString)
-            .eq("user_id", value: userId)
-            .execute()
+        if let userUUID = UUID(uuidString: userId) {
+            _ = try await client
+                .from("post_likes")
+                .delete()
+                .eq("post_id", value: postId)
+                .eq("user_id", value: userUUID)
+                .execute()
+        } else {
+            _ = try await client
+                .from("post_likes")
+                .delete()
+                .eq("post_id", value: postId.uuidString)
+                .eq("user_id", value: userId)
+                .execute()
+        }
     }
 
-    // MARK: Delete
+    // MARK: - Delete post
 
     func deletePost(postId: UUID) async throws {
         _ = try await client
@@ -264,17 +370,116 @@ final class SupabaseCommunityService {
             .execute()
     }
 
-    // MARK: Public URL
+    // MARK: - Comments
+
+    /// Fetches all comments for a post, oldest first, enriched with profile data.
+    func fetchComments(postId: UUID) async throws -> [PostComment] {
+        let rows: [SBCommentRow] = try await client
+            .from("post_comments")
+            .select()
+            .eq("post_id", value: postId.uuidString)
+            .order("created_at", ascending: true)
+            .execute()
+            .value
+
+        guard !rows.isEmpty else { return [] }
+
+        let userIds = Array(Set(rows.map { $0.user_id }))
+        let profilesByUserId: [String: SBProfileRow]
+        do {
+            let profiles: [SBProfileRow] = try await client
+                .from("profiles")
+                .select("id, username, avatar_path")
+                .in("id", values: userIds)
+                .execute()
+                .value
+            profilesByUserId = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+        } catch {
+            profilesByUserId = [:]
+        }
+
+        return rows.compactMap { row -> PostComment? in
+            guard let date = parseDate(row.created_at),
+                  let id = UUID(uuidString: row.id),
+                  let postId = UUID(uuidString: row.post_id) else { return nil }
+            let profile = profilesByUserId[row.user_id]
+            return PostComment(
+                id: id,
+                postId: postId,
+                userId: row.user_id,
+                body: row.body,
+                createdAt: date,
+                username: profile?.username,
+                avatarPath: profile?.avatar_path
+            )
+        }
+    }
+
+    /// Posts a new comment and returns it enriched with the current user's profile.
+    func postComment(postId: UUID, userId: String, body: String) async throws -> PostComment {
+        let insert = SBInsertComment(
+            post_id: postId.uuidString,
+            user_id: userId,
+            body: body.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+
+        let rows: [SBCommentRow] = try await client
+            .from("post_comments")
+            .insert(insert)
+            .select()
+            .execute()
+            .value
+
+        guard let row = rows.first,
+              let date = parseDate(row.created_at),
+              let id = UUID(uuidString: row.id),
+              let pid = UUID(uuidString: row.post_id) else {
+            throw NSError(domain: "CommunityService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Comment inserted but row read-back failed."])
+        }
+
+        // Fetch the poster's own profile for the returned comment
+        let profileRows: [SBProfileRow] = (try? await client
+            .from("profiles")
+            .select("id, username, avatar_path")
+            .eq("id", value: userId)
+            .limit(1)
+            .execute()
+            .value) ?? []
+        let profile = profileRows.first
+
+        return PostComment(
+            id: id,
+            postId: pid,
+            userId: row.user_id,
+            body: row.body,
+            createdAt: date,
+            username: profile?.username,
+            avatarPath: profile?.avatar_path
+        )
+    }
+
+    /// Deletes a comment by ID.
+    func deleteComment(commentId: UUID) async throws {
+        _ = try await client
+            .from("post_comments")
+            .delete()
+            .eq("id", value: commentId.uuidString)
+            .execute()
+    }
+
+    // MARK: - Public URL helpers
 
     func publicURL(for path: String) -> URL? {
-        // Do NOT percent-encode the path — Supabase Storage URLs use raw paths
-        // including the "/" separator between userId and filename.
-        // Encoding it turns "user/file.jpg" into "user%2Ffile.jpg" which 404s.
         let base = SupabaseConfig.url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return URL(string: "\(base)/storage/v1/object/public/\(photosBucket)/\(path)")
     }
 
-    // MARK: Private helpers
+    func avatarPublicURL(for path: String) -> URL? {
+        let base = SupabaseConfig.url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return URL(string: "\(base)/storage/v1/object/public/\(avatarsBucket)/\(path)")
+    }
+
+    // MARK: - Private helpers
 
     private func parseDate(_ value: String) -> Date? {
         isoFull.date(from: value) ?? isoBasic.date(from: value)

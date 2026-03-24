@@ -149,7 +149,6 @@ struct CarsView: View {
         }
         // MARK: - Sheets & covers
         .fullScreenCover(isPresented: $showLightbox) {
-            // lightbox is unused now that feed is real; kept for legacy wiring
             Color.black.ignoresSafeArea()
         }
         .fullScreenCover(isPresented: $showExploreFeed) {
@@ -212,17 +211,21 @@ struct CarsView: View {
                 .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showShareToFeed) {
-            ShareToFeedSheet(userCars: userVehiclesVM.vehicles) { _ in
-                shareSuccessToast = "Your build is live on the feed!"
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                    showShareSuccessToast = true
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        showShareSuccessToast = false
+            ShareToFeedSheet(
+                userCars: userVehiclesVM.vehicles,
+                preselectedIndex: currentGarageIndex,
+                onPosted: { _ in
+                    shareSuccessToast = "Your build is live on the feed!"
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                        showShareSuccessToast = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showShareSuccessToast = false
+                        }
                     }
                 }
-            }
+            )
             .environmentObject(authViewModel)
             .preferredColorScheme(.dark)
         }
@@ -272,34 +275,76 @@ private extension CarsView {
 
     var userCarousel: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: 10) {
+
+            // Header row
+            HStack(alignment: .center, spacing: 8) {
                 Text("My Garage")
                     .font(.title2.weight(.bold))
                     .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
+
                 Spacer()
+
+                // Share Build
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    showManageGarage = true
+                    showShareToFeed = true
                 } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "wrench.and.screwdriver")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("Manage Garage")
-                            .font(.caption.weight(.semibold))
+                    HStack(spacing: 5) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Share Build")
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
                     }
                     .foregroundColor(Color("EmpireMint"))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
                     .background(Capsule().fill(.ultraThinMaterial))
                     .overlay(
                         Capsule().stroke(
-                            LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                           startPoint: .topLeading, endPoint: .bottomTrailing),
+                            LinearGradient(
+                                colors: [Color("EmpireMint").opacity(0.6), Color("EmpireMint").opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
                             lineWidth: 1
                         )
                     )
                 }
                 .buttonStyle(.plain)
+                .fixedSize()
+
+                // Manage Garage
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showManageGarage = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "wrench.and.screwdriver")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Manage Garage")
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundColor(Color("EmpireMint"))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(.ultraThinMaterial))
+                    .overlay(
+                        Capsule().stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                    )
+                }
+                .buttonStyle(.plain)
+                .fixedSize()
             }
             .padding(.horizontal, 20)
 
@@ -346,19 +391,18 @@ private extension CarsView {
         }
     }
 
-    // MARK: Community section (real feed)
+    // MARK: Community section
 
     var communitySection: some View {
         VStack(spacing: 12) {
 
-            // Header row — title left, Explore Feed button right (fills remaining space)
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Community Spotlight")
                         .font(.title3.weight(.bold))
                         .foregroundColor(.white)
-                    if !communityVM.posts.isEmpty {
-                        Text("\(communityVM.posts.count) post\(communityVM.posts.count == 1 ? "" : "s") from Empire drivers")
+                    if communityVM.totalPostsCount > 0 {
+                        Text("\(communityVM.totalPostsCount) post\(communityVM.totalPostsCount == 1 ? "" : "s") from Empire drivers")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.5))
                     }
@@ -396,9 +440,7 @@ private extension CarsView {
             }
             .padding(.horizontal, 20)
 
-            // Feed body
             if communityVM.isLoading && communityVM.posts.isEmpty {
-                // Loading skeleton
                 HStack(spacing: 10) {
                     ProgressView().tint(Color("EmpireMint"))
                     Text("Loading community posts…")
@@ -409,7 +451,6 @@ private extension CarsView {
                 .padding(.vertical, 24)
 
             } else if communityVM.posts.isEmpty {
-                // Empty state
                 VStack(spacing: 14) {
                     Image(systemName: "person.3.sequence.fill")
                         .font(.system(size: 34))
@@ -423,9 +464,7 @@ private extension CarsView {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
                     if !userVehiclesVM.vehicles.isEmpty {
-                        Button {
-                            showShareToFeed = true
-                        } label: {
+                        Button { showShareToFeed = true } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "plus.circle.fill")
                                 Text("Share your first build")
@@ -434,30 +473,19 @@ private extension CarsView {
                             .foregroundStyle(Color("EmpireMint"))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.ultraThinMaterial)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(Color("EmpireMint").opacity(0.6), lineWidth: 1)
-                            )
+                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.ultraThinMaterial))
+                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color("EmpireMint").opacity(0.6), lineWidth: 1))
                         }
                         .buttonStyle(.plain)
                     }
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white.opacity(0.04))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
+                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white.opacity(0.04)))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
                 .padding(.horizontal, 20)
 
             } else {
-                // Horizontal preview strip — latest 6 posts
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(Array(communityVM.posts.prefix(6))) { post in
@@ -470,7 +498,6 @@ private extension CarsView {
                     .padding(.horizontal, 20)
                 }
             }
-
         }
         .padding(.vertical, 8)
         .padding(.bottom, 60)
@@ -588,7 +615,7 @@ private struct LiquidGlassCarCard: View {
     }
 }
 
-// MARK: - Community preview tile (horizontal strip)
+// MARK: - Community preview tile
 
 struct CommunityPreviewTile: View {
     let post: CommunityPost
@@ -596,39 +623,28 @@ struct CommunityPreviewTile: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Photo background
             ZStack {
                 Color.white.opacity(0.06)
-
                 if let url = photoURL {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let img):
-                            img
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 150, height: 190)
-                                .clipped()
+                            img.resizable().scaledToFill()
+                                .frame(width: 150, height: 190).clipped()
                         case .empty:
-                            ProgressView()
-                                .tint(Color("EmpireMint"))
-                                .scaleEffect(0.7)
+                            ProgressView().tint(Color("EmpireMint")).scaleEffect(0.7)
                         default:
-                            Image(systemName: "car.fill")
-                                .font(.system(size: 22))
+                            Image(systemName: "car.fill").font(.system(size: 22))
                                 .foregroundStyle(Color("EmpireMint").opacity(0.4))
                         }
                     }
                 } else {
-                    Image(systemName: "car.fill")
-                        .font(.system(size: 22))
+                    Image(systemName: "car.fill").font(.system(size: 22))
                         .foregroundStyle(Color("EmpireMint").opacity(0.4))
                 }
             }
             .frame(width: 150, height: 190)
-            .overlay(
-                LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .center, endPoint: .bottom)
-            )
+            .overlay(LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .center, endPoint: .bottom))
             .cornerRadius(16)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -636,23 +652,23 @@ struct CommunityPreviewTile: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.9))
                     .lineLimit(1)
-
-                Text(carDisplayName)
+                Text(post.carName)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-
+                if let makeModelLine, !makeModelLine.isEmpty, makeModelLine != post.carName {
+                    Text(makeModelLine)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(1)
+                }
                 HStack(spacing: 4) {
                     tileStageChip
                     tileHPChip
                     if post.likesCount > 0 {
                         HStack(spacing: 3) {
-                            Image(systemName: "heart.fill")
-                                .font(.system(size: 8))
-                                .foregroundStyle(Color("EmpireMint"))
-                            Text("\(post.likesCount)")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.8))
+                            Image(systemName: "heart.fill").font(.system(size: 8)).foregroundStyle(Color("EmpireMint"))
+                            Text("\(post.likesCount)").font(.system(size: 9, weight: .semibold)).foregroundStyle(.white.opacity(0.8))
                         }
                     }
                 }
@@ -668,6 +684,16 @@ struct CommunityPreviewTile: View {
         return parts.isEmpty ? post.carName : parts.joined(separator: " ")
     }
 
+    private var makeModelLine: String? {
+        let parts: [String] = [post.make, post.model].compactMap { value in
+            guard let value else { return nil }
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: " ")
+    }
+
     @ViewBuilder
     private var tileStageChip: some View {
         let label: String = post.isJailbreak ? "Jailbreak" : (post.stage == 0 ? "Stock" : "Stage \(post.stage)")
@@ -675,8 +701,7 @@ struct CommunityPreviewTile: View {
         Text(label.uppercased())
             .font(.system(size: 8, weight: .bold, design: .rounded))
             .foregroundStyle(tint)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 6).padding(.vertical, 3)
             .background(Capsule().fill(tint.opacity(0.15)))
             .overlay(Capsule().stroke(tint.opacity(0.65), lineWidth: 1))
     }
@@ -685,8 +710,7 @@ struct CommunityPreviewTile: View {
         Text("\(post.horsepower) HP")
             .font(.system(size: 8, weight: .bold, design: .rounded))
             .foregroundStyle(Color.cyan)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 6).padding(.vertical, 3)
             .background(Capsule().fill(Color.cyan.opacity(0.15)))
             .overlay(Capsule().stroke(Color.cyan.opacity(0.6), lineWidth: 1))
     }
@@ -768,7 +792,7 @@ private struct StatCapsule: View {
     }
 }
 
-// MARK: - Expanded card (inline, used inside the overlay)
+// MARK: - Expanded card inline
 
 private struct CarExpandedCardInline: View {
     let car: Car
@@ -836,16 +860,12 @@ private struct CarExpandedCardInline: View {
 
                     if let make = car.make, !make.isEmpty, let model = car.model, !model.isEmpty {
                         Text("\(make) \(model)")
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
+                            .font(.footnote).foregroundStyle(.white.opacity(0.85))
+                            .multilineTextAlignment(.center).padding(.horizontal, 16)
                     } else {
                         Text(car.description)
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.8))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
+                            .font(.footnote).foregroundStyle(.white.opacity(0.8))
+                            .multilineTextAlignment(.center).padding(.horizontal, 16)
                     }
                 }
                 .padding(.top, 8)
@@ -873,14 +893,9 @@ private struct CarExpandedCardInline: View {
                 .padding(14)
                 .background(
                     RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(
-                                    LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)],
-                                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                                    lineWidth: 1
-                                )
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 16)
+                            .stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.05)],
+                                                   startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
                 )
 
                 Spacer(minLength: 6)
@@ -891,8 +906,7 @@ private struct CarExpandedCardInline: View {
                         GlassButton(title: "Specs") { hapticTap(); onSpecs() }
                         GlassButton(title: "Share") { hapticTap() }
                     }
-                    GlassButton(title: "Close") { onClose() }
-                        .padding(.top, 2)
+                    GlassButton(title: "Close") { onClose() }.padding(.top, 2)
                 }
             }
             .padding(20)
@@ -965,16 +979,10 @@ private struct GlassButton: View {
         Button(action: { action?() }) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 10).padding(.vertical, 8)
                 .background(Capsule().fill(.ultraThinMaterial))
-                .overlay(
-                    Capsule().stroke(
-                        LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing),
-                        lineWidth: 1
-                    )
-                )
+                .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                                                         startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
                 .foregroundStyle(.white)
         }
         .buttonStyle(.plain)
@@ -998,9 +1006,7 @@ private struct HoloShimmerMask: View {
         .scaleEffect(x: 1.8)
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) { phase = 1 } }
-        .blendMode(.screen)
-        .opacity(0.6)
-        .allowsHitTesting(false)
+        .blendMode(.screen).opacity(0.6).allowsHitTesting(false)
     }
 }
 
@@ -1011,61 +1017,40 @@ private struct PopupCard<Content: View>: View {
     var onClose: () -> Void
     var body: some View {
         ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-                .onTapGesture { onClose() }
-
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture { onClose() }
             VStack(spacing: 0) {
                 content
-                    .frame(maxWidth: .infinity)
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color("EmpireMint").opacity(0.12))
-                            .background(.ultraThinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(
-                                LinearGradient(colors: [Color.white.opacity(0.3), Color.white.opacity(0.07)],
-                                               startPoint: .topLeading, endPoint: .bottomTrailing),
-                                lineWidth: 1
-                            )
-                    )
+                    .frame(maxWidth: .infinity).padding(14)
+                    .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color("EmpireMint").opacity(0.12))
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous)))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(LinearGradient(colors: [Color.white.opacity(0.3), Color.white.opacity(0.07)],
+                                               startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
                 Divider().background(Color.white.opacity(0.15))
                 Button(action: onClose) {
-                    Text("Close")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                    Text("Close").font(.caption.weight(.semibold))
+                        .padding(.horizontal, 16).padding(.vertical, 10)
                         .background(Capsule().fill(.ultraThinMaterial))
                         .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1))
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 10)
+                        .foregroundStyle(.white).padding(.vertical, 10)
                 }
                 .buttonStyle(.plain)
             }
             .frame(maxWidth: 360, maxHeight: 420)
             .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(.ultraThinMaterial))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(
-                        LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing),
-                        lineWidth: 1
-                    )
-            )
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
             .shadow(color: Color("EmpireMint").opacity(0.25), radius: 18, x: 0, y: 10)
             .padding(.horizontal, 24)
         }
         .transition(.opacity)
     }
 }
-
-// SpecsListView and ModsListView are defined in ExpandedCarView.swift — no redeclaration needed here.
 
 // MARK: - Helpers
 
@@ -1078,9 +1063,7 @@ private func stageTint(for stage: Int) -> Color {
     }
 }
 
-private func hapticTap() {
-    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-}
+private func hapticTap() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
 
 private func loadPhotoDataFromDisk(fileName: String?) -> Data? {
     guard let fileName else { return nil }
@@ -1092,7 +1075,6 @@ private func loadPhotoDataFromDisk(fileName: String?) -> Data? {
 
 struct CarsView_Previews: PreviewProvider {
     static var previews: some View {
-        CarsView()
-            .preferredColorScheme(.dark)
+        CarsView().preferredColorScheme(.dark)
     }
 }

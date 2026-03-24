@@ -16,6 +16,9 @@
 		7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */; };
 		7020AB952F12EEFD0082F480 /* CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8F2F12EECA0082F480 /* CartView.swift */; };
 		7020AB962F12EEFD0082F480 /* Cart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8B2F12EEB30082F480 /* Cart.swift */; };
+		7029E8F42F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
+		7029E8F52F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
+		7029E8F62F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
 		7036AA612F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
 		7036AA622F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
 		7036AA632F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
@@ -269,6 +272,7 @@
 		7020AB8B2F12EEB30082F480 /* Cart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cart.swift; sourceTree = "<group>"; };
 		7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
 		7020AB8F2F12EECA0082F480 /* CartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartView.swift; sourceTree = "<group>"; };
+		7029E8F32F71F10E00F44189 /* CommentSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentSheetView.swift; sourceTree = "<group>"; };
 		7036AA602F45562A009F57DB /* VIP.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = VIP.storekit; sourceTree = "<group>"; };
 		7039BA1C2F47521800004437 /* LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStore.swift; sourceTree = "<group>"; };
 		7039BA202F475FAC00004437 /* SafeCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeCollection.swift; sourceTree = "<group>"; };
@@ -463,6 +467,7 @@
 		70A016FF2F0DF49000A084C2 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				7029E8F32F71F10E00F44189 /* CommentSheetView.swift */,
 				7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */,
 				70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */,
 				704E4B912F11E5A800AB0A5D /* MerchListView.swift */,
@@ -719,6 +724,7 @@
 			files = (
 				707D0C922F4551AE00521AA5 /* StoreKitManager.swift in Sources */,
 				70A0171B2F0DF49000A084C2 /* MeetsView.swift in Sources */,
+				7029E8F52F71F10E00F44189 /* CommentSheetView.swift in Sources */,
 				7020AB912F12EEFD0082F480 /* CartView.swift in Sources */,
 				7020AB922F12EEFD0082F480 /* Cart.swift in Sources */,
 				703F05EF2F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
@@ -845,6 +851,7 @@
 				70B0CF6E2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
 				70A017112F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
 				70C0A6882F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
+				7029E8F62F71F10E00F44189 /* CommentSheetView.swift in Sources */,
 				70E699D72F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
 				703F05DA2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
 				70B0CF662F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
@@ -880,6 +887,7 @@
 				703F05BE2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
 				704E4B902F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
+				7029E8F42F71F10E00F44189 /* CommentSheetView.swift in Sources */,
 				7020AB952F12EEFD0082F480 /* CartView.swift in Sources */,
 				7089A7CC2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				7020AB962F12EEFD0082F480 /* Cart.swift in Sources */,
