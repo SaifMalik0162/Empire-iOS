@@ -73,7 +73,7 @@ struct RewardsView: View {
                                     .font(.title3.weight(.bold))
                                     .foregroundColor(.white)
                                 Spacer()
-                                Text("Tier: \(currentTier)")
+                                Text("Coming Soon")
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.white.opacity(0.9))
                                     .padding(.horizontal, 10)
@@ -88,7 +88,7 @@ struct RewardsView: View {
                                     .frame(width: 96, height: 96)
 
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("\(currentPoints) points")
+                                    Text("Coming Soon")
                                         .font(.title3.bold())
                                         .foregroundStyle(.white)
                                     ProgressView(value: progressToNextTier)
@@ -112,7 +112,7 @@ struct RewardsView: View {
                             // VIP banner
                             HStack(spacing: 10) {
                                 Image(systemName: "crown.fill").foregroundStyle(Color("EmpireMint"))
-                                MarqueeText(text: store.isVIP ? "VIP active: Earn 2× points on eligible community actions" : "Join VIP to earn 2× points on eligible community actions")
+                                MarqueeText(text: "Rewards are not live yet. Point values and milestones shown here are placeholders.")
                                     .font(.footnote.weight(.semibold))
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -173,7 +173,7 @@ struct RewardsView: View {
                     .background(glassCard(cornerRadius: 22))
                     .padding(.horizontal, 16)
 
-                    Text("Rewards system is a work in progress. Values shown here are for preview only.")
+                    Text("Rewards is coming soon. This screen is a preview and does not reflect a live points system yet.")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.6))
                         .padding(.horizontal, 20)

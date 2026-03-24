@@ -99,21 +99,19 @@ struct VIPJoinView: View {
     }
 
     private var cta: some View {
-        Button(action: {
-            Task { await store.purchaseVIP() }
-        }) {
+        Button(action: {}) {
             HStack {
-                if store.purchaseInFlight { ProgressView().tint(.black) }
-                Text(store.purchaseInFlight ? "Purchasing…" : (vipProduct?.displayPrice != nil ? "Join VIP — \(vipProduct!.displayPrice)" : "Join VIP"))
+                Text("Coming Soon")
                     .font(.headline)
             }
             .frame(maxWidth: .infinity)
             .padding()
             .background(.yellow, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .foregroundStyle(.black)
-            .shadow(color: .yellow.opacity(0.5), radius: 12, x: 0, y: 8)
+            .shadow(color: .yellow.opacity(0.25), radius: 12, x: 0, y: 8)
         }
-        .disabled(store.purchaseInFlight)
+        .disabled(true)
+        .opacity(0.7)
     }
 
     private var restore: some View {
