@@ -10,6 +10,7 @@ struct CommunityPost: Identifiable, Equatable {
     let carId: UUID?
     let caption: String?
     let photoPath: String?
+    let photoPaths: [String]
     let make: String?
     let model: String?
     let carName: String
@@ -46,6 +47,7 @@ private struct SBCommunityPostRow: Codable {
     let car_id: String?
     let caption: String?
     let photo_path: String?
+    let photo_paths: [String]?
     let make: String?
     let model: String?
     let car_name: String
@@ -63,6 +65,7 @@ private struct SBInsertPost: Encodable {
     let car_id: String?
     let caption: String?
     let photo_path: String?
+    let photo_paths: [String]?
     let make: String?
     let model: String?
     let car_name: String
@@ -102,6 +105,12 @@ private struct SBInsertComment: Encodable {
     let body: String
 }
 
+private struct SBInsertCommentUUID: Encodable {
+    let post_id: UUID
+    let user_id: UUID
+    let body: String
+}
+
 private struct SBCommentCountRow: Codable {
     let post_id: String
 }
@@ -132,7 +141,11 @@ final class SupabaseCommunityService {
             .from("community_posts")
             .select()
         let filteredQuery = if let authorUserId, !authorUserId.isEmpty {
-            baseQuery.eq("user_id", value: authorUserId)
+            if let authorUUID = UUID(uuidString: authorUserId) {
+                baseQuery.eq("user_id", value: authorUUID)
+            } else {
+                baseQuery.eq("user_id", value: authorUserId)
+            }
         } else {
             baseQuery
         }
@@ -157,7 +170,7 @@ final class SupabaseCommunityService {
                     .from("post_likes")
                     .select("post_id, user_id")
                     .eq("user_id", value: userUUID)
-                    .in("post_id", values: postIds)
+                    .in("post_id", values: postUUIDs)
                     .execute()
                     .value
             } else {
@@ -201,12 +214,23 @@ final class SupabaseCommunityService {
         let userIds = Array(Set(rows.map { $0.user_id }))
         let profilesByUserId: [String: SBProfileRow]
         do {
-            let profiles: [SBProfileRow] = try await client
-                .from("profiles")
-                .select("id, username, avatar_path")
-                .in("id", values: userIds)
-                .execute()
-                .value
+            let profiles: [SBProfileRow]
+            let userUUIDs = userIds.compactMap(UUID.init(uuidString:))
+            if userUUIDs.count == userIds.count, !userUUIDs.isEmpty {
+                profiles = try await client
+                    .from("profiles")
+                    .select("id, username, avatar_path")
+                    .in("id", values: userUUIDs)
+                    .execute()
+                    .value
+            } else {
+                profiles = try await client
+                    .from("profiles")
+                    .select("id, username, avatar_path")
+                    .in("id", values: userIds)
+                    .execute()
+                    .value
+            }
             profilesByUserId = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
         } catch {
             profilesByUserId = [:]
@@ -221,6 +245,7 @@ final class SupabaseCommunityService {
                 carId: row.car_id.flatMap { UUID(uuidString: $0) },
                 caption: row.caption,
                 photoPath: row.photo_path,
+                photoPaths: normalizedPhotoPaths(primary: row.photo_path, paths: row.photo_paths),
                 make: row.make,
                 model: row.model,
                 carName: row.car_name,
@@ -244,7 +269,11 @@ final class SupabaseCommunityService {
             .from("community_posts")
             .select("id", head: true, count: .exact)
         let filteredQuery = if let authorUserId, !authorUserId.isEmpty {
-            baseQuery.eq("user_id", value: authorUserId)
+            if let authorUUID = UUID(uuidString: authorUserId) {
+                baseQuery.eq("user_id", value: authorUUID)
+            } else {
+                baseQuery.eq("user_id", value: authorUserId)
+            }
         } else {
             baseQuery
         }
@@ -255,36 +284,41 @@ final class SupabaseCommunityService {
 
     // MARK: - Share post
 
-    func sharePost(car: Car, caption: String?, currentUserId: String, photoData: Data?) async throws -> CommunityPost {
-        var photoPath: String? = nil
+    func sharePost(car: Car, caption: String?, currentUserId: String, photoDataList: [Data]?) async throws -> CommunityPost {
+        var photoPaths: [String] = []
 
-        if let data = photoData {
-            let compressed = compressImageData(data, maxBytes: 900_000) ?? data
-            let path = "\(currentUserId.lowercased())/community_\(UUID().uuidString).jpg"
-            do {
-                try await client.storage
-                    .from(photosBucket)
-                    .upload(path, data: compressed, options: FileOptions(
-                        cacheControl: "3600",
-                        contentType: "image/jpeg",
-                        upsert: false
-                    ))
-                photoPath = path
-            } catch {
+        if let photoDataList {
+            for data in photoDataList.prefix(5) {
+                let compressed = compressImageData(data, maxBytes: 900_000) ?? data
+                let path = "\(currentUserId.lowercased())/community_\(UUID().uuidString).jpg"
+                do {
+                    try await client.storage
+                        .from(photosBucket)
+                        .upload(path, data: compressed, options: FileOptions(
+                            cacheControl: "3600",
+                            contentType: "image/jpeg",
+                            upsert: false
+                        ))
+                    photoPaths.append(path)
+                } catch {
+                }
             }
         }
 
-        if photoPath == nil, let existingFileName = car.photoFileName {
+        if photoPaths.isEmpty, let existingFileName = car.photoFileName {
             let existing = "\(currentUserId.lowercased())/\(car.id.uuidString).jpg"
-            photoPath = existing
+            photoPaths = [existing]
             _ = existingFileName
         }
+
+        let primaryPhotoPath = photoPaths.first
 
         let insert = SBInsertPost(
             user_id: currentUserId,
             car_id: car.id.uuidString,
             caption: caption?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : caption?.trimmingCharacters(in: .whitespacesAndNewlines),
-            photo_path: photoPath,
+            photo_path: primaryPhotoPath,
+            photo_paths: photoPaths.isEmpty ? nil : photoPaths,
             make: car.make,
             model: car.model,
             car_name: car.name,
@@ -311,6 +345,7 @@ final class SupabaseCommunityService {
             carId: UUID(uuidString: row.car_id ?? ""),
             caption: row.caption,
             photoPath: row.photo_path,
+            photoPaths: normalizedPhotoPaths(primary: row.photo_path, paths: row.photo_paths),
             make: row.make,
             model: row.model,
             carName: row.car_name,
@@ -377,7 +412,7 @@ final class SupabaseCommunityService {
         let rows: [SBCommentRow] = try await client
             .from("post_comments")
             .select()
-            .eq("post_id", value: postId.uuidString)
+            .eq("post_id", value: postId)
             .order("created_at", ascending: true)
             .execute()
             .value
@@ -387,12 +422,23 @@ final class SupabaseCommunityService {
         let userIds = Array(Set(rows.map { $0.user_id }))
         let profilesByUserId: [String: SBProfileRow]
         do {
-            let profiles: [SBProfileRow] = try await client
-                .from("profiles")
-                .select("id, username, avatar_path")
-                .in("id", values: userIds)
-                .execute()
-                .value
+            let profiles: [SBProfileRow]
+            let userUUIDs = userIds.compactMap(UUID.init(uuidString:))
+            if userUUIDs.count == userIds.count, !userUUIDs.isEmpty {
+                profiles = try await client
+                    .from("profiles")
+                    .select("id, username, avatar_path")
+                    .in("id", values: userUUIDs)
+                    .execute()
+                    .value
+            } else {
+                profiles = try await client
+                    .from("profiles")
+                    .select("id, username, avatar_path")
+                    .in("id", values: userIds)
+                    .execute()
+                    .value
+            }
             profilesByUserId = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
         } catch {
             profilesByUserId = [:]
@@ -417,18 +463,33 @@ final class SupabaseCommunityService {
 
     /// Posts a new comment and returns it enriched with the current user's profile.
     func postComment(postId: UUID, userId: String, body: String) async throws -> PostComment {
-        let insert = SBInsertComment(
-            post_id: postId.uuidString,
-            user_id: userId,
-            body: body.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
-
-        let rows: [SBCommentRow] = try await client
-            .from("post_comments")
-            .insert(insert)
-            .select()
-            .execute()
-            .value
+        let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rows: [SBCommentRow]
+        if let userUUID = UUID(uuidString: userId) {
+            let insert = SBInsertCommentUUID(
+                post_id: postId,
+                user_id: userUUID,
+                body: trimmedBody
+            )
+            rows = try await client
+                .from("post_comments")
+                .insert(insert)
+                .select()
+                .execute()
+                .value
+        } else {
+            let insert = SBInsertComment(
+                post_id: postId.uuidString,
+                user_id: userId,
+                body: trimmedBody
+            )
+            rows = try await client
+                .from("post_comments")
+                .insert(insert)
+                .select()
+                .execute()
+                .value
+        }
 
         guard let row = rows.first,
               let date = parseDate(row.created_at),
@@ -438,13 +499,24 @@ final class SupabaseCommunityService {
         }
 
         // Fetch the poster's own profile for the returned comment
-        let profileRows: [SBProfileRow] = (try? await client
-            .from("profiles")
-            .select("id, username, avatar_path")
-            .eq("id", value: userId)
-            .limit(1)
-            .execute()
-            .value) ?? []
+        let profileRows: [SBProfileRow]
+        if let userUUID = UUID(uuidString: userId) {
+            profileRows = (try? await client
+                .from("profiles")
+                .select("id, username, avatar_path")
+                .eq("id", value: userUUID)
+                .limit(1)
+                .execute()
+                .value) ?? []
+        } else {
+            profileRows = (try? await client
+                .from("profiles")
+                .select("id, username, avatar_path")
+                .eq("id", value: userId)
+                .limit(1)
+                .execute()
+                .value) ?? []
+        }
         let profile = profileRows.first
 
         return PostComment(
@@ -483,6 +555,23 @@ final class SupabaseCommunityService {
 
     private func parseDate(_ value: String) -> Date? {
         isoFull.date(from: value) ?? isoBasic.date(from: value)
+    }
+
+    private func normalizedPhotoPaths(primary: String?, paths: [String]?) -> [String] {
+        var result: [String] = []
+        if let primary {
+            let trimmed = primary.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                result.append(trimmed)
+            }
+        }
+        for path in paths ?? [] {
+            let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty, !result.contains(trimmed) {
+                result.append(trimmed)
+            }
+        }
+        return result
     }
 
     private func compressImageData(_ data: Data, maxBytes: Int) -> Data? {

@@ -100,7 +100,6 @@ struct ExploreFeedView: View {
                         post: post,
                         currentUserId: currentUserId,
                         communityVM: vm,
-                        photoURL: vm.photoURL(for: post),
                         avatarURL: vm.avatarURL(for: post)
                     )
                     .padding(.horizontal, 16)
@@ -310,7 +309,6 @@ struct FeedPostCard: View {
     let post: CommunityPost
     let currentUserId: String
     @ObservedObject var communityVM: CommunityViewModel
-    let photoURL: URL?
     let avatarURL: URL?
     var allowsProfileNavigation = true
 
@@ -321,8 +319,11 @@ struct FeedPostCard: View {
     @State private var showComments = false
     @State private var showUserPosts = false
     @State private var tilt: CGSize = .zero
+    @State private var currentPhotoIndex = 0
+    @State private var photoDragOffset: CGFloat = 0
 
     private var isOwnPost: Bool { post.userId == currentUserId }
+    private var photoURLs: [URL] { communityVM.photoURLs(for: post) }
 
     private var stageAccent: Color {
         if post.isJailbreak { return .purple }
@@ -354,17 +355,40 @@ struct FeedPostCard: View {
 
             // Hero photo
             Group {
-                if let url = photoURL {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let img):
-                            img.resizable().scaledToFill()
-                                .frame(maxWidth: .infinity).frame(height: 340).clipped().opacity(0.62)
-                        case .empty:
-                            ZStack { Color.white.opacity(0.04); ProgressView().tint(Color("EmpireMint")) }.frame(height: 340)
-                        default:
-                            Color.white.opacity(0.04).frame(height: 340)
+                if !photoURLs.isEmpty {
+                    if photoURLs.count == 1, let url = photoURLs.first {
+                        communityPhoto(url: url)
+                    } else {
+                        GeometryReader { geo in
+                            HStack(spacing: 0) {
+                                ForEach(Array(photoURLs.enumerated()), id: \.offset) { pair in
+                                    communityPhoto(url: pair.element)
+                                        .frame(width: geo.size.width, height: 340)
+                                }
+                            }
+                            .offset(x: -CGFloat(currentPhotoIndex) * geo.size.width + photoDragOffset)
+                            .animation(.spring(response: 0.28, dampingFraction: 0.85), value: currentPhotoIndex)
+                            .contentShape(Rectangle())
+                            .highPriorityGesture(
+                                DragGesture(minimumDistance: 12)
+                                    .onChanged { value in
+                                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                                        photoDragOffset = value.translation.width
+                                    }
+                                    .onEnded { value in
+                                        defer { photoDragOffset = 0 }
+                                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                                        let threshold = geo.size.width * 0.18
+                                        if value.translation.width < -threshold {
+                                            currentPhotoIndex = min(currentPhotoIndex + 1, photoURLs.count - 1)
+                                        } else if value.translation.width > threshold {
+                                            currentPhotoIndex = max(currentPhotoIndex - 1, 0)
+                                        }
+                                    }
+                            )
                         }
+                        .frame(height: 340)
+                        .clipped()
                     }
                 } else {
                     ZStack {
@@ -381,134 +405,44 @@ struct FeedPostCard: View {
                                startPoint: .top, endPoint: .bottom)
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             )
+            .overlay(alignment: .topTrailing) {
+                if photoURLs.count > 1 {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.stack.3d.up.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("\(currentPhotoIndex + 1)/\(photoURLs.count)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Color.black.opacity(0.42)))
+                    .padding(14)
+                }
+            }
+            .overlay {
+                if photoURLs.count > 1 {
+                    Rectangle()
+                        .fill(Color.clear)
+                        .contentShape(Rectangle())
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 180)
+                        .frame(maxHeight: .infinity, alignment: .center)
+                        .highPriorityGesture(photoSwipeGesture)
+                }
+            }
             .overlay(heartBurst)
             .onTapGesture(count: 2) { doubleTapLike() }
 
-            // Overlaid content
-            VStack(spacing: 0) {
-                // Top — avatar + username + menu
-                HStack(spacing: 10) {
-                    profileIdentity
-                    Spacer()
-                    if isOwnPost {
-                        Menu {
-                            Button(role: .destructive) { showDeleteConfirm = true } label: {
-                                Label("Delete post", systemImage: "trash")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle.fill")
-                                .font(.system(size: 20)).foregroundStyle(.white.opacity(0.75))
-                                .shadow(color: .black.opacity(0.5), radius: 4)
-                        }
-                    }
-                }
-                .padding(.horizontal, 16).padding(.top, 16)
+            topOverlay
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-                Spacer()
-
-                // Bottom — car info, chips, actions, caption
-                VStack(alignment: .leading, spacing: 6) {
-                    // Car title + secondary make/model
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(post.carName)
-                                .font(.system(.title3, design: .rounded).weight(.semibold))
-                                .foregroundStyle(.white)
-                                .shadow(color: .black.opacity(0.5), radius: 4)
-                                .lineLimit(1)
-                            if let cls = post.vehicleClass {
-                                Text(cls.components(separatedBy: " - ").first ?? "")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.5))
-                            }
-                        }
-
-                        if let makeModelLine, !makeModelLine.isEmpty, makeModelLine != post.carName {
-                            Text(makeModelLine)
-                                .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.72))
-                                .lineLimit(1)
-                                .shadow(color: .black.opacity(0.35), radius: 3)
-                        }
-                    }
-                    .padding(.top, 10)
-
-                    // Chips + action buttons
-                    HStack(spacing: 7) {
-                        // Stage chip
-                        Text(stageLabel.uppercased())
-                            .font(.system(size: 9, weight: .bold, design: .rounded)).foregroundStyle(stageAccent)
-                            .padding(.horizontal, 9).padding(.vertical, 6)
-                            .background(Capsule().fill(stageAccent.opacity(0.15)))
-                            .overlay(Capsule().stroke(stageAccent.opacity(0.7), lineWidth: 1))
-
-                        // HP chip
-                        Text("\(post.horsepower) HP")
-                            .font(.system(size: 9, weight: .bold, design: .rounded)).foregroundStyle(Color.cyan)
-                            .padding(.horizontal, 9).padding(.vertical, 6)
-                            .background(Capsule().fill(Color.cyan.opacity(0.15)))
-                            .overlay(Capsule().stroke(Color.cyan.opacity(0.6), lineWidth: 1))
-
-                        Spacer()
-
-                        // Like button
-                        Button { Task { await communityVM.toggleLike(postId: post.id) } } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: post.isLiked ? "heart.fill" : "heart")
-                                    .foregroundStyle(post.isLiked ? Color("EmpireMint") : .white.opacity(0.85))
-                                if post.likesCount > 0 {
-                                    Text("\(post.likesCount)")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.white.opacity(0.85))
-                                }
-                            }
-                            .font(.system(size: 15))
-                            .padding(.horizontal, 10).padding(.vertical, 7)
-                            .background(Capsule().fill(.ultraThinMaterial))
-                            .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-
-                        // Comment button
-                        Button { showComments = true } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "bubble.left")
-                                    .foregroundStyle(.white.opacity(0.85))
-                                if post.commentsCount > 0 {
-                                    Text("\(post.commentsCount)")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.white.opacity(0.85))
-                                }
-                            }
-                            .font(.system(size: 15))
-                            .padding(.horizontal, 10).padding(.vertical, 7)
-                            .background(Capsule().fill(.ultraThinMaterial))
-                            .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-
-                        // Share
-                        if let shareURL = URL(string: "https://empireontario.shop/cars/\(post.id.uuidString)") {
-                            ShareLink(item: shareURL) {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 14)).foregroundStyle(.white.opacity(0.85))
-                                    .padding(8)
-                                    .background(Circle().fill(.ultraThinMaterial))
-                                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
-                            }
-                        }
-                    }
-
-                    // Caption
-                    if let caption = post.caption, !caption.isEmpty {
-                        Text(caption)
-                            .font(.subheadline).foregroundStyle(.white.opacity(0.85)).lineLimit(3)
-                            .shadow(color: .black.opacity(0.4), radius: 4)
-                    }
-                }
-                .padding(.horizontal, 16).padding(.bottom, 18).padding(.top, 10)
-            }
-            .frame(height: 340)
+            bottomOverlay
+                .padding(.horizontal, 16)
+                .padding(.bottom, 18)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
 
             // Stage accent glow
             RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -620,6 +554,164 @@ struct FeedPostCard: View {
         } else {
             content
         }
+    }
+
+    private var topOverlay: some View {
+        HStack(spacing: 10) {
+            profileIdentity
+            Spacer()
+            if isOwnPost {
+                Menu {
+                    Button(role: .destructive) { showDeleteConfirm = true } label: {
+                        Label("Delete post", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .shadow(color: .black.opacity(0.5), radius: 4)
+                }
+            }
+        }
+    }
+
+    private var bottomOverlay: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(post.carName)
+                        .font(.system(.title3, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.5), radius: 4)
+                        .lineLimit(1)
+                    if let cls = post.vehicleClass {
+                        Text(cls.components(separatedBy: " - ").first ?? "")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+
+                if let makeModelLine, !makeModelLine.isEmpty, makeModelLine != post.carName {
+                    Text(makeModelLine)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .lineLimit(1)
+                        .shadow(color: .black.opacity(0.35), radius: 3)
+                }
+            }
+            .padding(.top, 10)
+
+            HStack(spacing: 7) {
+                Text(stageLabel.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(stageAccent)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(stageAccent.opacity(0.15)))
+                    .overlay(Capsule().stroke(stageAccent.opacity(0.7), lineWidth: 1))
+
+                Text("\(post.horsepower) HP")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.cyan)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.cyan.opacity(0.15)))
+                    .overlay(Capsule().stroke(Color.cyan.opacity(0.6), lineWidth: 1))
+
+                Spacer()
+
+                Button { Task { await communityVM.toggleLike(postId: post.id) } } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: post.isLiked ? "heart.fill" : "heart")
+                            .foregroundStyle(post.isLiked ? Color("EmpireMint") : .white.opacity(0.85))
+                        if post.likesCount > 0 {
+                            Text("\(post.likesCount)")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.85))
+                        }
+                    }
+                    .font(.system(size: 15))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(.ultraThinMaterial))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                Button { showComments = true } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "bubble.left")
+                            .foregroundStyle(.white.opacity(0.85))
+                        if post.commentsCount > 0 {
+                            Text("\(post.commentsCount)")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.85))
+                        }
+                    }
+                    .font(.system(size: 15))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(.ultraThinMaterial))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                if let shareURL = URL(string: "https://empireontario.shop/cars/\(post.id.uuidString)") {
+                    ShareLink(item: shareURL) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(8)
+                            .background(Circle().fill(.ultraThinMaterial))
+                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    }
+                }
+            }
+
+            if let caption = post.caption, !caption.isEmpty {
+                Text(caption)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(3)
+                    .shadow(color: .black.opacity(0.4), radius: 4)
+            }
+        }
+    }
+
+    private func communityPhoto(url: URL) -> some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .success(let img):
+                img.resizable().scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 340)
+                    .clipped()
+                    .opacity(0.62)
+            case .empty:
+                ZStack { Color.white.opacity(0.04); ProgressView().tint(Color("EmpireMint")) }
+                    .frame(height: 340)
+            default:
+                Color.white.opacity(0.04).frame(height: 340)
+            }
+        }
+    }
+
+    private var photoSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                photoDragOffset = value.translation.width
+            }
+            .onEnded { value in
+                defer { photoDragOffset = 0 }
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                let threshold: CGFloat = 60
+                if value.translation.width < -threshold {
+                    currentPhotoIndex = min(currentPhotoIndex + 1, photoURLs.count - 1)
+                } else if value.translation.width > threshold {
+                    currentPhotoIndex = max(currentPhotoIndex - 1, 0)
+                }
+            }
     }
 
     private var heartBurst: some View {

@@ -78,12 +78,12 @@ final class CommunityViewModel: ObservableObject {
 
     // MARK: - Share
 
-    func sharePost(car: Car, caption: String?, photoData: Data?) async throws -> CommunityPost {
+    func sharePost(car: Car, caption: String?, photoDataList: [Data]?) async throws -> CommunityPost {
         let userId = currentUserId
         guard !userId.isEmpty else {
             throw NSError(domain: "Community", code: 2, userInfo: [NSLocalizedDescriptionKey: "Not signed in."])
         }
-        let post = try await service.sharePost(car: car, caption: caption, currentUserId: userId, photoData: photoData)
+        let post = try await service.sharePost(car: car, caption: caption, currentUserId: userId, photoDataList: photoDataList)
         posts.insert(post, at: 0)
         if authorUserId == nil || authorUserId == userId {
             totalPostsCount += 1
@@ -148,6 +148,11 @@ final class CommunityViewModel: ObservableObject {
     func photoURL(for post: CommunityPost) -> URL? {
         guard let path = post.photoPath else { return nil }
         return service.publicURL(for: path)
+    }
+
+    func photoURLs(for post: CommunityPost) -> [URL] {
+        let resolvedPaths = post.photoPaths.isEmpty ? (post.photoPath.map { [$0] } ?? []) : post.photoPaths
+        return resolvedPaths.compactMap(service.publicURL(for:))
     }
 
     func avatarURL(for post: CommunityPost) -> URL? {

@@ -15,8 +15,8 @@ struct ShareToFeedSheet: View {
     @State private var caption: String = ""
     @State private var isPosting = false
     @State private var errorMessage: String? = nil
-    @State private var selectedPhotoItem: PhotosPickerItem? = nil
-    @State private var overridePhotoData: Data? = nil
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var overridePhotoDataList: [Data] = []
 
     private var selectedCar: Car? { userCars[safe: selectedCarIndex] }
 
@@ -72,12 +72,19 @@ struct ShareToFeedSheet: View {
             // Pre-select the car the user was looking at in the garage carousel
             selectedCarIndex = min(preselectedIndex, max(0, userCars.count - 1))
         }
-        .onChange(of: selectedPhotoItem) { _, item in
-            guard let item else { return }
+        .onChange(of: selectedPhotoItems) { _, items in
+            guard !items.isEmpty else {
+                overridePhotoDataList = []
+                return
+            }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self) {
-                    await MainActor.run { overridePhotoData = data }
+                var loaded: [Data] = []
+                for item in items.prefix(5) {
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        loaded.append(data)
+                    }
                 }
+                await MainActor.run { overridePhotoDataList = loaded }
             }
         }
         .preferredColorScheme(.dark)
@@ -115,7 +122,7 @@ struct ShareToFeedSheet: View {
                         ShareVehicleRow(
                             car: userCars[idx],
                             isSelected: idx == selectedCarIndex,
-                            overridePhotoData: idx == selectedCarIndex ? overridePhotoData : nil
+                            overridePhotoData: idx == selectedCarIndex ? overridePhotoDataList.first : nil
                         )
                         .onTapGesture {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -150,7 +157,7 @@ struct ShareToFeedSheet: View {
 
             HStack(spacing: 12) {
                 Group {
-                    if let data = overridePhotoData, let ui = UIImage(data: data) {
+                    if let data = overridePhotoDataList.first, let ui = UIImage(data: data) {
                         Image(uiImage: ui).resizable().scaledToFill()
                             .frame(width: 72, height: 54).clipShape(RoundedRectangle(cornerRadius: 10))
                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color("EmpireMint").opacity(0.5), lineWidth: 1.5))
@@ -171,10 +178,10 @@ struct ShareToFeedSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 5, matching: .images) {
                         HStack(spacing: 6) {
                             Image(systemName: "photo.badge.plus").font(.system(size: 13, weight: .semibold))
-                            Text(overridePhotoData == nil ? "Choose different photo" : "Change photo")
+                            Text(overridePhotoDataList.isEmpty ? "Choose photos" : "Change photos")
                                 .font(.caption.weight(.semibold))
                         }
                         .foregroundStyle(.white)
@@ -185,10 +192,10 @@ struct ShareToFeedSheet: View {
                                                    startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
                     }
 
-                    if overridePhotoData != nil {
+                    if !overridePhotoDataList.isEmpty {
                         Button {
-                            overridePhotoData = nil
-                            selectedPhotoItem = nil
+                            overridePhotoDataList = []
+                            selectedPhotoItems = []
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.uturn.backward").font(.system(size: 11))
@@ -202,7 +209,35 @@ struct ShareToFeedSheet: View {
                 Spacer()
             }
 
-            Text("Leave empty to automatically use the photo from your garage.")
+            if !overridePhotoDataList.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(overridePhotoDataList.enumerated()), id: \.offset) { pair in
+                            if let ui = UIImage(data: pair.element) {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(uiImage: ui)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 64, height: 64)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                                    if pair.offset == 0 {
+                                        Text("COVER")
+                                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color("EmpireMint"))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 4)
+                                            .background(Capsule().fill(.ultraThinMaterial))
+                                            .padding(6)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text("Choose up to 5 photos. The first photo will be used as the cover image.")
                 .font(.caption2).foregroundStyle(.white.opacity(0.4))
         }
         .glassCard()
@@ -254,7 +289,7 @@ struct ShareToFeedSheet: View {
                 let post = try await communityVM.sharePost(
                     car: car,
                     caption: caption.isEmpty ? nil : caption,
-                    photoData: overridePhotoData ?? loadCarPhotoData(for: car)
+                    photoDataList: overridePhotoDataList.isEmpty ? loadDefaultPhotoDataList(for: car) : overridePhotoDataList
                 )
                 await MainActor.run {
                     isPosting = false
@@ -272,10 +307,11 @@ struct ShareToFeedSheet: View {
         }
     }
 
-    private func loadCarPhotoData(for car: Car) -> Data? {
+    private func loadDefaultPhotoDataList(for car: Car) -> [Data]? {
         guard let fileName = car.photoFileName,
               let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
-        return try? Data(contentsOf: dir.appendingPathComponent(fileName))
+        guard let data = try? Data(contentsOf: dir.appendingPathComponent(fileName)) else { return nil }
+        return [data]
     }
 }
 
