@@ -488,7 +488,7 @@ private extension CarsView {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        ForEach(Array(communityVM.posts.prefix(6))) { post in
+                        ForEach(Array(communityVM.posts.prefix(3))) { post in
                             CommunityPreviewTile(
                                 post: post,
                                 photoURL: communityVM.photoURL(for: post)
