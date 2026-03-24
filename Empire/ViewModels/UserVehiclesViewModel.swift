@@ -4,6 +4,7 @@ import Combine
 import SwiftData
 import OSLog
 
+@MainActor
 final class UserVehiclesViewModel: ObservableObject {
     @Published var vehicles: [Car] = []
     var modelContext: ModelContext? = nil
