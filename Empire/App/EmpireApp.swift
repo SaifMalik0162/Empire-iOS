@@ -4,7 +4,7 @@ import SwiftData
 
 @main
 struct EmpireApp: App {
-    @StateObject private var authViewModel: AuthViewModel
+    @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var cart = Cart()
     @StateObject private var vehiclesVM = UserVehiclesViewModel()
     
@@ -12,7 +12,6 @@ struct EmpireApp: App {
     @State private var dismissObserver: AnyCancellable? = nil
 
     init() {
-        _authViewModel = StateObject(wrappedValue: AuthViewModel(autoCheckStatus: false))
         AppTelemetry.shared.configure()
     }
     
