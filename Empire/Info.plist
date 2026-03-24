@@ -21,5 +21,9 @@
 	<string>Empire Connect saves meet events to your calendar.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Empire Connect uses your camera to scan meet check-in QR codes.</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
 </dict>
 </plist>
