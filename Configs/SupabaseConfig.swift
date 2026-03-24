@@ -2,6 +2,8 @@ import Foundation
 
 enum SupabaseConfig {
     private static let cachePrefix = "supabase.config."
+    private static let bakedInURL = "https://matwihdeczmkdvsbuxvv.supabase.co"
+    private static let bakedInPublishableKey = "sb_publishable_Bd_9Istn0C4ep16Qg2M1RA_FCHJW4Bf"
 
     static let url: URL = {
         let rawValue = requiredValue(for: "SUPABASE_URL")
@@ -36,11 +38,27 @@ enum SupabaseConfig {
             return cachedValue
         }
 
+        if let bakedInValue = bakedInValue(for: key) {
+            cache(value: bakedInValue, for: key)
+            return bakedInValue
+        }
+
         fatalError("Missing \(key). Set via Configs/Secrets.xcconfig (preferred) or Xcode Scheme environment variables.")
     }
 
     private static func cache(value: String, for key: String) {
         UserDefaults.standard.set(value, forKey: cachePrefix + key)
+    }
+
+    private static func bakedInValue(for key: String) -> String? {
+        switch key {
+        case "SUPABASE_URL":
+            return bakedInURL
+        case "SUPABASE_ANON_KEY":
+            return bakedInPublishableKey
+        default:
+            return nil
+        }
     }
 
     private static func candidateBundles() -> [Bundle] {
