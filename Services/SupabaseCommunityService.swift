@@ -118,7 +118,7 @@ private struct SBCommentCountRow: Codable {
 // MARK: - Service
 
 final class SupabaseCommunityService {
-    private let client = SupabaseClientProvider.client
+    private var client: SupabaseClient { SupabaseClientProvider.client }
     private let photosBucket = "car-photos"
     private let avatarsBucket = "avatars"
 

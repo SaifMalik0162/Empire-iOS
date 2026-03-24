@@ -9,7 +9,7 @@ protocol ProfileStatsServiceProviding {
 }
 
 struct SupabaseProfileStatsService: ProfileStatsServiceProviding {
-    private let client = SupabaseClientProvider.client
+    private var client: SupabaseClient { SupabaseClientProvider.client }
     private let merchOrdersTable = "merch_orders"
 
     func countMeetRSVPs(for userId: String) async throws -> Int {

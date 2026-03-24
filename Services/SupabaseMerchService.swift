@@ -11,7 +11,7 @@ struct SBMerchRow: Codable, Equatable, Identifiable {
 }
 
 final class SupabaseMerchService {
-    private let supabaseClient: SupabaseClient = SupabaseClientProvider.shared
+    private var supabaseClient: SupabaseClient { SupabaseClientProvider.shared }
 
     func fetchMerch() async throws -> [MerchItem] {
         let rows: [SBMerchRow] = try await AppTelemetry.shared.measure(operation: "merch.fetch") {
