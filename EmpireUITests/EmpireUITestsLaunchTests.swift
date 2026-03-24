@@ -8,6 +8,8 @@
 import XCTest
 
 final class EmpireUITestsLaunchTests: XCTestCase {
+    private let supabaseURL = "https://matwihdeczmkdvsbuxvv.supabase.co"
+    private let supabaseAnonKey = "sb_publishable_Bd_9Istn0C4ep16Qg2M1RA_FCHJW4Bf"
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
@@ -20,6 +22,8 @@ final class EmpireUITestsLaunchTests: XCTestCase {
     @MainActor
     func testLaunch() throws {
         let app = XCUIApplication()
+        app.launchEnvironment["SUPABASE_URL"] = supabaseURL
+        app.launchEnvironment["SUPABASE_ANON_KEY"] = supabaseAnonKey
         app.launch()
 
         // Insert steps here to perform after app launch but before taking a screenshot,
