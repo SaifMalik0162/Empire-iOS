@@ -234,9 +234,9 @@ extension SupabaseCarsService: CarsServiceProviding {}
 
     func avatarPublicURLString(from avatarPath: String?) -> String? {
         guard let avatarPath, !avatarPath.isEmpty else { return nil }
-        let base = SupabaseConfig.url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let encodedPath = avatarPath.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? avatarPath
-        return "\(base)/storage/v1/object/public/avatars/\(encodedPath)"
+        return SupabaseClientProvider
+            .publicObjectURL(bucket: "avatars", path: avatarPath)?
+            .absoluteString
     }
     
     func refreshCarsFromBackendIfAuthenticated() async {

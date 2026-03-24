@@ -375,7 +375,9 @@ struct ProfileView: View {
                         .preferredColorScheme(.dark)
                 }
                 .sheet(isPresented: $showRecentBuy) {
-                    let recent = MerchCatalog.featured.first ?? MerchItem(name: "Empire Hoodie", price: "$78.00", imageName: "hoodiePlaceholder", category: .apparel)
+                    let recent = LocalStore.shared.fetchMerch(context: modelContext).first
+                        ?? MerchCatalog.featured.first
+                        ?? MerchItem(name: "Empire Hoodie", price: "$78.00", imageName: "hoodiePlaceholder", category: .apparel)
                     RecentBuyView(
                         item: recent,
                         variant: "Black / L",

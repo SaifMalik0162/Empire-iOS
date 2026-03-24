@@ -28,8 +28,23 @@ final class SupabaseMerchService {
 
     static func mapRowsToMerchItems(_ rows: [SBMerchRow]) -> [MerchItem] {
         rows.map { r in
-            let cat = MerchCategory(rawValue: r.category) ?? .apparel
-            return MerchItem(name: r.name, price: r.price_string, imageName: r.image_name, category: cat)
+            let normalizedCategory = r.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let cat: MerchCategory
+            switch normalizedCategory {
+            case "accessories":
+                cat = .accessories
+            case "banners":
+                cat = .banners
+            default:
+                cat = .apparel
+            }
+
+            return MerchItem(
+                name: r.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                price: r.price_string.trimmingCharacters(in: .whitespacesAndNewlines),
+                imageName: r.image_name.trimmingCharacters(in: .whitespacesAndNewlines),
+                category: cat
+            )
         }
     }
 }
