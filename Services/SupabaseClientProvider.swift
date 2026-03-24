@@ -7,7 +7,10 @@ enum SupabaseClientProvider {
             supabaseURL: SupabaseConfig.url,
             supabaseKey: SupabaseConfig.publishableKey,
             options: SupabaseClientOptions(
-                auth: .init(emitLocalSessionAsInitialSession: true)
+                auth: .init(
+                    storageKey: "empire-auth-token",
+                    emitLocalSessionAsInitialSession: true
+                )
             )
         )
         return client
