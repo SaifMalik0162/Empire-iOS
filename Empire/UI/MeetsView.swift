@@ -379,11 +379,13 @@ private struct MeetCard: View {
             }
             .padding(.leading, 4)
 
+            // Text + badge column
             VStack(alignment: .leading, spacing: 5) {
                 Text(meet.title)
                     .font(.system(.headline, design: .rounded).weight(.semibold))
                     .foregroundStyle(.white)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 6) {
                     Image(systemName: "location.fill")
@@ -402,24 +404,25 @@ private struct MeetCard: View {
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.65))
                 }
-            }
 
-            Spacer()
-
-            // Status badges
-            VStack(alignment: .trailing, spacing: 6) {
+                // Badge sits under the metadata rows
                 if isCheckedIn {
                     StatusBadge(label: "Checked In", color: Color("EmpireMint"))
+                        .padding(.top, 2)
                 } else if isRSVPed {
                     StatusBadge(label: "RSVP'd", color: .blue)
+                        .padding(.top, 2)
                 }
-
-                Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .animation(.spring(response: 0.3), value: expanded)
             }
-            .padding(.trailing, 6)
+
+            Spacer(minLength: 8)
+
+            // no badge competing here
+            Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.5))
+                .animation(.spring(response: 0.3), value: expanded)
+                .padding(.trailing, 6)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 16)

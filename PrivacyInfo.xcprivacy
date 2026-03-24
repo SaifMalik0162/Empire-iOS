@@ -2,5 +2,12 @@
   "NSPrivacyTracking": false,
   "NSPrivacyTrackingDomains": [],
   "NSPrivacyCollectedDataTypes": [],
-  "NSPrivacyAccessedAPITypes": []
+  "NSPrivacyAccessedAPITypes": [
+    {
+      "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+      "NSPrivacyAccessedAPITypeReasons": [
+        "CA92.1"
+      ]
+    }
+  ]
 }

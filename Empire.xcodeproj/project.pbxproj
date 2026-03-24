@@ -16,6 +16,9 @@
 		7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */; };
 		7020AB952F12EEFD0082F480 /* CartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8F2F12EECA0082F480 /* CartView.swift */; };
 		7020AB962F12EEFD0082F480 /* Cart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7020AB8B2F12EEB30082F480 /* Cart.swift */; };
+		7029E8F42F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
+		7029E8F52F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
+		7029E8F62F71F10E00F44189 /* CommentSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7029E8F32F71F10E00F44189 /* CommentSheetView.swift */; };
 		7036AA612F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
 		7036AA622F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
 		7036AA632F45562A009F57DB /* VIP.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 7036AA602F45562A009F57DB /* VIP.storekit */; };
@@ -55,6 +58,15 @@
 		703F05EF2F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
 		703F05F02F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
 		703F05F12F63931000D4EF47 /* SupabaseMerchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */; };
+		7040A91F2F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
+		7040A9202F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
+		7040A9212F6E540000220213 /* SupabaseCommunityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */; };
+		7040A9232F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
+		7040A9242F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
+		7040A9252F6E5EC900220213 /* CommunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9222F6E5EC400220213 /* CommunityViewModel.swift */; };
+		7040A9272F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
+		7040A9282F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
+		7040A9292F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */; };
 		704251952F13397100322849 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251912F13397100322849 /* APIService.swift */; };
 		704251962F13397100322849 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704251922F13397100322849 /* NetworkManager.swift */; };
 		704251972F13397100322849 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7042518D2F13397100322849 /* APIConfig.swift */; };
@@ -178,6 +190,9 @@
 		70AAC8672F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
 		70AAC8682F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
 		70AAC8692F6B864000BB4A58 /* QRCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */; };
+		70AFDB132F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */; };
+		70AFDB142F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */; };
+		70AFDB152F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */; };
 		70B0CF572F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
 		70B0CF582F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
 		70B0CF592F10646D003FCD20 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF552F10634F003FCD20 /* LoginView.swift */; };
@@ -220,6 +235,9 @@
 		70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
 		70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
 		70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
+		70F2AA012F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
+		70F2AA032F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
+		70F2AA042F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
 		70FA11012F80000100ABCD01 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 70FA11022F80000100ABCD01 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
@@ -257,6 +275,7 @@
 		7020AB8B2F12EEB30082F480 /* Cart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cart.swift; sourceTree = "<group>"; };
 		7020AB8D2F12EEBB0082F480 /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
 		7020AB8F2F12EECA0082F480 /* CartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartView.swift; sourceTree = "<group>"; };
+		7029E8F32F71F10E00F44189 /* CommentSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentSheetView.swift; sourceTree = "<group>"; };
 		7036AA602F45562A009F57DB /* VIP.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = VIP.storekit; sourceTree = "<group>"; };
 		7039BA1C2F47521800004437 /* LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStore.swift; sourceTree = "<group>"; };
 		7039BA202F475FAC00004437 /* SafeCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeCollection.swift; sourceTree = "<group>"; };
@@ -269,6 +288,9 @@
 		703F05D52F63910500D4EF47 /* ErrorResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorResponse.swift; sourceTree = "<group>"; };
 		703F05E62F6391F300D4EF47 /* SupabaseMeetsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMeetsService.swift; sourceTree = "<group>"; };
 		703F05EE2F63931000D4EF47 /* SupabaseMerchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMerchService.swift; sourceTree = "<group>"; };
+		7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseCommunityService.swift; sourceTree = "<group>"; };
+		7040A9222F6E5EC400220213 /* CommunityViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityViewModel.swift; sourceTree = "<group>"; };
+		7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareToFeedSheet.swift; sourceTree = "<group>"; };
 		7042518D2F13397100322849 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		704251912F13397100322849 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		704251922F13397100322849 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
@@ -314,6 +336,7 @@
 		70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetsParticipation.swift; sourceTree = "<group>"; };
 		70AAC8622F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseMeetsParticipationService.swift; sourceTree = "<group>"; };
 		70AAC8662F6B864000BB4A58 /* QRCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCheckInView.swift; sourceTree = "<group>"; };
+		70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecsAndModsPopups.swift; sourceTree = "<group>"; };
 		70B0CF552F10634F003FCD20 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		70B0CF602F1064D0003FCD20 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		70B0CF642F1067F0003FCD20 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
@@ -335,6 +358,7 @@
 		70E699D52F1496ED001304D6 /* VehicleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleEditorView.swift; sourceTree = "<group>"; };
 		70F1AA002F70000100ABCD01 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		70F1AA052F70000100ABCD01 /* AppTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTelemetry.swift; sourceTree = "<group>"; };
+		70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStatsViewModel.swift; sourceTree = "<group>"; };
 		70FA11022F80000100ABCD01 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -395,6 +419,7 @@
 		704251932F13397100322849 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				7040A91E2F6E53FA00220213 /* SupabaseCommunityService.swift */,
 				70F1AA002F70000100ABCD01 /* AppLogger.swift */,
 				70F1AA052F70000100ABCD01 /* AppTelemetry.swift */,
 				703F05D52F63910500D4EF47 /* ErrorResponse.swift */,
@@ -414,7 +439,9 @@
 		704251AA2F1339BA00322849 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				7040A9222F6E5EC400220213 /* CommunityViewModel.swift */,
 				704251A92F1339BA00322849 /* AuthViewModel.swift */,
+				70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */,
 				704251B22F134C5C00322849 /* UserVehiclesViewModel.swift */,
 				704251B62F134C5E00322849 /* AddVehicleView.swift */,
 				70E699D52F1496ED001304D6 /* VehicleEditorView.swift */,
@@ -445,6 +472,9 @@
 		70A016FF2F0DF49000A084C2 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				7029E8F32F71F10E00F44189 /* CommentSheetView.swift */,
+				7040A9262F6E5EF500220213 /* ShareToFeedSheet.swift */,
+				70AFDB122F6D0B4F0021C5D6 /* SpecsAndModsPopups.swift */,
 				704E4B912F11E5A800AB0A5D /* MerchListView.swift */,
 				70A016EC2F0DF49000A084C2 /* CarCardView.swift */,
 				70A016ED2F0DF49000A084C2 /* CarsView.swift */,
@@ -699,6 +729,7 @@
 			files = (
 				707D0C922F4551AE00521AA5 /* StoreKitManager.swift in Sources */,
 				70A0171B2F0DF49000A084C2 /* MeetsView.swift in Sources */,
+				7029E8F52F71F10E00F44189 /* CommentSheetView.swift in Sources */,
 				7020AB912F12EEFD0082F480 /* CartView.swift in Sources */,
 				7020AB922F12EEFD0082F480 /* Cart.swift in Sources */,
 				703F05EF2F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
@@ -709,7 +740,9 @@
 				7039BA262F47612900004437 /* ManageGarageSheet.swift in Sources */,
 				70F1AA022F70000100ABCD01 /* AppLogger.swift in Sources */,
 				70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */,
+				7040A9242F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
 				70C0A6842F457D18003F8425 /* VIPJoinView.swift in Sources */,
+				70F2AA032F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */,
 				7068B04A2F42783100D6628C /* KeychainService.swift in Sources */,
 				7089A7CB2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				704251992F13397100322849 /* APIService.swift in Sources */,
@@ -748,8 +781,10 @@
 				704E4B8F2F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				70A017292F0DF49000A084C2 /* ProfileStatCard.swift in Sources */,
 				70A6A7532F1ECCDE00483418 /* TopToast.swift in Sources */,
+				7040A9272F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */,
 				70A0172A2F0DF49000A084C2 /* EmpireSplashView.swift in Sources */,
 				70A0172B2F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
+				70AFDB142F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */,
 				7039BA232F475FAC00004437 /* SafeCollection.swift in Sources */,
 				70C0A68E2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
 				70A0172C2F0DF49000A084C2 /* MerchView.swift in Sources */,
@@ -763,6 +798,7 @@
 				703F05D82F63910800D4EF47 /* ErrorResponse.swift in Sources */,
 				704251B72F134C5E00322849 /* AddVehicleView.swift in Sources */,
 				70DF416E2F196E930034C5FB /* SettingsView.swift in Sources */,
+				7040A9212F6E540000220213 /* SupabaseCommunityService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -779,12 +815,16 @@
 				70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				7042519D2F13397100322849 /* APIService.swift in Sources */,
 				7042519E2F13397100322849 /* NetworkManager.swift in Sources */,
+				70F2AA042F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */,
 				7042519F2F13397100322849 /* APIConfig.swift in Sources */,
 				7068B04B2F42783100D6628C /* KeychainService.swift in Sources */,
 				70AAC8682F6B864000BB4A58 /* QRCheckInView.swift in Sources */,
 				70C0A6902F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
 				7039BA222F475FAC00004437 /* SafeCollection.swift in Sources */,
+				7040A9202F6E540000220213 /* SupabaseCommunityService.swift in Sources */,
+				7040A9232F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
 				70A017082F0DF49000A084C2 /* HomeView.swift in Sources */,
+				7040A9292F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */,
 				70AAC8642F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
 				7020AB8C2F12EEB30082F480 /* Cart.swift in Sources */,
 				7089A7CD2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
@@ -818,6 +858,7 @@
 				70B0CF6E2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
 				70A017112F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
 				70C0A6882F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
+				7029E8F62F71F10E00F44189 /* CommentSheetView.swift in Sources */,
 				70E699D72F1496ED001304D6 /* VehicleEditorView.swift in Sources */,
 				703F05DA2F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
 				70B0CF662F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */,
@@ -835,6 +876,7 @@
 				70B0CF582F10646D003FCD20 /* LoginView.swift in Sources */,
 				70C0A68D2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
 				70A017182F0DF49000A084C2 /* StageChip.swift in Sources */,
+				70AFDB132F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */,
 				7020AB8E2F12EEBB0082F480 /* ProductDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -844,12 +886,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				70C0A68C2F457D2C003F8425 /* VIPDashboardView.swift in Sources */,
+				70AFDB152F6D0B660021C5D6 /* SpecsAndModsPopups.swift in Sources */,
 				703F05F02F63931000D4EF47 /* SupabaseMerchService.swift in Sources */,
+				7040A9252F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
 				70A017312F0DF49000A084C2 /* MeetsView.swift in Sources */,
 				70A017322F0DF49000A084C2 /* CoolRipple.swift in Sources */,
 				703F05BE2F63900800D4EF47 /* SupabaseCarsService.swift in Sources */,
 				704E4B902F11E5A000AB0A5D /* MerchGridView.swift in Sources */,
 				7020AB942F12EEFD0082F480 /* ProductDetailView.swift in Sources */,
+				7029E8F42F71F10E00F44189 /* CommentSheetView.swift in Sources */,
 				7020AB952F12EEFD0082F480 /* CartView.swift in Sources */,
 				7089A7CC2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				7020AB962F12EEFD0082F480 /* Cart.swift in Sources */,
@@ -885,11 +930,13 @@
 				703F05E12F63912A00D4EF47 /* SupabaseAuthService.swift in Sources */,
 				7039BA212F475FAC00004437 /* SafeCollection.swift in Sources */,
 				70DF416C2F196E930034C5FB /* SettingsView.swift in Sources */,
+				7040A91F2F6E540000220213 /* SupabaseCommunityService.swift in Sources */,
 				7089A7C52F1C280900EDB4D5 /* RewardsView.swift in Sources */,
 				7068B0492F42783100D6628C /* KeychainService.swift in Sources */,
 				70AAC8652F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
 				70C0A6862F457D18003F8425 /* VIPJoinView.swift in Sources */,
 				70B0CF612F1064D0003FCD20 /* SignUpView.swift in Sources */,
+				7040A9282F6E5EF500220213 /* ShareToFeedSheet.swift in Sources */,
 				70A017412F0DF49000A084C2 /* VisualEffectBlur.swift in Sources */,
 				704251B52F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
 				7089A7C72F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
@@ -906,6 +953,7 @@
 				70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				704251952F13397100322849 /* APIService.swift in Sources */,
 				704251962F13397100322849 /* NetworkManager.swift in Sources */,
+				70F2AA012F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */,
 				704251972F13397100322849 /* APIConfig.swift in Sources */,
 				70AAC85F2F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */,
 				70A017442F0DF49000A084C2 /* StageChip.swift in Sources */,
@@ -1059,7 +1107,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 80;
+				CURRENT_PROJECT_VERSION = 90;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1101,7 +1149,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 80;
+				CURRENT_PROJECT_VERSION = 90;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

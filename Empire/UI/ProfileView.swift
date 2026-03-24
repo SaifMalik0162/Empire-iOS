@@ -13,6 +13,7 @@ struct ProfileView: View {
     @State private var showRewards: Bool = false
     @State private var showRecentBuy: Bool = false
     @State private var animateGradient = false
+    @State private var showCommunityPosts: Bool = false
     
     @State private var showManageGarage: Bool = false
     
@@ -24,13 +25,13 @@ struct ProfileView: View {
     
     @State private var showAddVehicle: Bool = false
     @StateObject private var vehiclesVM = UserVehiclesViewModel()
+    @StateObject private var profileStatsVM = ProfileStatsViewModel()
+    @StateObject private var communityVM = CommunityViewModel(
+        userId: UserDefaults.standard.string(forKey: "currentUserId")
+    )
     
-    // Computed stats placeholder (to be wired to backend later)
     private var computedStats: [(String, Int)] {
-        let meetsCount = 0 // TODO: replace with actual meets count from backend/profile
-        let carsCount = vehiclesVM.vehicles.count
-        let merchCount = 0 // TODO: replace with purchases count later
-        return [("Meets", meetsCount), ("Cars", carsCount), ("Merch", merchCount)]
+        [("Meets", profileStatsVM.meetsCount), ("Cars", vehiclesVM.vehicles.count), ("Merch", profileStatsVM.merchCount)]
     }
     
     @State private var selectedVehicleIndex = 0
@@ -59,6 +60,20 @@ struct ProfileView: View {
             return user.email
         }
         return "No email"
+    }
+
+    private var currentUserId: String {
+        authViewModel.currentUser?.id ?? UserDefaults.standard.string(forKey: "currentUserId") ?? ""
+    }
+
+    private var communitySummaryLine: String {
+        if communityVM.totalPostsCount == 0 {
+            return "No community posts yet"
+        }
+        if let latest = communityVM.posts.first {
+            return "Latest build: \(latest.carName)"
+        }
+        return "\(communityVM.totalPostsCount) community post\(communityVM.totalPostsCount == 1 ? "" : "s")"
     }
     
     private func performLogoutNow() {
@@ -228,6 +243,9 @@ struct ProfileView: View {
                         }
                     }
                     .padding(.horizontal, 16)
+
+                    communitySection
+                        .padding(.horizontal, 16)
                     
                     // MARK: - Featured
                     HStack(spacing: 14) {
@@ -305,6 +323,9 @@ struct ProfileView: View {
                 }
                 .onChange(of: authViewModel.isAuthenticated) { oldValue, newValue in
                     print("[ProfileView] onChange isAuthenticated: old=\(oldValue) -> new=\(newValue)")
+                    if !newValue {
+                        profileStatsVM.reset()
+                    }
                 }
                 .onAppear {
                     print("[ProfileView] onAppear")
@@ -314,6 +335,9 @@ struct ProfileView: View {
                 }
                 .task {
                     print("[ProfileView] .task appeared")
+                }
+                .task(id: currentUserId) {
+                    await profileStatsVM.load(for: currentUserId)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
                     Task { await vehiclesVM.loadVehicles() }
@@ -364,11 +388,84 @@ struct ProfileView: View {
                     ManageGarageSheet(vehiclesVM: vehiclesVM)
                         .preferredColorScheme(.dark)
                 }
+                .sheet(isPresented: $showCommunityPosts) {
+                    CommunityProfilePostsView(
+                        userId: currentUserId,
+                        username: authViewModel.currentUser?.username,
+                        avatarURL: avatarURL,
+                        currentUserId: currentUserId
+                    )
+                    .preferredColorScheme(.dark)
+                }
                 .onAppear {
-                    Task { await vehiclesVM.loadVehicles() }
+                    Task {
+                        await vehiclesVM.loadVehicles()
+                        await communityVM.refresh()
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
+                    Task { await communityVM.refresh() }
                 }
             }
         }
+    }
+
+    private var communitySection: some View {
+        Button {
+            showCommunityPosts = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color("EmpireMint").opacity(0.12))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: "person.3.sequence.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color("EmpireMint"))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text("Community")
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.white)
+                        Text("\(communityVM.totalPostsCount)")
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(Color("EmpireMint"))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color("EmpireMint").opacity(0.12)))
+                    }
+                    Text(communitySummaryLine)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.62))
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.45))
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color("EmpireMint").opacity(0.5), Color.white.opacity(0.06)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
