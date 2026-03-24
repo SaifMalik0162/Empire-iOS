@@ -397,11 +397,25 @@ final class SupabaseCommunityService {
 
     // MARK: - Delete post
 
-    func deletePost(postId: UUID) async throws {
+    func deletePost(post: CommunityPost) async throws {
+        let pathsToRemove = Array(
+            Set(
+                ([post.photoPath].compactMap { $0 } + post.photoPaths)
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+            )
+        )
+
+        if !pathsToRemove.isEmpty {
+            _ = try? await client.storage
+                .from(photosBucket)
+                .remove(paths: pathsToRemove)
+        }
+
         _ = try await client
             .from("community_posts")
             .delete()
-            .eq("id", value: postId.uuidString)
+            .eq("id", value: post.id)
             .execute()
     }
 

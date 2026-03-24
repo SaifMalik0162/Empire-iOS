@@ -120,10 +120,11 @@ final class CommunityViewModel: ObservableObject {
 
     func deletePost(postId: UUID) async {
         guard let idx = posts.firstIndex(where: { $0.id == postId }) else { return }
+        let post = posts[idx]
         posts.remove(at: idx)
         totalPostsCount = max(0, totalPostsCount - 1)
         do {
-            try await service.deletePost(postId: postId)
+            try await service.deletePost(post: post)
         } catch {
             logger.error("deletePost failed: \(String(describing: error), privacy: .public)")
         }

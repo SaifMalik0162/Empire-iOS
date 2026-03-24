@@ -322,7 +322,10 @@ struct FeedPostCard: View {
     @State private var currentPhotoIndex = 0
     @State private var photoDragOffset: CGFloat = 0
 
-    private var isOwnPost: Bool { post.userId == currentUserId }
+    private var isOwnPost: Bool {
+        post.userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            == currentUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
     private var photoURLs: [URL] { communityVM.photoURLs(for: post) }
 
     private var stageAccent: Color {
@@ -457,6 +460,11 @@ struct FeedPostCard: View {
         .frame(height: 340)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onLongPressGesture(minimumDuration: 0.45) {
+            guard isOwnPost else { return }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            showDeleteConfirm = true
+        }
         .confirmationDialog("Delete this post?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) { Task { await communityVM.deletePost(postId: post.id) } }
             Button("Cancel", role: .cancel) {}
@@ -560,18 +568,6 @@ struct FeedPostCard: View {
         HStack(spacing: 10) {
             profileIdentity
             Spacer()
-            if isOwnPost {
-                Menu {
-                    Button(role: .destructive) { showDeleteConfirm = true } label: {
-                        Label("Delete post", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .shadow(color: .black.opacity(0.5), radius: 4)
-                }
-            }
         }
     }
 
