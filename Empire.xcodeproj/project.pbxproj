@@ -235,6 +235,9 @@
 		70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
 		70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
 		70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F1AA052F70000100ABCD01 /* AppTelemetry.swift */; };
+		70F2AA012F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
+		70F2AA032F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
+		70F2AA042F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */; };
 		70FA11012F80000100ABCD01 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 70FA11022F80000100ABCD01 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
@@ -355,6 +358,7 @@
 		70E699D52F1496ED001304D6 /* VehicleEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleEditorView.swift; sourceTree = "<group>"; };
 		70F1AA002F70000100ABCD01 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		70F1AA052F70000100ABCD01 /* AppTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTelemetry.swift; sourceTree = "<group>"; };
+		70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStatsViewModel.swift; sourceTree = "<group>"; };
 		70FA11022F80000100ABCD01 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -437,6 +441,7 @@
 			children = (
 				7040A9222F6E5EC400220213 /* CommunityViewModel.swift */,
 				704251A92F1339BA00322849 /* AuthViewModel.swift */,
+				70F2AA022F80010100ABCD01 /* ProfileStatsViewModel.swift */,
 				704251B22F134C5C00322849 /* UserVehiclesViewModel.swift */,
 				704251B62F134C5E00322849 /* AddVehicleView.swift */,
 				70E699D52F1496ED001304D6 /* VehicleEditorView.swift */,
@@ -737,6 +742,7 @@
 				70F1AA062F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				7040A9242F6E5EC900220213 /* CommunityViewModel.swift in Sources */,
 				70C0A6842F457D18003F8425 /* VIPJoinView.swift in Sources */,
+				70F2AA032F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */,
 				7068B04A2F42783100D6628C /* KeychainService.swift in Sources */,
 				7089A7CB2F1C2DD800EDB4D5 /* MerchCatalog.swift in Sources */,
 				704251992F13397100322849 /* APIService.swift in Sources */,
@@ -809,6 +815,7 @@
 				70F1AA072F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				7042519D2F13397100322849 /* APIService.swift in Sources */,
 				7042519E2F13397100322849 /* NetworkManager.swift in Sources */,
+				70F2AA042F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */,
 				7042519F2F13397100322849 /* APIConfig.swift in Sources */,
 				7068B04B2F42783100D6628C /* KeychainService.swift in Sources */,
 				70AAC8682F6B864000BB4A58 /* QRCheckInView.swift in Sources */,
@@ -946,6 +953,7 @@
 				70F1AA042F70000100ABCD01 /* AppTelemetry.swift in Sources */,
 				704251952F13397100322849 /* APIService.swift in Sources */,
 				704251962F13397100322849 /* NetworkManager.swift in Sources */,
+				70F2AA012F80010100ABCD01 /* ProfileStatsViewModel.swift in Sources */,
 				704251972F13397100322849 /* APIConfig.swift in Sources */,
 				70AAC85F2F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */,
 				70A017442F0DF49000A084C2 /* StageChip.swift in Sources */,

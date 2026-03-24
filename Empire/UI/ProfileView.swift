@@ -25,16 +25,13 @@ struct ProfileView: View {
     
     @State private var showAddVehicle: Bool = false
     @StateObject private var vehiclesVM = UserVehiclesViewModel()
+    @StateObject private var profileStatsVM = ProfileStatsViewModel()
     @StateObject private var communityVM = CommunityViewModel(
         userId: UserDefaults.standard.string(forKey: "currentUserId")
     )
     
-    // Computed stats placeholder (to be wired to backend later)
     private var computedStats: [(String, Int)] {
-        let meetsCount = 0 // TODO: replace with actual meets count from backend/profile
-        let carsCount = vehiclesVM.vehicles.count
-        let merchCount = 0 // TODO: replace with purchases count later
-        return [("Meets", meetsCount), ("Cars", carsCount), ("Merch", merchCount)]
+        [("Meets", profileStatsVM.meetsCount), ("Cars", vehiclesVM.vehicles.count), ("Merch", profileStatsVM.merchCount)]
     }
     
     @State private var selectedVehicleIndex = 0
@@ -326,6 +323,9 @@ struct ProfileView: View {
                 }
                 .onChange(of: authViewModel.isAuthenticated) { oldValue, newValue in
                     print("[ProfileView] onChange isAuthenticated: old=\(oldValue) -> new=\(newValue)")
+                    if !newValue {
+                        profileStatsVM.reset()
+                    }
                 }
                 .onAppear {
                     print("[ProfileView] onAppear")
@@ -335,6 +335,9 @@ struct ProfileView: View {
                 }
                 .task {
                     print("[ProfileView] .task appeared")
+                }
+                .task(id: currentUserId) {
+                    await profileStatsVM.load(for: currentUserId)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
                     Task { await vehiclesVM.loadVehicles() }
