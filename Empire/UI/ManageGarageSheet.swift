@@ -251,7 +251,7 @@ private struct VehicleRowCard: View {
                 } else {
                     StatCapsule(label: "Stage", value: "\(item.car.stage)", tint: stageTint(for: item.car.stage))
                 }
-                StatCapsule(label: "HP", value: "\(item.car.horsepower)", tint: .cyan)
+                StatCapsule(label: "WHP", value: "\(item.car.horsepower)", tint: .cyan)
             }
         }
         .padding(12)

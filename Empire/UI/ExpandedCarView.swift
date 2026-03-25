@@ -217,7 +217,7 @@ struct CarExpandedCard: View {
                         } else {
                             StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
                         }
-                        StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                        StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                     }
 
                     // Stat meters with unified animation
@@ -372,7 +372,7 @@ private struct LiquidStatRow: View {
 
     private var normalized: Double { max == 0 ? 0 : min(value / max, 1) }
     private var displayValue: String {
-        if name == "Horsepower" { return "\(Int(value)) HP" }
+        if name == "Horsepower" { return "\(Int(value)) WHP" }
         if name.lowercased().contains("stage") { return "\(Int(value))" }
         return String(format: "%.0f", value)
     }
@@ -451,7 +451,7 @@ private struct StatRow: View {
     }
     private var barWidth: CGFloat { CGFloat(normalized) * 220 }
     private var displayValue: String {
-        if name == "Horsepower" { return "\(Int(value)) HP" }
+        if name == "Horsepower" { return "\(Int(value)) WHP" }
         if name == "Jailbreak" { return "Jailbreak" }
         if name == "Stock" { return "Stock" }
         if name == "Stage" { return "\(Int(value))" }
@@ -610,7 +610,7 @@ private struct GalleryTile: View {
                     } else {
                         StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
                     }
-                    StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                    StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                 }
                 StatRow(
                     name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"),

@@ -335,7 +335,7 @@ struct VehicleEditorView: View {
             // Specs card
             EditorGlassCard {
                 GlassSection(title: "Specs & Horsepower") {
-                    GlassNumberField(title: "Horsepower", value: $tempHorsepower, suffix: " HP")
+                    GlassNumberField(title: "Horsepower", value: $tempHorsepower, suffix: " WHP")
                     ForEach(tempSpecs, id: \.id) { spec in
                         HStack(spacing: 10) {
                             // Key pill
@@ -396,6 +396,7 @@ struct VehicleEditorView: View {
                         isSuggested: s == suggestedStage,
                         isPendingApproval: false,
                         accentColor: stageTint(for: s),
+                        horsepowerRange: horsepowerRangeText(for: s),
                         description: stageDescription(for: s),
                         examples: stageExamples(for: s)
                     )
@@ -418,6 +419,7 @@ struct VehicleEditorView: View {
                     isSuggested: false,
                     isPendingApproval: false,
                     accentColor: Color.purple,
+                    horsepowerRange: horsepowerRangeText(for: nil),
                     description: "Jailbreak mode disables stage selection and allows custom tuning beyond normal stages.",
                     examples: ["Custom engine swaps", "Extreme modifications"]
                 )
@@ -651,6 +653,23 @@ struct VehicleEditorView: View {
         }
     }
 
+    private func horsepowerRangeText(for stage: Int?) -> String {
+        switch stage {
+        case 0:
+            return "Typical range: 0-149 WHP"
+        case 1:
+            return "Typical range: 150-250 WHP"
+        case 2:
+            return "Typical range: 251-400 WHP"
+        case 3:
+            return "Typical range: 401+ WHP"
+        case nil:
+            return ""
+        default:
+            return "Typical range varies"
+        }
+    }
+
     private func stageExamples(for stage: Int) -> [String] {
         switch stage {
         case 0: return ["Factory intake", "Stock exhaust", "No tuning"]
@@ -832,6 +851,7 @@ private struct StageCarouselCard: View {
     let isSuggested: Bool
     let isPendingApproval: Bool
     let accentColor: Color
+    let horsepowerRange: String
     let description: String
     let examples: [String]
 
@@ -849,6 +869,11 @@ private struct StageCarouselCard: View {
                             .accessibilityLabel("System Suggestion")
                     }
                     Spacer()
+                }
+                if !horsepowerRange.isEmpty {
+                    Text(horsepowerRange)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(accentColor.opacity(0.85))
                 }
                 Text(description)
                     .font(.subheadline)
@@ -1031,7 +1056,9 @@ private struct GlassNumberField: View {
                     Text(suffix)
                         .foregroundColor(.clear)
                         .font(.footnote)
-                        .frame(width: 28, alignment: .leading)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(width: 40, alignment: .leading)
                         .accessibilityHidden(true)
                 }
                 TextField(title, value: $value, formatter: NumberFormatter())
@@ -1046,7 +1073,9 @@ private struct GlassNumberField: View {
                     Text(suffix)
                         .foregroundColor(.white.opacity(0.8))
                         .font(.footnote)
-                        .frame(width: 28, alignment: .leading)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(width: 40, alignment: .leading)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .center)
@@ -1338,4 +1367,3 @@ private func stageTint(for stage: Int) -> Color {
     default: return .gray
     }
 }
-

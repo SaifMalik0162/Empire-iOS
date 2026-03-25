@@ -606,7 +606,7 @@ struct FeedPostCard: View {
                     .background(Capsule().fill(stageAccent.opacity(0.15)))
                     .overlay(Capsule().stroke(stageAccent.opacity(0.7), lineWidth: 1))
 
-                Text("\(post.horsepower) HP")
+                Text("\(post.horsepower) WHP")
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.cyan)
                     .padding(.horizontal, 9)
@@ -939,21 +939,27 @@ struct CommunityProfilePostsView: View {
                 profileMetric(value: "\(vm.totalPostsCount)", label: "Posts")
                 if let headerStats = currentHeaderStats {
                     HStack(spacing: 6) {
-                        Text("\(headerStats.horsepower) HP")
+                        Text("\(headerStats.horsepower) WHP")
                             .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
                             .foregroundStyle(Color.cyan.opacity(0.95))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 5)
                             .background(Capsule().fill(Color.cyan.opacity(0.16)))
                             .overlay(Capsule().stroke(Color.cyan.opacity(0.45), lineWidth: 1))
+                            .fixedSize(horizontal: false, vertical: true)
 
                         Text(headerStats.stageLabel)
                             .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
                             .foregroundStyle(headerStats.tint.opacity(0.95))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 5)
                             .background(Capsule().fill(headerStats.tint.opacity(0.16)))
                             .overlay(Capsule().stroke(headerStats.tint.opacity(0.45), lineWidth: 1))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -1172,7 +1178,7 @@ private struct CommunityProfileGridTile: View {
                         .background(Capsule().fill(stageColor.opacity(0.15)))
                         .overlay(Capsule().stroke(stageColor.opacity(0.5), lineWidth: 1))
 
-                    Text("\(post.horsepower) HP")
+                    Text("\(post.horsepower) WHP")
                         .font(.system(size: 8, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.cyan)
                         .padding(.horizontal, 7)
@@ -1415,7 +1421,7 @@ private struct ExpandedCommunityPostCard: View {
 
                 HStack(spacing: 8) {
                     expandedChip(label: stageLabel.uppercased(), tint: stageAccent)
-                    expandedChip(label: "\(post.horsepower) HP", tint: .cyan)
+                    expandedChip(label: "\(post.horsepower) WHP", tint: .cyan)
                     if let cls = post.vehicleClass {
                         expandedChip(label: cls.components(separatedBy: " - ").first ?? cls, tint: .white.opacity(0.7))
                     }
@@ -1546,11 +1552,14 @@ private struct ExpandedCommunityPostCard: View {
     private func expandedChip(label: String, tint: Color) -> some View {
         Text(label.uppercased())
             .font(.system(size: 10, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
             .foregroundStyle(tint)
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
             .background(Capsule().fill(tint.opacity(0.14)))
             .overlay(Capsule().stroke(tint.opacity(0.55), lineWidth: 1))
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func expandedActionButton(icon: String, title: String, tint: Color, action: @escaping () -> Void) -> some View {
