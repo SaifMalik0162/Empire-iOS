@@ -848,13 +848,13 @@ struct VehicleEditorView: View {
         }
     }
 
-    private static func preparePhotoForLocalStorage(_ data: Data) async -> Data {
+    private nonisolated static func preparePhotoForLocalStorage(_ data: Data) async -> Data {
         await Task.detached(priority: .userInitiated) {
             compressForLocalStorage(data) ?? data
         }.value
     }
 
-    private static func compressForLocalStorage(_ data: Data) -> Data? {
+    private nonisolated static func compressForLocalStorage(_ data: Data) -> Data? {
         let maxBytes = 1_500_000
         let maxDimension: CGFloat = 1600
 
@@ -878,7 +878,7 @@ struct VehicleEditorView: View {
         return result ?? data
     }
 
-    private static func resizedImageIfNeeded(_ image: UIImage, maxDimension: CGFloat) -> UIImage? {
+    private nonisolated static func resizedImageIfNeeded(_ image: UIImage, maxDimension: CGFloat) -> UIImage? {
         let size = image.size
         let longestSide = max(size.width, size.height)
         guard longestSide > maxDimension else { return nil }

@@ -129,6 +129,16 @@ final class SupabaseCommunityService {
     }()
     private let isoBasic = ISO8601DateFormatter()
 
+    func authenticatedUserId() async throws -> String {
+        do {
+            let session = try await client.auth.session
+            return session.user.id.uuidString.lowercased()
+        } catch {
+            let user = try await client.auth.user()
+            return user.id.uuidString.lowercased()
+        }
+    }
+
     // MARK: - Fetch feed
 
     func fetchFeed(
@@ -476,34 +486,21 @@ final class SupabaseCommunityService {
     }
 
     /// Posts a new comment and returns it enriched with the current user's profile.
-    func postComment(postId: UUID, userId: String, body: String) async throws -> PostComment {
+    func postComment(postId: UUID, preferredUserId: String, body: String) async throws -> PostComment {
         let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
-        let rows: [SBCommentRow]
-        if let userUUID = UUID(uuidString: userId) {
-            let insert = SBInsertCommentUUID(
-                post_id: postId,
-                user_id: userUUID,
-                body: trimmedBody
-            )
-            rows = try await client
-                .from("post_comments")
-                .insert(insert)
-                .select()
-                .execute()
-                .value
-        } else {
-            let insert = SBInsertComment(
-                post_id: postId.uuidString,
-                user_id: userId,
-                body: trimmedBody
-            )
-            rows = try await client
-                .from("post_comments")
-                .insert(insert)
-                .select()
-                .execute()
-                .value
-        }
+        let fallbackUserId = preferredUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let userId = (try? await authenticatedUserId()) ?? fallbackUserId
+        let insert = SBInsertComment(
+            post_id: postId.uuidString.lowercased(),
+            user_id: userId,
+            body: trimmedBody
+        )
+        let rows: [SBCommentRow] = try await client
+            .from("post_comments")
+            .insert(insert)
+            .select()
+            .execute()
+            .value
 
         guard let row = rows.first,
               let date = parseDate(row.created_at),
@@ -513,24 +510,13 @@ final class SupabaseCommunityService {
         }
 
         // Fetch the poster's own profile for the returned comment
-        let profileRows: [SBProfileRow]
-        if let userUUID = UUID(uuidString: userId) {
-            profileRows = (try? await client
-                .from("profiles")
-                .select("id, username, avatar_path")
-                .eq("id", value: userUUID)
-                .limit(1)
-                .execute()
-                .value) ?? []
-        } else {
-            profileRows = (try? await client
-                .from("profiles")
-                .select("id, username, avatar_path")
-                .eq("id", value: userId)
-                .limit(1)
-                .execute()
-                .value) ?? []
-        }
+        let profileRows: [SBProfileRow] = (try? await client
+            .from("profiles")
+            .select("id, username, avatar_path")
+            .eq("id", value: userId)
+            .limit(1)
+            .execute()
+            .value) ?? []
         let profile = profileRows.first
 
         return PostComment(
