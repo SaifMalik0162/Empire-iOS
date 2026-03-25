@@ -857,6 +857,13 @@ struct CheckInSuccessView: View {
                 ringOpacity = 0
             }
         }
+        .onDisappear {
+            scale = 0.8
+            checkScale = 0.6
+            opacity = 0
+            ringScale = 1
+            ringOpacity = 1
+        }
     }
 }
 
@@ -883,6 +890,7 @@ private struct ShimmerMask: View {
                     phase = 1
                 }
             }
+            .onDisappear { phase = 0 }
         }
         .allowsHitTesting(false)
     }

@@ -159,8 +159,7 @@ final class CommunityViewModel: ObservableObject {
 
     func avatarURL(for post: CommunityPost) -> URL? {
         guard let path = post.avatarPath, !path.isEmpty else { return nil }
-        let base = SupabaseConfig.url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        return URL(string: "\(base)/storage/v1/object/public/avatars/\(path)")
+        return service.avatarPublicURL(for: path)
     }
 }
 

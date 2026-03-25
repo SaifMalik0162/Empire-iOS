@@ -65,7 +65,6 @@ final class UserVehiclesViewModel: ObservableObject {
 
     @MainActor
     func addPlaceholderVehicleAndReturnIndex() -> Int? {
-        #if DEBUG
         let placeholder = Car(
             name: "Your Car",
             description: "No make/model provided",
@@ -79,19 +78,14 @@ final class UserVehiclesViewModel: ObservableObject {
         persistVehicles()
         syncCarInBackground(placeholder)
         return vehicles.indices.last
-        #else
-        return nil
-        #endif
     }
 
     @MainActor
     func addPlaceholderVehicle() {
-        #if DEBUG
         let placeholder = Car(name: "Your Car", description: "No make/model provided", imageName: "car_placeholder", horsepower: 0, stage: 1)
         vehicles.append(placeholder)
         persistVehicles()
         syncCarInBackground(placeholder)
-        #endif
     }
 
     @MainActor

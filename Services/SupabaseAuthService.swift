@@ -39,7 +39,7 @@ private struct SBProfileRow: Codable {
 
 @MainActor
 final class SupabaseAuthService {
-    private let client = SupabaseClientProvider.client
+    private var client: SupabaseClient { SupabaseClientProvider.client }
     private let logger = AppLogger.supabaseAuth
     private let avatarBucket = "avatars"
     private let usernameCooldown: TimeInterval = 60 * 60 * 24 * 14

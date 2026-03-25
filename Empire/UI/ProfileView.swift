@@ -333,9 +333,6 @@ struct ProfileView: View {
                     print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
                     vehiclesVM.setContext(modelContext)
                 }
-                .task {
-                    print("[ProfileView] .task appeared")
-                }
                 .task(id: currentUserId) {
                     await profileStatsVM.load(for: currentUserId)
                 }
@@ -375,7 +372,9 @@ struct ProfileView: View {
                         .preferredColorScheme(.dark)
                 }
                 .sheet(isPresented: $showRecentBuy) {
-                    let recent = MerchCatalog.featured.first ?? MerchItem(name: "Empire Hoodie", price: "$78.00", imageName: "hoodiePlaceholder", category: .apparel)
+                    let recent = LocalStore.shared.fetchMerch(context: modelContext).first
+                        ?? MerchCatalog.featured.first
+                        ?? MerchItem(name: "Empire Hoodie", price: "$78.00", imageName: "hoodiePlaceholder", category: .apparel)
                     RecentBuyView(
                         item: recent,
                         variant: "Black / L",
@@ -484,6 +483,7 @@ private struct ProfileShimmer: View {
         .scaleEffect(x: 1.6)
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 } }
+        .onDisappear { phase = 0 }
         .blendMode(.screen)
         .opacity(0.5)
         .allowsHitTesting(false)

@@ -21,26 +21,29 @@ enum SupabaseConfig {
     private static func requiredValue(for key: String) -> String {
         if let environmentValue = ProcessInfo.processInfo.environment[key],
            isUsableValue(environmentValue) {
-            cache(value: environmentValue, for: key)
-            return environmentValue
+            let normalized = normalizedValue(environmentValue)
+            cache(value: normalized, for: key)
+            return normalized
         }
 
         for bundle in candidateBundles() {
             if let plistValue = bundle.object(forInfoDictionaryKey: key) as? String,
                isUsableValue(plistValue) {
-                cache(value: plistValue, for: key)
-                return plistValue
+                let normalized = normalizedValue(plistValue)
+                cache(value: normalized, for: key)
+                return normalized
             }
         }
 
         if let cachedValue = UserDefaults.standard.string(forKey: cachePrefix + key),
            isUsableValue(cachedValue) {
-            return cachedValue
+            return normalizedValue(cachedValue)
         }
 
         if let bakedInValue = bakedInValue(for: key) {
-            cache(value: bakedInValue, for: key)
-            return bakedInValue
+            let normalized = normalizedValue(bakedInValue)
+            cache(value: normalized, for: key)
+            return normalized
         }
 
         fatalError("Missing \(key). Set via Configs/Secrets.xcconfig (preferred) or Xcode Scheme environment variables.")
@@ -48,6 +51,10 @@ enum SupabaseConfig {
 
     private static func cache(value: String, for key: String) {
         UserDefaults.standard.set(value, forKey: cachePrefix + key)
+    }
+
+    private static func normalizedValue(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func bakedInValue(for key: String) -> String? {
@@ -73,7 +80,7 @@ enum SupabaseConfig {
     }
 
     private static func isUsableValue(_ value: String) -> Bool {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = normalizedValue(value)
         guard !trimmed.isEmpty else { return false }
         guard !trimmed.hasPrefix("YOUR_") else { return false }
         guard !trimmed.hasPrefix("REMOVED_") else { return false }

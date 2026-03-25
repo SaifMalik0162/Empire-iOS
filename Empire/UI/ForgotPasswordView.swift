@@ -32,6 +32,9 @@ struct ForgotPasswordView: View {
             .onAppear {
                 animateGradient = true
             }
+            .onDisappear {
+                animateGradient = false
+            }
             
             VStack(spacing: 24) {
                 EmpireLogoView(size: 150, style: .tinted(EmpireTheme.mintCore), shimmer: true, parallaxAmount: 0)
@@ -175,4 +178,3 @@ struct ForgotPasswordView: View {
     .environmentObject(AuthViewModel())
         .preferredColorScheme(.dark)
 }
-

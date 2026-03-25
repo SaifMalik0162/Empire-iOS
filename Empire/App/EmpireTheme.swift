@@ -158,6 +158,9 @@ private struct _ShimmerModifier: ViewModifier {
                     phase = 1.2
                 }
             }
+            .onDisappear {
+                phase = -1
+            }
     }
 }
 

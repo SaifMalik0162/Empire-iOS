@@ -43,7 +43,7 @@ struct CarCardView: View {
                 } else {
                     StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
                 }
-                StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 12)

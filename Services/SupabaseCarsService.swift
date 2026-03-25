@@ -35,7 +35,7 @@ struct SBModRow: Codable, Equatable {
 }
 
 final class SupabaseCarsService {
-    private let client = SupabaseClientProvider.shared
+    private var client: SupabaseClient { SupabaseClientProvider.shared }
     private let photosBucket = "car-photos"
     private let logger = AppLogger.supabaseCars
 

@@ -26,6 +26,12 @@ public struct EmpireInteractiveBackground: View {
             withAnimation(.linear(duration: 14).repeatForever(autoreverses: false)) { t2 = 2 * .pi }
             withAnimation(.linear(duration: 16).repeatForever(autoreverses: false)) { t3 = 2 * .pi }
         }
+        .onDisappear {
+            animate = false
+            t1 = 0
+            t2 = 0
+            t3 = 0
+        }
     }
 
     @ViewBuilder

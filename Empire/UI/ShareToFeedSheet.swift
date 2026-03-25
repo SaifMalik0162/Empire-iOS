@@ -363,7 +363,7 @@ private struct ShareVehicleRow: View {
                 } else {
                     ShareStatChip(label: "Stage \(car.stage)", tint: stageTint(for: car.stage))
                 }
-                ShareStatChip(label: "\(car.horsepower) HP", tint: .cyan)
+                ShareStatChip(label: "\(car.horsepower) WHP", tint: .cyan)
             }
 
             ZStack {

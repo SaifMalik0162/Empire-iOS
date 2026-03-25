@@ -15,7 +15,7 @@ private struct SBMeetRow: Codable, Equatable, Identifiable {
 // MARK: - Service
 
 final class SupabaseMeetsService {
-    private let supabaseClient: SupabaseClient = SupabaseClientProvider.client
+    private var supabaseClient: SupabaseClient { SupabaseClientProvider.client }
     private let logger = AppLogger.supabaseMeets
 
     // Full ISO 8601 with fractional seconds (Supabase default)

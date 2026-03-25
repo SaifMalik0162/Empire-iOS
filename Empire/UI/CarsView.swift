@@ -502,10 +502,6 @@ private extension CarsView {
         .padding(.vertical, 8)
         .padding(.bottom, 60)
         .padding(.top, 4)
-        .task { await communityVM.refresh() }
-        .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
-            Task { await communityVM.refresh() }
-        }
     }
 
     // MARK: Quick editor fallback
@@ -607,7 +603,7 @@ private struct LiquidGlassCarCard: View {
                     } else {
                         StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
                     }
-                    StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                    StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                 }
             }
             .padding(14)
@@ -700,19 +696,25 @@ struct CommunityPreviewTile: View {
         let tint: Color   = post.isJailbreak ? .purple : stageTint(for: post.stage)
         Text(label.uppercased())
             .font(.system(size: 8, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
             .foregroundStyle(tint)
             .padding(.horizontal, 6).padding(.vertical, 3)
             .background(Capsule().fill(tint.opacity(0.15)))
             .overlay(Capsule().stroke(tint.opacity(0.65), lineWidth: 1))
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var tileHPChip: some View {
-        Text("\(post.horsepower) HP")
+        Text("\(post.horsepower) WHP")
             .font(.system(size: 8, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
             .foregroundStyle(Color.cyan)
             .padding(.horizontal, 6).padding(.vertical, 3)
             .background(Capsule().fill(Color.cyan.opacity(0.15)))
             .overlay(Capsule().stroke(Color.cyan.opacity(0.6), lineWidth: 1))
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -878,7 +880,7 @@ private struct CarExpandedCardInline: View {
                     } else {
                         StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
                     }
-                    StatCapsule(label: "HP", value: "\(car.horsepower)", tint: .cyan)
+                    StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
                 VStack(spacing: 10) {
@@ -963,7 +965,7 @@ private struct StatRow: View {
     }
     private var barWidth: CGFloat { CGFloat(normalized) * 220 }
     private var displayValue: String {
-        if name == "Horsepower" { return "\(Int(value)) HP" }
+        if name == "Horsepower" { return "\(Int(value)) WHP" }
         if name == "Jailbreak"  { return "Jailbreak" }
         if name == "Stock"      { return "Stock" }
         return String(format: "%.0f", value)
@@ -1006,6 +1008,7 @@ private struct HoloShimmerMask: View {
         .scaleEffect(x: 1.8)
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) { phase = 1 } }
+        .onDisappear { phase = 0 }
         .blendMode(.screen).opacity(0.6).allowsHitTesting(false)
     }
 }

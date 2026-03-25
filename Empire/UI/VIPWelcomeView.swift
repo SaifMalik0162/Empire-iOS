@@ -71,6 +71,7 @@ struct VIPWelcomeView: View {
             .padding(24)
         }
         .onAppear { animate = true }
+        .onDisappear { animate = false }
     }
 }
 
@@ -95,6 +96,9 @@ private struct ConfettiPiece: View {
                         y = maxY + 60
                         rotate += .random(in: 180...540)
                     }
+                }
+                .onDisappear {
+                    y = .random(in: -420...(-120))
                 }
         }
     }

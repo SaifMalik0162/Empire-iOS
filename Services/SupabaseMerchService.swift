@@ -11,7 +11,7 @@ struct SBMerchRow: Codable, Equatable, Identifiable {
 }
 
 final class SupabaseMerchService {
-    private let supabaseClient: SupabaseClient = SupabaseClientProvider.shared
+    private var supabaseClient: SupabaseClient { SupabaseClientProvider.shared }
 
     func fetchMerch() async throws -> [MerchItem] {
         let rows: [SBMerchRow] = try await AppTelemetry.shared.measure(operation: "merch.fetch") {
@@ -28,8 +28,24 @@ final class SupabaseMerchService {
 
     static func mapRowsToMerchItems(_ rows: [SBMerchRow]) -> [MerchItem] {
         rows.map { r in
-            let cat = MerchCategory(rawValue: r.category) ?? .apparel
-            return MerchItem(name: r.name, price: r.price_string, imageName: r.image_name, category: cat)
+            let normalizedCategory = r.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let cat: MerchCategory
+            switch normalizedCategory {
+            case "accessories":
+                cat = .accessories
+            case "banners":
+                cat = .banners
+            default:
+                cat = .apparel
+            }
+
+            return MerchItem(
+                stableIDSeed: r.id,
+                name: r.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                price: r.price_string.trimmingCharacters(in: .whitespacesAndNewlines),
+                imageName: r.image_name.trimmingCharacters(in: .whitespacesAndNewlines),
+                category: cat
+            )
         }
     }
 }

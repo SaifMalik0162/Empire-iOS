@@ -364,6 +364,7 @@ private struct CompactShine: ViewModifier {
                     phase = 1.2
                 }
             }
+            .onDisappear { phase = -1 }
             .allowsHitTesting(false)
     }
 }
@@ -385,6 +386,7 @@ private struct CompactShimmerOverlay: View {
         .onAppear {
             withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 }
         }
+        .onDisappear { phase = 0 }
         .blendMode(.screen)
         .opacity(0.5)
         .allowsHitTesting(false)

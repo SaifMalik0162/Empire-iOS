@@ -12,14 +12,9 @@ struct HomeView: View {
     @State private var isLoadingMeets = false
     @State private var meetsError: String? = nil
     @State private var featuredUserCarPhotoData: Data? = nil
+    @State private var featuredMerch: [MerchItem] = []
 
     // MARK: - Data Sources
-    private let featuredMerch: [MerchItem] = [
-        MerchItem(name: "Street Royalty Hoodie", price: "$80", imageName: "street_royalty_hoodie", category: .apparel),
-        MerchItem(name: "Empire Single Logo Tee", price: "$35", imageName: "empire_single_logo_tee", category: .apparel),
-        MerchItem(name: "Air Freshener Kit", price: "$15", imageName: "air_freshener_kit", category: .accessories)
-    ]
-
     private let communityCars: [Car] = [
         Car(name: "Honda Prelude BB2", description: "@officialtobysemple — Clean BB2 build", imageName: "prelude_bb2", horsepower: 450, stage: 3),
         Car(name: "Civic Si Coupe", description: "@fg2_corey — FG2 Si coupe", imageName: "civic_si_fg2", horsepower: 220, stage: 2),
@@ -366,10 +361,12 @@ struct HomeView: View {
             }
             .onAppear {
                 reloadFeaturedUserCarPhoto()
+                loadFeaturedMerch()
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     reloadFeaturedUserCarPhoto()
+                    loadFeaturedMerch()
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
@@ -424,6 +421,28 @@ struct HomeView: View {
                     let msg = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
                     self.meetsError = msg.isEmpty ? "Failed to load meets" : msg
                 }
+            }
+        }
+    }
+
+    private func loadFeaturedMerch() {
+        let cached = LocalStore.shared.fetchMerch(context: modelContext)
+        if !cached.isEmpty {
+            featuredMerch = Array(cached.prefix(3))
+        } else {
+            featuredMerch = Array(MerchCatalog.featured.prefix(3))
+        }
+
+        Task {
+            do {
+                let fresh = try await SupabaseMerchService().fetchMerch()
+                guard !fresh.isEmpty else { return }
+                await MainActor.run {
+                    LocalStore.shared.cacheMerch(fresh, context: modelContext)
+                    featuredMerch = Array(fresh.prefix(3))
+                }
+            } catch {
+                AppTelemetry.shared.record(error: error, context: "home.featured_merch")
             }
         }
     }
@@ -517,6 +536,7 @@ private struct HomeShimmerOverlay: View {
         .scaleEffect(x: 1.6)
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 } }
+        .onDisappear { phase = 0 }
         .blendMode(.screen)
         .opacity(0.5)
         .allowsHitTesting(false)
@@ -533,6 +553,7 @@ private struct HomeCompactShine: ViewModifier {
                 phase = -1
                 withAnimation(.linear(duration: 5).repeatForever(autoreverses: false)) { phase = 1.2 }
             }
+            .onDisappear { phase = -1 }
             .allowsHitTesting(false)
     }
 }

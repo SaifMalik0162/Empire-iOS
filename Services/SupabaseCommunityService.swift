@@ -118,7 +118,7 @@ private struct SBCommentCountRow: Codable {
 // MARK: - Service
 
 final class SupabaseCommunityService {
-    private let client = SupabaseClientProvider.client
+    private var client: SupabaseClient { SupabaseClientProvider.client }
     private let photosBucket = "car-photos"
     private let avatarsBucket = "avatars"
 
@@ -556,13 +556,11 @@ final class SupabaseCommunityService {
     // MARK: - Public URL helpers
 
     func publicURL(for path: String) -> URL? {
-        let base = SupabaseConfig.url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        return URL(string: "\(base)/storage/v1/object/public/\(photosBucket)/\(path)")
+        SupabaseClientProvider.publicObjectURL(bucket: photosBucket, path: path)
     }
 
     func avatarPublicURL(for path: String) -> URL? {
-        let base = SupabaseConfig.url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        return URL(string: "\(base)/storage/v1/object/public/\(avatarsBucket)/\(path)")
+        SupabaseClientProvider.publicObjectURL(bucket: avatarsBucket, path: path)
     }
 
     // MARK: - Private helpers
