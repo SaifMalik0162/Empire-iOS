@@ -1,4 +1,5 @@
 import SwiftUI
+import CryptoKit
 
 // MARK: - Tabs
 enum EmpireTab: CaseIterable, Hashable {
@@ -131,9 +132,38 @@ enum MerchCategory: String, CaseIterable, Codable, Equatable, Hashable {
 }
 
 struct MerchItem: Identifiable {
-    let id = UUID()
+    let id: UUID
     let name: String
     let price: String
     let imageName: String
     let category: MerchCategory
+
+    init(
+        id: UUID? = nil,
+        stableIDSeed: String? = nil,
+        name: String,
+        price: String,
+        imageName: String,
+        category: MerchCategory
+    ) {
+        self.id = id ?? Self.makeStableID(from: stableIDSeed ?? "\(category.rawValue)|\(imageName)|\(name)")
+        self.name = name
+        self.price = price
+        self.imageName = imageName
+        self.category = category
+    }
+
+    private static func makeStableID(from seed: String) -> UUID {
+        let digest = SHA256.hash(data: Data(seed.utf8))
+        let bytes = Array(digest.prefix(16))
+        let uuidString = String(
+            format: "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5],
+            bytes[6], bytes[7],
+            bytes[8], bytes[9],
+            bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+        )
+        return UUID(uuidString: uuidString) ?? UUID()
+    }
 }

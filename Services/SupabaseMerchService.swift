@@ -40,6 +40,7 @@ final class SupabaseMerchService {
             }
 
             return MerchItem(
+                stableIDSeed: r.id,
                 name: r.name.trimmingCharacters(in: .whitespacesAndNewlines),
                 price: r.price_string.trimmingCharacters(in: .whitespacesAndNewlines),
                 imageName: r.image_name.trimmingCharacters(in: .whitespacesAndNewlines),
