@@ -54,6 +54,10 @@ struct EmpireSplashView: View {
                                 }
                             }
                         }
+                        .onDisappear {
+                            spin = false
+                            fadeOut = false
+                        }
                 }
             }
         }

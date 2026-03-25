@@ -367,6 +367,7 @@ private struct LiquidStatRow: View {
                     phase = 1
                 }
             }
+            .onDisappear { phase = 0 }
         }
     }
 

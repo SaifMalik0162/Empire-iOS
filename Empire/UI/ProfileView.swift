@@ -333,9 +333,6 @@ struct ProfileView: View {
                     print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
                     vehiclesVM.setContext(modelContext)
                 }
-                .task {
-                    print("[ProfileView] .task appeared")
-                }
                 .task(id: currentUserId) {
                     await profileStatsVM.load(for: currentUserId)
                 }

@@ -553,6 +553,7 @@ private struct HomeCompactShine: ViewModifier {
                 phase = -1
                 withAnimation(.linear(duration: 5).repeatForever(autoreverses: false)) { phase = 1.2 }
             }
+            .onDisappear { phase = -1 }
             .allowsHitTesting(false)
     }
 }

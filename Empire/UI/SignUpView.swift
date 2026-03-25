@@ -38,6 +38,9 @@ struct SignUpView: View {
             .onAppear {
                 animateGradient = true
             }
+            .onDisappear {
+                animateGradient = false
+            }
 
             VStack(spacing: 24) {
                 // Header
@@ -256,6 +259,9 @@ struct SignUpView: View {
         .onAppear {
             animateGradient.toggle()
         }
+        .onDisappear {
+            animateGradient = false
+        }
     }
 
     private func performRegister() {
@@ -303,4 +309,3 @@ extension Color {
     .environmentObject(AuthViewModel())
         .preferredColorScheme(.dark)
 }
-
