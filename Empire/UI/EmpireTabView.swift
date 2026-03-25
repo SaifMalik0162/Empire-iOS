@@ -12,12 +12,6 @@ struct EmpireTabView: View {
 
     @State private var dismissObserver: AnyCancellable?
 
-    @State private var meets: [Meet] = [
-        Meet(title: "Empire Meet 1", city: "Toronto", date: Date()),
-        Meet(title: "Empire Meet 2", city: "Montreal", date: Date().addingTimeInterval(86400)),
-        Meet(title: "Empire Meet 3", city: "Vancouver", date: Date().addingTimeInterval(86400*2))
-    ]
-
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeView()
