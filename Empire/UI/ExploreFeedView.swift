@@ -318,7 +318,6 @@ struct FeedPostCard: View {
     @State private var showDeleteConfirm = false
     @State private var showComments = false
     @State private var showUserPosts = false
-    @State private var tilt: CGSize = .zero
     @State private var currentPhotoIndex = 0
     @State private var photoDragOffset: CGFloat = 0
 
@@ -343,18 +342,20 @@ struct FeedPostCard: View {
 
             // Glass card base
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.085), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(LinearGradient(colors: [Color.white.opacity(0.3), Color.white.opacity(0.05)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                        .blendMode(.screen)
                 )
                 .overlay(PostShimmer().clipShape(RoundedRectangle(cornerRadius: 24)))
-                .shadow(color: stageAccent.opacity(0.2), radius: 20, x: 0, y: 12)
-                .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 6)
-                .rotation3DEffect(.degrees(Double(tilt.width) * 0.04), axis: (x: 0, y: 1, z: 0))
-                .rotation3DEffect(.degrees(Double(-tilt.height) * 0.04), axis: (x: 1, y: 0, z: 0))
+                .shadow(color: .black.opacity(0.32), radius: 12, x: 0, y: 8)
 
             // Hero photo
             Group {
@@ -454,7 +455,6 @@ struct FeedPostCard: View {
                                    startPoint: .bottomLeading, endPoint: .topTrailing),
                     lineWidth: 1.5
                 )
-                .blendMode(.plusLighter)
                 .allowsHitTesting(false)
         }
         .frame(height: 340)
@@ -530,7 +530,7 @@ struct FeedPostCard: View {
         .background(.ultraThinMaterial)
         .clipShape(Circle())
         .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
-        .shadow(color: .black.opacity(0.4), radius: 4)
+        .shadow(color: .black.opacity(0.22), radius: 2, y: 1)
     }
 
     private var placeholderPersonIcon: some View {
@@ -545,10 +545,8 @@ struct FeedPostCard: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(post.username ?? "Empire Driver")
                     .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.6), radius: 4)
                 Text(post.createdAt.relativeFormatted)
                     .font(.caption2).foregroundStyle(.white.opacity(0.6))
-                    .shadow(color: .black.opacity(0.6), radius: 4)
             }
         }
 
@@ -578,7 +576,6 @@ struct FeedPostCard: View {
                     Text(post.carName)
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.5), radius: 4)
                         .lineLimit(1)
                     if let cls = post.vehicleClass {
                         Text(cls.components(separatedBy: " - ").first ?? "")
@@ -592,7 +589,6 @@ struct FeedPostCard: View {
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.72))
                         .lineLimit(1)
-                        .shadow(color: .black.opacity(0.35), radius: 3)
                 }
             }
             .padding(.top, 10)
@@ -629,7 +625,7 @@ struct FeedPostCard: View {
                     .font(.system(size: 15))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
-                    .background(Capsule().fill(.ultraThinMaterial))
+                    .background(Capsule().fill(Color.black.opacity(0.28)))
                     .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
@@ -647,7 +643,7 @@ struct FeedPostCard: View {
                     .font(.system(size: 15))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
-                    .background(Capsule().fill(.ultraThinMaterial))
+                    .background(Capsule().fill(Color.black.opacity(0.28)))
                     .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
@@ -658,7 +654,7 @@ struct FeedPostCard: View {
                             .font(.system(size: 14))
                             .foregroundStyle(.white.opacity(0.85))
                             .padding(8)
-                            .background(Circle().fill(.ultraThinMaterial))
+                            .background(Circle().fill(Color.black.opacity(0.28)))
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
                 }
@@ -669,7 +665,6 @@ struct FeedPostCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(3)
-                    .shadow(color: .black.opacity(0.4), radius: 4)
             }
         }
     }
@@ -1336,7 +1331,6 @@ private struct ExpandedCommunityPostCard: View {
     var allowsProfileNavigation = false
 
     @State private var showComments = false
-    @State private var tilt: CGSize = .zero
 
     private var stageAccent: Color {
         if post.isJailbreak { return .purple }
@@ -1469,7 +1463,13 @@ private struct ExpandedCommunityPostCard: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.085), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
         )
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
@@ -1483,25 +1483,7 @@ private struct ExpandedCommunityPostCard: View {
                     lineWidth: 2
                 )
         )
-        .shadow(color: stageAccent.opacity(0.28), radius: 26, y: 14)
-        .shadow(color: .black.opacity(0.35), radius: 18, y: 10)
-        .rotation3DEffect(.degrees(Double(tilt.width) * 0.05), axis: (x: 0, y: 1, z: 0))
-        .rotation3DEffect(.degrees(Double(-tilt.height) * 0.05), axis: (x: 1, y: 0, z: 0))
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    let w = max(-20, min(20, value.translation.width))
-                    let h = max(-20, min(20, value.translation.height))
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.85)) {
-                        tilt = CGSize(width: w, height: h)
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.88)) {
-                        tilt = .zero
-                    }
-                }
-        )
+        .shadow(color: .black.opacity(0.32), radius: 14, y: 8)
         .sheet(isPresented: $showComments) {
             CommentSheetView(post: post, currentUserId: currentUserId, communityVM: communityVM)
                 .presentationDetents([.medium, .large])
@@ -1578,7 +1560,7 @@ private struct ExpandedCommunityPostCard: View {
         .foregroundStyle(tint)
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(Capsule().fill(.ultraThinMaterial))
+        .background(Capsule().fill(Color.white.opacity(0.08)))
         .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
     }
 }
@@ -1591,7 +1573,7 @@ private struct PostShimmer: View {
         LinearGradient(
             gradient: Gradient(stops: [
                 .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.06), location: 0.45),
+                .init(color: .white.opacity(0.05), location: 0.45),
                 .init(color: .clear, location: 0.9)
             ]),
             startPoint: .topLeading, endPoint: .bottomTrailing
@@ -1600,7 +1582,8 @@ private struct PostShimmer: View {
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) { phase = 1 } }
         .onDisappear { phase = 0 }
-        .blendMode(.screen).allowsHitTesting(false)
+        .opacity(0.55)
+        .allowsHitTesting(false)
     }
 }
 
