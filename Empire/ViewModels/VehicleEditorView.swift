@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import UIKit
 import SwiftData
+import CryptoKit
 
 // MARK: - Glass Card & Shimmer Components
 
@@ -83,6 +84,8 @@ struct VehicleEditorView: View {
 
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var tempPhotoData: Data? = nil
+    @State private var originalPhotoFingerprint: String?
+    @State private var tempPhotoFingerprint: String?
 
     private let userStorageKey: String
 
@@ -134,8 +137,13 @@ struct VehicleEditorView: View {
         // Load photo data from disk using photoFileName if available.
         if let photoFileName = baseCar.photoFileName, let loadedData = ImageStore.load(photoFileName) {
             _tempPhotoData = State(initialValue: loadedData)
+            let fingerprint = Self.photoFingerprint(for: loadedData)
+            _originalPhotoFingerprint = State(initialValue: fingerprint)
+            _tempPhotoFingerprint = State(initialValue: fingerprint)
         } else {
             _tempPhotoData = State(initialValue: nil)
+            _originalPhotoFingerprint = State(initialValue: nil)
+            _tempPhotoFingerprint = State(initialValue: nil)
         }
 
         _stageCarouselSelection = State(initialValue: baseCar.stage)
@@ -711,30 +719,36 @@ struct VehicleEditorView: View {
 
         updated.vehicleClass = tempVehicleClass
 
-        // Persist photo data to disk and update photoFileName accordingly
-        if let data = tempPhotoData {
-            let filename = "car_\(updated.id.uuidString).jpg"
-            do {
-                let compressed = compressForLocalStorage(data) ?? data
-                _ = try ImageStore.save(compressed, fileName: filename)
-                updated.photoFileName = filename
-            } catch {
-                // On failure, do not update photoFileName
-            }
-        }
-
         // Apply suggested stage directly, no jailbreak or pending overrides
         let suggested = computeSuggestedStage()
         updated.stage = suggested
         updated.isJailbreak = false
 
-        // Persist per-user so edits survive relaunch.
-        Self.saveCar(updated, userKey: userStorageKey)
+        let photoDataToWrite = tempPhotoData
+        let photoDidChange = tempPhotoFingerprint != originalPhotoFingerprint
+        let userStorageKey = self.userStorageKey
+        let modelContext = self.modelContext
 
-        LocalStore.shared.upsertCar(updated, context: modelContext, userKey: userStorageKey)
+        Task(priority: .userInitiated) {
+            var finalized = updated
 
-        onSave(updated)
-        dismiss()
+            if photoDidChange, let photoDataToWrite {
+                let filename = "car_\(finalized.id.uuidString).jpg"
+                do {
+                    _ = try ImageStore.save(photoDataToWrite, fileName: filename)
+                    finalized.photoFileName = filename
+                } catch {
+                    // On failure, keep the previous photoFileName.
+                }
+            }
+
+            await MainActor.run {
+                Self.saveCar(finalized, userKey: userStorageKey)
+                LocalStore.shared.upsertCar(finalized, context: modelContext, userKey: userStorageKey)
+                onSave(finalized)
+                dismiss()
+            }
+        }
     }
 
     // MARK: - Helpers & fallback
@@ -801,6 +815,11 @@ struct VehicleEditorView: View {
         return try? JSONDecoder().decode(Car.self, from: data)
     }
 
+    private static func photoFingerprint(for data: Data) -> String {
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
     private func labelForClass(_ cls: VehicleClass) -> String {
         switch cls {
         case .a_FWD_Tuner: return "A - FWD Tuner"
@@ -818,28 +837,58 @@ struct VehicleEditorView: View {
     private func loadSelectedPhoto(from item: PhotosPickerItem) async {
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else { return }
+            let processedData = await Self.preparePhotoForLocalStorage(data)
+            let fingerprint = Self.photoFingerprint(for: processedData)
             await MainActor.run {
-                self.tempPhotoData = compressForLocalStorage(data) ?? data
+                self.tempPhotoData = processedData
+                self.tempPhotoFingerprint = fingerprint
             }
         } catch {
             // Ignore picker errors and keep previous image state.
         }
     }
 
-    private func compressForLocalStorage(_ data: Data) -> Data? {
+    private static func preparePhotoForLocalStorage(_ data: Data) async -> Data {
+        await Task.detached(priority: .userInitiated) {
+            compressForLocalStorage(data) ?? data
+        }.value
+    }
+
+    private static func compressForLocalStorage(_ data: Data) -> Data? {
         let maxBytes = 1_500_000
-        guard data.count > maxBytes else { return data }
+        let maxDimension: CGFloat = 1600
+
         guard let image = UIImage(data: data) else { return data }
 
+        let resizedImage = resizedImageIfNeeded(image, maxDimension: maxDimension)
+        let inputImage = resizedImage ?? image
+
+        if let jpeg = inputImage.jpegData(compressionQuality: 0.92), jpeg.count <= maxBytes {
+            return jpeg
+        }
+
         var compression: CGFloat = 0.94
-        var result = image.jpegData(compressionQuality: compression)
+        var result = inputImage.jpegData(compressionQuality: compression)
 
         while let current = result, current.count > maxBytes, compression > 0.5 {
             compression -= 0.08
-            result = image.jpegData(compressionQuality: compression)
+            result = inputImage.jpegData(compressionQuality: compression)
         }
 
         return result ?? data
+    }
+
+    private static func resizedImageIfNeeded(_ image: UIImage, maxDimension: CGFloat) -> UIImage? {
+        let size = image.size
+        let longestSide = max(size.width, size.height)
+        guard longestSide > maxDimension else { return nil }
+
+        let scale = maxDimension / longestSide
+        let targetSize = CGSize(width: floor(size.width * scale), height: floor(size.height * scale))
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
     }
 }
 
