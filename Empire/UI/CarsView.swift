@@ -502,10 +502,6 @@ private extension CarsView {
         .padding(.vertical, 8)
         .padding(.bottom, 60)
         .padding(.top, 4)
-        .task { await communityVM.refresh() }
-        .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
-            Task { await communityVM.refresh() }
-        }
     }
 
     // MARK: Quick editor fallback
@@ -1012,6 +1008,7 @@ private struct HoloShimmerMask: View {
         .scaleEffect(x: 1.8)
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) { phase = 1 } }
+        .onDisappear { phase = 0 }
         .blendMode(.screen).opacity(0.6).allowsHitTesting(false)
     }
 }

@@ -536,6 +536,7 @@ private struct HomeShimmerOverlay: View {
         .scaleEffect(x: 1.6)
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 } }
+        .onDisappear { phase = 0 }
         .blendMode(.screen)
         .opacity(0.5)
         .allowsHitTesting(false)

@@ -1599,6 +1599,7 @@ private struct PostShimmer: View {
         .scaleEffect(x: 1.8)
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) { phase = 1 } }
+        .onDisappear { phase = 0 }
         .blendMode(.screen).allowsHitTesting(false)
     }
 }

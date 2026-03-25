@@ -510,6 +510,7 @@ private struct HoloShimmerMask: View {
                 phase = 1
             }
         }
+        .onDisappear { phase = 0 }
         .blendMode(.screen)
         .opacity(accessibilityReduceMotion ? 0.0 : 0.6)
         .allowsHitTesting(false)
