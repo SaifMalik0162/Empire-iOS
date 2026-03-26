@@ -917,12 +917,14 @@ struct CommunityProfilePostsView: View {
                     .font(.system(.headline, design: .rounded).weight(.semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.88)
 
                 HStack(spacing: 6) {
                     Text("@\(displayHandle)")
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.45))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.84)
 
                     Circle()
                         .fill(Color("EmpireMint").opacity(0.6))
@@ -933,34 +935,42 @@ struct CommunityProfilePostsView: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
+            .layoutPriority(1)
 
             Spacer(minLength: 10)
 
             VStack(alignment: .trailing, spacing: 6) {
                 profileMetric(value: "\(vm.totalPostsCount)", label: "Posts")
                 if let headerStats = currentHeaderStats {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
+                        if let classCode = headerStats.classCode,
+                           let classTint = headerStats.classTint {
+                            Text(classCode)
+                                .font(.system(size: 11, weight: .black, design: .rounded))
+                                .foregroundStyle(classTint)
+                                .shadow(color: classTint.opacity(0.9), radius: 8, x: 0, y: 0)
+                                .shadow(color: classTint.opacity(0.45), radius: 16, x: 0, y: 0)
+                        }
+
                         Text("\(headerStats.horsepower) WHP")
                             .font(.system(size: 10, weight: .bold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.72)
                             .foregroundStyle(Color.cyan.opacity(0.95))
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 7)
                             .padding(.vertical, 5)
                             .background(Capsule().fill(Color.cyan.opacity(0.16)))
                             .overlay(Capsule().stroke(Color.cyan.opacity(0.45), lineWidth: 1))
-                            .fixedSize(horizontal: false, vertical: true)
 
                         Text(headerStats.stageLabel)
                             .font(.system(size: 10, weight: .bold, design: .rounded))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.72)
+                            .minimumScaleFactor(0.82)
                             .foregroundStyle(headerStats.tint.opacity(0.95))
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 7)
                             .padding(.vertical, 5)
                             .background(Capsule().fill(headerStats.tint.opacity(0.16)))
                             .overlay(Capsule().stroke(headerStats.tint.opacity(0.45), lineWidth: 1))
-                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -1077,12 +1087,16 @@ struct CommunityProfilePostsView: View {
         StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak).uppercased()
     }
 
-    private var currentHeaderStats: (horsepower: Int, stageLabel: String, tint: Color)? {
+    private var currentHeaderStats: (horsepower: Int, stageLabel: String, tint: Color, classCode: String?, classTint: Color?)? {
+        let latestClass = VehicleClass.from(rawValue: vm.posts.first?.vehicleClass)
+
         if let currentHeaderCar {
             return (
                 horsepower: currentHeaderCar.horsepower,
                 stageLabel: StageSystem.displayLabel(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak).uppercased(),
-                tint: StageSystem.accentColor(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak)
+                tint: StageSystem.accentColor(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak),
+                classCode: currentHeaderCar.vehicleClass?.code ?? latestClass?.code,
+                classTint: currentHeaderCar.vehicleClass?.accentColor ?? latestClass?.accentColor
             )
         }
 
@@ -1090,7 +1104,9 @@ struct CommunityProfilePostsView: View {
         return (
             horsepower: latest.horsepower,
             stageLabel: latestStageLabel(for: latest),
-            tint: stageTintForHeader(latest)
+            tint: stageTintForHeader(latest),
+            classCode: latestClass?.code,
+            classTint: latestClass?.accentColor
         )
     }
 
