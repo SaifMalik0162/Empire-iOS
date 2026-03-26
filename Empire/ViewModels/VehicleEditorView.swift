@@ -66,6 +66,7 @@ struct VehicleEditorView: View {
 
     private enum Step {
         case details
+        case vehicleClass
         case modsSpecs
         case stage
     }
@@ -93,12 +94,10 @@ struct VehicleEditorView: View {
     @State private var selectedPresetMods: Set<String> = []
 
     @State private var stageCarouselSelection: Int = 0
-    @State private var showStageWarning: Bool = false
-    @State private var attemptedStageSelection: Int? = nil
 
     private static let presetSet: Set<String> = [
-        "Tune", "Intake", "Headers", "Exhaust", "Forced Induction",
-        "Motor Swap", "Drivetrain Swap", "Transmission Upgrades", "Built Motor"
+        "Tune", "Intake", "Headers", "Exhaust",
+        "Forced Induction", "Motor Swap", "Drivetrain Swap", "Transmission Upgrades", "Built Motor"
     ]
 
     init(car: Binding<Car>, onSave: @escaping (Car) -> Void) {
@@ -123,14 +122,15 @@ struct VehicleEditorView: View {
             ? VehicleEditorView.defaultSpecs()
             : VehicleEditorView.normalizedSpecs(baseCar.specs)
         _tempSpecs = State(initialValue: initialSpecs)
-        _tempMods = State(initialValue: baseCar.mods)
 
-        // Preselect presets based on saved mods titles and select all existing mod pills
+        // Preset mods are driven only by the quick-select pills. Keep custom mods in the grid.
         let presetSet = Self.presetSet
-        let titles = Set(baseCar.mods.map { $0.title })
+        let titles = Set(baseCar.mods.compactMap { Self.normalizePresetTitle($0.title) })
         let intersecting = titles.intersection(presetSet)
+        let customMods = baseCar.mods.filter { !Self.isPresetModTitle($0.title) }
+        _tempMods = State(initialValue: customMods)
         _selectedPresetMods = State(initialValue: intersecting)
-        _selectedModIDs = State(initialValue: Set(baseCar.mods.map { $0.id }))
+        _selectedModIDs = State(initialValue: Set(customMods.map { $0.id }))
 
         _tempVehicleClass = State(initialValue: baseCar.vehicleClass)
 
@@ -172,6 +172,8 @@ struct VehicleEditorView: View {
                             switch step {
                             case .details:
                                 stepOneView
+                            case .vehicleClass:
+                                classStepView
                             case .modsSpecs:
                                 stepTwoView
                             case .stage:
@@ -215,6 +217,12 @@ struct VehicleEditorView: View {
             Task {
                 await loadSelectedPhoto(from: newValue)
             }
+        }
+        .onAppear {
+            ensureQuarterMileSpecMatchesClass()
+        }
+        .onChange(of: tempVehicleClass) { _, _ in
+            ensureQuarterMileSpecMatchesClass()
         }
     }
 
@@ -289,17 +297,35 @@ struct VehicleEditorView: View {
                 }
             }
 
-            // Vehicle Class card
+        }
+    }
+
+    private var classStepView: some View {
+        VStack(spacing: 24) {
             EditorGlassCard {
-                GlassSection(title: "Vehicle Class") {
-                    Picker("Class", selection: Binding(get: { tempVehicleClass ?? VehicleClass.a_FWD_Tuner }, set: { tempVehicleClass = $0 })) {
-                        ForEach(VehicleClass.allCases) { cls in
-                            Text(labelForClass(cls))
-                                .tag(cls)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Vehicle Class")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color("EmpireMint"))
+
+                    Text("Choose the class first. The stage system evaluates power relative to the class, and Class D uses quarter-mile results instead of the normal ladder.")
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.74))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(VehicleClass.allCases) { cls in
+                                VehicleClassCard(vehicleClass: cls, isSelected: tempVehicleClass == cls)
+                                    .onTapGesture {
+                                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                                            tempVehicleClass = cls
+                                            ensureQuarterMileSpecMatchesClass()
+                                        }
+                                    }
+                            }
                         }
                     }
-                    .pickerStyle(.menu)
-                    .tint(Color("EmpireMint"))
                 }
             }
         }
@@ -315,7 +341,7 @@ struct VehicleEditorView: View {
                     QuickAddModsRow(selectedPresets: $selectedPresetMods)
                     let modGridColumns: [GridItem] = [GridItem(.adaptive(minimum: 140), spacing: 6)]
                     LazyVGrid(columns: modGridColumns, spacing: 6) {
-                        ForEach(Array(tempMods.enumerated()).filter { !Self.presetSet.contains($0.element.title) }, id: \.element.id) { index, item in
+                        ForEach(Array(tempMods.enumerated()).filter { !Self.isPresetModTitle($0.element.title) }, id: \.element.id) { index, item in
                             let id = item.id
                             ModPillView(
                                 title: item.title.isEmpty ? "Untitled Mod" : item.title,
@@ -377,132 +403,143 @@ struct VehicleEditorView: View {
     // MARK: - Step 3 View (Stage selection with justification and approval logic)
 
     private var stepThreeView: some View {
-        VStack(spacing: 12) {
-            Text("Stage Selection")
+        let assessment = computeStageAssessment()
+        let selectedClass = tempVehicleClass
+        let stageColor = StageSystem.accentColor(for: assessment.stage.rawValue, isJailbreak: assessment.isJailbreak)
+
+        return VStack(spacing: 16) {
+            Text("Stage Assessment")
                 .font(.title2.weight(.semibold))
                 .foregroundColor(Color("EmpireMint"))
                 .padding(.bottom, 8)
 
-            let suggestedStage = computeSuggestedStage()
+            EditorGlassCard {
+                VStack(alignment: .leading, spacing: 18) {
+                    ZStack(alignment: .topLeading) {
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [stageColor.opacity(0.24), Color.white.opacity(0.05)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    .stroke(stageColor.opacity(0.45), lineWidth: 1)
+                            )
 
-            Text("System Suggestion: \(suggestedStageText(for: suggestedStage))")
-                .font(.footnote)
-                .foregroundColor(.white.opacity(0.8))
-                .italic()
-                .padding(.bottom, 8)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(selectedClass.map { "Class \($0.code) • \($0.displayName)" } ?? "No class selected")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.74))
 
-            Text("Scroll to view all stage levels")
-                .font(.footnote)
-                .foregroundColor(Color("EmpireMint").opacity(0.7))
-                .padding(.bottom, 4)
+                            Text(StageSystem.displayLabel(for: assessment.stage.rawValue, isJailbreak: assessment.isJailbreak).uppercased())
+                                .font(.system(size: 28, weight: .black, design: .rounded))
+                                .foregroundStyle(stageColor)
 
-            TabView(selection: $stageCarouselSelection) {
-                ForEach(0...3, id: \.self) { s in
-                    StageCarouselCard(
-                        stage: s,
-                        isSelected: s == suggestedStage,
-                        isSuggested: s == suggestedStage,
-                        isPendingApproval: false,
-                        accentColor: stageTint(for: s),
-                        horsepowerRange: horsepowerRangeText(for: s),
-                        description: stageDescription(for: s),
-                        examples: stageExamples(for: s)
-                    )
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .tag(s)
-                    .onTapGesture {
-                        if s != suggestedStage {
-                            attemptedStageSelection = s
-                            showStageWarning = true
-                            stageCarouselSelection = s
-                        } else {
-                            stageCarouselSelection = s
+                            Text(assessment.summary)
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(.white)
+
+                            Text(assessment.detail)
+                                .font(.footnote)
+                                .foregroundStyle(.white.opacity(0.8))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(18)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 190)
+
+                    HStack(spacing: 10) {
+                        stageGatePill(title: "Major Mods", value: "\(assessment.majorModCount)/\(StageSystem.requiredMajorModCount)", isPassing: assessment.majorModCount >= StageSystem.requiredMajorModCount)
+                        stageGatePill(title: "Tune", value: assessment.hasTune ? "Detected" : "Missing", isPassing: assessment.hasTune)
+                        stageGatePill(title: tempVehicleClass == .dragTrack ? "1/4 Mile" : "WHP", value: tempVehicleClass == .dragTrack ? quarterMileDisplayValue : "\(tempHorsepower)", isPassing: tempVehicleClass == .dragTrack ? !quarterMileValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty : true)
+                    }
+                }
+            }
+
+            if let selectedClass, !selectedClass.stageBands.isEmpty {
+                EditorGlassCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Class \(selectedClass.code) Stage Ladder")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(selectedClass.accentColor)
+
+                        ForEach(selectedClass.stageBands, id: \.rank) { band in
+                            HStack {
+                                Text(band.rank.label)
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(band.rank.accentColor)
+                                Spacer()
+                                Text(band.horsepowerLabel)
+                                    .font(.footnote)
+                                    .foregroundStyle(.white.opacity(0.78))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(band.rank == assessment.stage ? band.rank.accentColor.opacity(0.16) : Color.white.opacity(0.04))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(band.rank == assessment.stage ? band.rank.accentColor.opacity(0.8) : Color.white.opacity(0.08), lineWidth: 1)
+                            )
                         }
                     }
                 }
-                StageCarouselCard(
-                    stage: nil,
-                    isSelected: false,
-                    isSuggested: false,
-                    isPendingApproval: false,
-                    accentColor: Color.purple,
-                    horsepowerRange: horsepowerRangeText(for: nil),
-                    description: "Jailbreak mode disables stage selection and allows custom tuning beyond normal stages.",
-                    examples: ["Custom engine swaps", "Extreme modifications"]
-                )
-                .padding(.vertical, 6)
-                .padding(.horizontal, 10)
-                .tag(4)
-                .onTapGesture {
-                    attemptedStageSelection = 4
-                    showStageWarning = true
-                    stageCarouselSelection = 4
-                }
             }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            .frame(height: 230)
-            .padding(.bottom, 6)
 
-            HStack(spacing: 6) {
-                Image(systemName: "chevron.left")
-                    .foregroundColor(stageCarouselSelection > 0 ? Color("EmpireMint") : Color("EmpireMint").opacity(0.3))
-                    .font(.headline)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundColor(stageCarouselSelection < 4 ? Color("EmpireMint") : Color("EmpireMint").opacity(0.3))
-                    .font(.headline)
-            }
-            .padding(.horizontal, 30)
-            .padding(.bottom, 12)
+            EditorGlassCard {
+                GlassSection(title: "Build Readiness") {
+                    let selectedMods = selectedMajorModTitles()
 
-            HStack(spacing: 6) {
-                ForEach(0...4, id: \.self) { idx in
-                    Circle()
-                        .fill(idx == stageCarouselSelection ? Color("EmpireMint") : Color.white.opacity(0.25))
-                        .frame(width: 8, height: 8)
-                }
-            }
-            .padding(.bottom, 12)
+                    VStack(alignment: .leading, spacing: 10) {
+                        readinessRow(
+                            title: "Major mod gate",
+                            detail: "A build stays Stock until at least 3 major mods are selected.",
+                            isPassing: assessment.majorModCount >= StageSystem.requiredMajorModCount
+                        )
+                        readinessRow(
+                            title: "Tune required",
+                            detail: assessment.hasTune ? "Tune detected in the selected setup." : "Add a tune before the build can move out of Stock.",
+                            isPassing: assessment.hasTune
+                        )
 
-            if showStageWarning {
-                EditorGlassCard {
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(Color("EmpireMint"))
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Selection doesn't match system suggestion")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(Color("EmpireMint"))
-                            let s = computeSuggestedStage()
-                            let attempted = attemptedStageSelection ?? s
-                            Text("You selected \(attempted == 4 ? "Jailbreak" : (attempted == 0 ? "Stock" : "Stage \(attempted)")). The system analyzed your mods and suggests \(s == 0 ? "Stock" : "Stage \(s)").")
-                                .font(.footnote)
-                                .foregroundColor(.white.opacity(0.85))
-                                .fixedSize(horizontal: false, vertical: true)
-                            Button(action: { showStageWarning = false; stageCarouselSelection = suggestedStage }) {
-                                Text("Okay")
-                                    .font(.footnote.weight(.semibold))
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Capsule().fill(Color("EmpireMint")))
-                                    .foregroundColor(.black)
+                        if tempVehicleClass == .dragTrack {
+                            readinessRow(
+                                title: "Quarter-mile required",
+                                detail: quarterMileValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    ? "Enter the fastest recorded 1/4 mile run for Class D."
+                                    : "Recorded run: \(quarterMileValue)",
+                                isPassing: !quarterMileValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            )
+                        }
+
+                        if !selectedMods.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Selected Major Mods")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.82))
+
+                                FlexiblePillWrap(items: selectedMods) { mod in
+                                    Text(mod)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Capsule().fill(Color.white.opacity(0.07)))
+                                        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                                }
                             }
                         }
-                        Spacer(minLength: 0)
                     }
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .animation(.easeInOut, value: stageCarouselSelection)
-        .animation(.easeInOut, value: tempStage)
-        .onChange(of: tempStage) { oldValue, newValue in
-            let s = computeSuggestedStage()
-            stageCarouselSelection = s
-        }
         .onAppear {
-            stageCarouselSelection = computeSuggestedStage()
+            stageCarouselSelection = assessment.stage.rawValue
         }
     }
 
@@ -513,6 +550,31 @@ struct VehicleEditorView: View {
             switch step {
             case .details:
                 // Step 1: Only Next button
+                Button(action: { step = nextStep(from: step) }) {
+                    Text("Next")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(Color("EmpireMint"))
+                        )
+                        .foregroundColor(.black)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            case .vehicleClass:
+                Button(action: { step = previousStep(from: step) }) {
+                    Text("Back")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .stroke(Color("EmpireMint"), lineWidth: 1.3)
+                        )
+                        .foregroundColor(Color("EmpireMint"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Button(action: { step = nextStep(from: step) }) {
                     Text("Next")
                         .font(.system(size: 16, weight: .semibold))
@@ -585,107 +647,95 @@ struct VehicleEditorView: View {
     private func previousStep(from step: Step) -> Step {
         switch step {
         case .details: return .details
-        case .modsSpecs: return .details
+        case .vehicleClass: return .details
+        case .modsSpecs: return .vehicleClass
         case .stage: return .modsSpecs
         }
     }
     private func nextStep(from step: Step) -> Step {
         switch step {
-        case .details: return .modsSpecs
+        case .details: return .vehicleClass
+        case .vehicleClass: return .modsSpecs
         case .modsSpecs: return .stage
         case .stage: return .stage
         }
     }
 
     private func canSave() -> Bool {
-
+        if tempVehicleClass == .dragTrack {
+            return !quarterMileValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
         return true
     }
 
-    // MARK: - Helper: Compute suggested stage from current selections
+    // MARK: - Helper: Compute stage from class, horsepower, and qualifying mods
 
-    private func computeSuggestedStage() -> Int {
-        // The suggestion is always from mods/specs, never affected by user's manual override including Jailbreak.
-        // So always compute fresh suggestion ignoring tempIsJailbreak and tempStage.
-
-        // Count preset mods and selected mod pills excluding presets
-        let selectedPresetCount = selectedPresetMods.count
-        let selectedModCount = tempMods.filter { selectedModIDs.contains($0.id) && !Self.presetSet.contains($0.title) }.count
-        let totalSelectedCount = selectedPresetCount + selectedModCount
-
-        // Check if any selected mod or preset contains "tune" (case-insensitive)
-        let hasTuneFromPresets = selectedPresetMods.contains { $0.localizedCaseInsensitiveContains("tune") }
-        let hasTuneFromSelectedMods = tempMods.contains { mod in
-            selectedModIDs.contains(mod.id) && mod.title.localizedCaseInsensitiveContains("tune")
-        }
-        let hasTuneAny = hasTuneFromPresets || hasTuneFromSelectedMods
-
-        guard hasTuneAny else {
-            // No tune detected, suggest stage 0 by default
-            return 0
-        }
-
-        if totalSelectedCount >= 6 {
-            return 3
-        } else if totalSelectedCount >= 4 {
-            return 2
-        } else if totalSelectedCount >= 2 {
-            return 1
-        } else {
-            return 0
-        }
+    private func computeStageAssessment() -> StageAssessment {
+        StageSystem.assessment(
+            vehicleClass: tempVehicleClass,
+            horsepower: tempHorsepower,
+            selectedMajorMods: selectedMajorModTitles()
+        )
     }
 
-    private func suggestedStageText(for stage: Int) -> String {
-        switch stage {
-        case 0: return "Stock"
-        case 1: return "Stage 1"
-        case 2: return "Stage 2"
-        case 3: return "Stage 3"
-        default: return "Stock"
+    private func selectedMajorModTitles() -> [String] {
+        let presetMods = selectedPresetMods.filter { StageSystem.isMajorMod($0) }
+        let selectedCustomMods = tempMods.compactMap { mod -> String? in
+            guard selectedModIDs.contains(mod.id) else { return nil }
+            guard Self.isPresetModTitle(mod.title) == false else { return nil }
+            return StageSystem.isMajorMod(mod.title, isMajorFlag: mod.isMajor) ? mod.title : nil
         }
+        return Array(Set(presetMods + selectedCustomMods)).sorted()
     }
 
-    private func stageDescription(for stage: Int) -> String {
-        switch stage {
-        case 0:
-            return "Stock configuration with factory parts."
-        case 1:
-            return "Mild upgrades for improved performance."
-        case 2:
-            return "Significant modifications including major tuning."
-        case 3:
-            return "Extreme modifications with high performance parts."
-        default:
-            return ""
+    private func stageGatePill(title: String, value: String, isPassing: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased())
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .foregroundStyle((isPassing ? Color("EmpireMint") : Color.orange).opacity(0.9))
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill((isPassing ? Color("EmpireMint") : Color.orange).opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke((isPassing ? Color("EmpireMint") : Color.orange).opacity(0.35), lineWidth: 1)
+        )
     }
 
-    private func horsepowerRangeText(for stage: Int?) -> String {
-        switch stage {
-        case 0:
-            return "Typical range: 0-149 WHP"
-        case 1:
-            return "Typical range: 150-250 WHP"
-        case 2:
-            return "Typical range: 251-400 WHP"
-        case 3:
-            return "Typical range: 401+ WHP"
-        case nil:
-            return ""
-        default:
-            return "Typical range varies"
-        }
-    }
+    private func readinessRow(title: String, detail: String, isPassing: Bool) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: isPassing ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                .font(.headline)
+                .foregroundStyle(isPassing ? Color("EmpireMint") : Color.orange)
 
-    private func stageExamples(for stage: Int) -> [String] {
-        switch stage {
-        case 0: return ["Factory intake", "Stock exhaust", "No tuning"]
-        case 1: return ["Basic tune", "Performance exhaust", "Upgraded intake"]
-        case 2: return ["Aggressive tuning", "Forced induction", "Built motor"]
-        case 3: return ["Race-level tune", "Full motor swap", "Pro-level forced induction"]
-        default: return []
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.74))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke((isPassing ? Color("EmpireMint") : Color.orange).opacity(0.22), lineWidth: 1)
+        )
     }
 
     // MARK: - Save & Dismiss
@@ -700,11 +750,11 @@ struct VehicleEditorView: View {
         updated.horsepower = tempHorsepower
         updated.specs = tempSpecs
 
-        updated.mods = tempMods
+        updated.mods = tempMods.filter { !Self.isPresetModTitle($0.title) }
 
         // Merge selected preset pills into saved mods without duplicating in the editor grid
-        let existingTitles = Set(updated.mods.map { $0.title })
-        let presetsToPersist = selectedPresetMods.subtracting(existingTitles)
+        let existingPresetTitles = Set(updated.mods.compactMap { Self.normalizePresetTitle($0.title) })
+        let presetsToPersist = selectedPresetMods.subtracting(existingPresetTitles)
         if !presetsToPersist.isEmpty {
             let newPresetItems = presetsToPersist.map { title in
                 ModItem(title: title, notes: "", isMajor: true)
@@ -714,15 +764,16 @@ struct VehicleEditorView: View {
 
         // Remove any preset mods that are no longer selected
         updated.mods.removeAll { item in
-            Self.presetSet.contains(item.title) && !selectedPresetMods.contains(item.title)
+            guard let normalizedTitle = Self.normalizePresetTitle(item.title) else { return false }
+            return !selectedPresetMods.contains(normalizedTitle)
         }
 
         updated.vehicleClass = tempVehicleClass
+        updated.specs = syncedSpecsForSave()
 
-        // Apply suggested stage directly, no jailbreak or pending overrides
-        let suggested = computeSuggestedStage()
-        updated.stage = suggested
-        updated.isJailbreak = false
+        let assessment = computeStageAssessment()
+        updated.stage = assessment.stage.rawValue
+        updated.isJailbreak = assessment.isJailbreak
 
         let photoDataToWrite = tempPhotoData
         let photoDidChange = tempPhotoFingerprint != originalPhotoFingerprint
@@ -780,7 +831,7 @@ struct VehicleEditorView: View {
     }
 
     private static func normalizedSpecs(_ specs: [SpecItem]) -> [SpecItem] {
-        let preferredSpecOrder: [String] = ["engine", "drivetrain", "transmission", "tires", "weight"]
+        let preferredSpecOrder: [String] = ["engine", "drivetrain", "transmission", "tires", "weight", "1/4 mile"]
         let rank = Dictionary(uniqueKeysWithValues: preferredSpecOrder.enumerated().map { ($1, $0) })
         return specs.sorted { lhs, rhs in
             let leftRank = rank[lhs.key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] ?? Int.max
@@ -821,17 +872,74 @@ struct VehicleEditorView: View {
     }
 
     private func labelForClass(_ cls: VehicleClass) -> String {
-        switch cls {
-        case .a_FWD_Tuner: return "A - FWD Tuner"
-        case .performance4Cyl: return "B - Performance 4-Cylinder"
-        case .sixCylinderStreet: return "C - 6-Cylinder Street"
-        case .highPerformance: return "S - High-Performance Sports"
-        case .m_AmericanMuscle: return "M - American Muscle"
-        case .importV8: return "I - Import V8 Performance"
-        case .supercar: return "X - Supercars & Hypercars"
-        case .electricHybrid: return "E - Electric & Hybrid"
-        case .trackOnly: return "T - Track-Only"
+        cls.rawValue
+    }
+
+    private var quarterMileValue: String {
+        tempSpecs.first(where: { normalizedSpecKey($0.key) == "1/4 mile" })?.value ?? ""
+    }
+
+    private var quarterMileDisplayValue: String {
+        let value = quarterMileValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? "Needed" : value
+    }
+
+    private func normalizedSpecKey(_ key: String) -> String {
+        key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private func ensureQuarterMileSpecMatchesClass() {
+        if tempVehicleClass == .dragTrack {
+            if tempSpecs.contains(where: { normalizedSpecKey($0.key) == "1/4 mile" }) == false {
+                tempSpecs.append(SpecItem(key: "1/4 Mile", value: ""))
+                tempSpecs = Self.normalizedSpecs(tempSpecs)
+            }
+        } else {
+            tempSpecs.removeAll { normalizedSpecKey($0.key) == "1/4 mile" }
         }
+    }
+
+    private func updateQuarterMileSpec(_ value: String) {
+        if let index = tempSpecs.firstIndex(where: { normalizedSpecKey($0.key) == "1/4 mile" }) {
+            tempSpecs[index].value = value
+        } else {
+            tempSpecs.append(SpecItem(key: "1/4 Mile", value: value))
+        }
+        tempSpecs = Self.normalizedSpecs(tempSpecs)
+    }
+
+    private func syncedSpecsForSave() -> [SpecItem] {
+        var specs = tempSpecs
+        if tempVehicleClass == .dragTrack {
+            if let index = specs.firstIndex(where: { normalizedSpecKey($0.key) == "1/4 mile" }) {
+                specs[index].key = "1/4 Mile"
+            } else {
+                specs.append(SpecItem(key: "1/4 Mile", value: quarterMileValue))
+            }
+        } else {
+            specs.removeAll { normalizedSpecKey($0.key) == "1/4 mile" }
+        }
+        return Self.normalizedSpecs(specs)
+    }
+
+    private static func normalizePresetTitle(_ title: String) -> String? {
+        let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch normalized {
+        case "tune": return "Tune"
+        case "intake", "intake manifold": return "Intake"
+        case "headers": return "Headers"
+        case "exhaust", "performance exhaust": return "Exhaust"
+        case "forced induction", "forced induction kit": return "Forced Induction"
+        case "motor swap": return "Motor Swap"
+        case "drivetrain swap": return "Drivetrain Swap"
+        case "transmission upgrade", "transmission upgrades": return "Transmission Upgrades"
+        case "built motor": return "Built Motor"
+        default: return nil
+        }
+    }
+
+    private static func isPresetModTitle(_ title: String) -> Bool {
+        normalizePresetTitle(title) != nil
     }
 
     private func loadSelectedPhoto(from item: PhotosPickerItem) async {
@@ -1368,11 +1476,6 @@ private struct ModPillView: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            if isMajor {
-                Image(systemName: "bolt.fill")
-                    .font(.caption2)
-                    .foregroundStyle(.yellow)
-            }
             Spacer(minLength: 0)
             Button(role: .destructive) { onDelete() } label: {
                 Image(systemName: "xmark.circle.fill")
@@ -1404,6 +1507,43 @@ private struct ModPillView: View {
                 onToggleSelect()
             }
         )
+    }
+}
+
+private struct FlexiblePillWrap<Data: RandomAccessCollection, Content: View>: View where Data.Element: Hashable {
+    let items: Data
+    let content: (Data.Element) -> Content
+
+    init(items: Data, @ViewBuilder content: @escaping (Data.Element) -> Content) {
+        self.items = items
+        self.content = content
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            let rows = makeRows(from: Array(items))
+            ForEach(Array(rows.enumerated()), id: \.offset) { entry in
+                let row = entry.element
+                HStack(spacing: 8) {
+                    ForEach(row, id: \.self) { item in
+                        content(item)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+    }
+
+    private func makeRows(from items: [Data.Element]) -> [[Data.Element]] {
+        var rows: [[Data.Element]] = [[]]
+        for item in items {
+            if rows[rows.count - 1].count >= 2 {
+                rows.append([item])
+            } else {
+                rows[rows.count - 1].append(item)
+            }
+        }
+        return rows.filter { !$0.isEmpty }
     }
 }
 

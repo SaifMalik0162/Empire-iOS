@@ -243,14 +243,7 @@ private struct VehicleRowCard: View {
             Spacer(minLength: 8)
 
             HStack(spacing: 4) {
-                // Small stat capsules inline
-                if item.car.isJailbreak {
-                    StatCapsule(label: "Jailbreak", value: "", tint: .purple)
-                } else if item.car.stage == 0 {
-                    StatCapsule(label: "Stock", value: "", tint: .gray)
-                } else {
-                    StatCapsule(label: "Stage", value: "\(item.car.stage)", tint: stageTint(for: item.car.stage))
-                }
+                StatCapsule(label: StageSystem.displayLabel(for: item.car.stage, isJailbreak: item.car.isJailbreak), value: "", tint: StageSystem.accentColor(for: item.car.stage, isJailbreak: item.car.isJailbreak))
                 StatCapsule(label: "WHP", value: "\(item.car.horsepower)", tint: .cyan)
             }
         }
@@ -294,15 +287,6 @@ private func loadPhotoDataFromDisk(fileName: String?) -> Data? {
     let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     let url = dir.appendingPathComponent(fileName)
     return try? Data(contentsOf: url)
-}
-
-private func stageTint(for stage: Int) -> Color {
-    switch stage {
-    case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
-    default: return .gray
-    }
 }
 
 private struct StatCapsule: View {

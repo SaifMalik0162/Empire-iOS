@@ -37,6 +37,9 @@ struct ExploreFeedView: View {
                 case .stage1:    return post.stage == 1
                 case .stage2:    return post.stage == 2
                 case .stage3:    return post.stage == 3
+                case .stage4:    return post.stage == 4
+                case .stage5:    return post.stage == 5
+                case .maxOut:    return post.stage >= 6 && !post.isJailbreak
                 case .liked:     return post.isLiked
                 }
             }()
@@ -234,7 +237,7 @@ struct ExploreFeedView: View {
 // MARK: - Feed filter enum
 
 enum FeedFilter: CaseIterable {
-    case all, liked, stock, stage1, stage2, stage3, jailbreak
+    case all, liked, stock, stage1, stage2, stage3, stage4, stage5, maxOut, jailbreak
 
     var label: String {
         switch self {
@@ -244,6 +247,9 @@ enum FeedFilter: CaseIterable {
         case .stage1:    return "Stage 1"
         case .stage2:    return "Stage 2"
         case .stage3:    return "Stage 3"
+        case .stage4:    return "Stage 4"
+        case .stage5:    return "Stage 5"
+        case .maxOut:    return "MAX"
         case .jailbreak: return "Jailbreak"
         }
     }
@@ -256,6 +262,9 @@ enum FeedFilter: CaseIterable {
         case .stage1:    return "bolt.fill"
         case .stage2:    return "bolt.fill"
         case .stage3:    return "flame.fill"
+        case .stage4:    return "flame.fill"
+        case .stage5:    return "aqi.medium"
+        case .maxOut:    return "sparkles"
         case .jailbreak: return "lock.open.fill"
         }
     }
@@ -268,6 +277,9 @@ enum FeedFilter: CaseIterable {
         case .stage1:    return Color("EmpireMint")
         case .stage2:    return Color(red: 0.95, green: 0.78, blue: 0.1)
         case .stage3:    return Color(red: 0.95, green: 0.28, blue: 0.22)
+        case .stage4:    return Color(red: 0.92, green: 0.20, blue: 0.16)
+        case .stage5:    return Color(red: 0.88, green: 0.16, blue: 0.28)
+        case .maxOut:    return Color(red: 0.76, green: 0.48, blue: 1.0)
         case .jailbreak: return Color(red: 0.65, green: 0.35, blue: 0.95)
         }
     }
@@ -328,13 +340,7 @@ struct FeedPostCard: View {
     private var photoURLs: [URL] { communityVM.photoURLs(for: post) }
 
     private var stageAccent: Color {
-        if post.isJailbreak { return .purple }
-        switch post.stage {
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return Color(white: 0.6)
-        }
+        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     var body: some View {
@@ -494,9 +500,7 @@ struct FeedPostCard: View {
     // MARK: - Helpers
 
     private var stageLabel: String {
-        if post.isJailbreak { return "Jailbreak" }
-        if post.stage == 0  { return "Stock" }
-        return "Stage \(post.stage)"
+        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     private var carDisplayName: String {
@@ -577,10 +581,12 @@ struct FeedPostCard: View {
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    if let cls = post.vehicleClass {
-                        Text(cls.components(separatedBy: " - ").first ?? "")
+                    if let vehicleClass = VehicleClass.from(rawValue: post.vehicleClass) {
+                        Text(vehicleClass.code)
                             .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(vehicleClass.accentColor)
+                            .shadow(color: vehicleClass.accentColor.opacity(0.9), radius: 8, x: 0, y: 0)
+                            .shadow(color: vehicleClass.accentColor.opacity(0.45), radius: 16, x: 0, y: 0)
                     }
                 }
 
@@ -1064,26 +1070,19 @@ struct CommunityProfilePostsView: View {
     }
 
     private func stageTintForHeader(_ post: CommunityPost) -> Color {
-        if post.isJailbreak { return .purple }
-        switch post.stage {
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return .gray
-        }
+        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     private func latestStageLabel(for post: CommunityPost) -> String {
-        if post.isJailbreak { return "JAILBREAK" }
-        return post.stage == 0 ? "STOCK" : "STAGE \(post.stage)"
+        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak).uppercased()
     }
 
     private var currentHeaderStats: (horsepower: Int, stageLabel: String, tint: Color)? {
         if let currentHeaderCar {
             return (
                 horsepower: currentHeaderCar.horsepower,
-                stageLabel: currentHeaderCar.isJailbreak ? "JAILBREAK" : (currentHeaderCar.stage == 0 ? "STOCK" : "STAGE \(currentHeaderCar.stage)"),
-                tint: currentHeaderCar.isJailbreak ? .purple : stageTint(for: currentHeaderCar.stage)
+                stageLabel: StageSystem.displayLabel(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak).uppercased(),
+                tint: StageSystem.accentColor(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak)
             )
         }
 
@@ -1259,18 +1258,11 @@ private struct CommunityProfileGridTile: View {
     }
 
     private var profileStageLabel: String {
-        if post.isJailbreak { return "JAILBREAK" }
-        return post.stage == 0 ? "STOCK" : "STAGE \(post.stage)"
+        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak).uppercased()
     }
 
     private var stageColor: Color {
-        if post.isJailbreak { return .purple }
-        switch post.stage {
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return .gray
-        }
+        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
     }
 }
 
@@ -1333,13 +1325,7 @@ private struct ExpandedCommunityPostCard: View {
     @State private var showComments = false
 
     private var stageAccent: Color {
-        if post.isJailbreak { return .purple }
-        switch post.stage {
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return Color(white: 0.6)
-        }
+        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     var body: some View {
@@ -1416,8 +1402,8 @@ private struct ExpandedCommunityPostCard: View {
                 HStack(spacing: 8) {
                     expandedChip(label: stageLabel.uppercased(), tint: stageAccent)
                     expandedChip(label: "\(post.horsepower) WHP", tint: .cyan)
-                    if let cls = post.vehicleClass {
-                        expandedChip(label: cls.components(separatedBy: " - ").first ?? cls, tint: .white.opacity(0.7))
+                    if let cls = VehicleClass.from(rawValue: post.vehicleClass) {
+                        expandedChip(label: "\(cls.code) \(cls.displayName)", tint: cls.accentColor)
                     }
                 }
 
@@ -1517,8 +1503,7 @@ private struct ExpandedCommunityPostCard: View {
     }
 
     private var stageLabel: String {
-        if post.isJailbreak { return "Jailbreak" }
-        return post.stage == 0 ? "Stock" : "Stage \(post.stage)"
+        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     private var makeModelLine: String? {
@@ -1588,10 +1573,5 @@ private struct PostShimmer: View {
 }
 
 private func stageTint(for stage: Int) -> Color {
-    switch stage {
-    case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
-    default: return .gray
-    }
+    StageSystem.accentColor(for: stage, isJailbreak: false)
 }

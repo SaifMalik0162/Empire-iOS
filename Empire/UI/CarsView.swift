@@ -596,13 +596,7 @@ private struct LiquidGlassCarCard: View {
                     .foregroundStyle(.white)
                     .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
                 HStack(spacing: 6) {
-                    if car.isJailbreak {
-                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
-                    } else if car.stage == 0 {
-                        StatCapsule(label: "Stock", value: "", tint: .gray)
-                    } else {
-                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
-                    }
+                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                     StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                 }
             }
@@ -692,8 +686,8 @@ struct CommunityPreviewTile: View {
 
     @ViewBuilder
     private var tileStageChip: some View {
-        let label: String = post.isJailbreak ? "Jailbreak" : (post.stage == 0 ? "Stock" : "Stage \(post.stage)")
-        let tint: Color   = post.isJailbreak ? .purple : stageTint(for: post.stage)
+        let label = StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak)
+        let tint = StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
         Text(label.uppercased())
             .font(.system(size: 8, weight: .bold, design: .rounded))
             .lineLimit(1)
@@ -776,16 +770,33 @@ private struct StatCapsule: View {
     let label: String
     let value: String
     let tint: Color
+
+    private var hasValue: Bool {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
     var body: some View {
-        HStack(spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .lineLimit(1).minimumScaleFactor(0.8)
-                .foregroundStyle(tint.opacity(0.9))
-            Text(value)
-                .font(.caption2.weight(.semibold))
-                .lineLimit(1).minimumScaleFactor(0.8)
-                .foregroundStyle(.white)
+        Group {
+            if hasValue {
+                HStack(spacing: 6) {
+                    Text(label.uppercased())
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(tint.opacity(0.9))
+                    Text(value)
+                        .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(.white)
+                }
+            } else {
+                Text(label.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(tint.opacity(0.9))
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -873,23 +884,17 @@ private struct CarExpandedCardInline: View {
                 .padding(.top, 8)
 
                 HStack(spacing: 10) {
-                    if car.isJailbreak {
-                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
-                    } else if car.stage == 0 {
-                        StatCapsule(label: "Stock", value: "", tint: .gray)
-                    } else {
-                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
-                    }
+                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                     StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
                 VStack(spacing: 10) {
                     StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
                     StatRow(
-                        name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"),
+                        name: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
                         value: Double(car.isJailbreak ? 1 : car.stage),
-                        max: car.isJailbreak ? 1 : 3,
-                        accent: car.isJailbreak ? .purple : stageTint(for: car.stage)
+                        max: car.isJailbreak ? 1 : 6,
+                        accent: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
                     )
                 }
                 .padding(14)
@@ -960,7 +965,9 @@ private struct StatRow: View {
     }
 
     private var normalized: Double {
-        if name == "Stage" { return max == 0 ? 0 : Double(Swift.max(0, Swift.min(Int(value), 3))) / 3.0 }
+        if name.hasPrefix("Stage") || name == "MAX" {
+            return max == 0 ? 0 : Double(Swift.max(0, Swift.min(Int(value), Int(max)))) / max
+        }
         return max == 0 ? 0 : Swift.min(value / max, 1)
     }
     private var barWidth: CGFloat { CGFloat(normalized) * 220 }
@@ -968,6 +975,7 @@ private struct StatRow: View {
         if name == "Horsepower" { return "\(Int(value)) WHP" }
         if name == "Jailbreak"  { return "Jailbreak" }
         if name == "Stock"      { return "Stock" }
+        if name == "MAX"        { return "MAX" }
         return String(format: "%.0f", value)
     }
 }
@@ -1058,12 +1066,7 @@ private struct PopupCard<Content: View>: View {
 // MARK: - Helpers
 
 private func stageTint(for stage: Int) -> Color {
-    switch stage {
-    case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
-    default: return .gray
-    }
+    StageSystem.accentColor(for: stage, isJailbreak: false)
 }
 
 private func hapticTap() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
