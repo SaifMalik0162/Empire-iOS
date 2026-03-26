@@ -88,6 +88,7 @@ struct CarsView: View {
                 CarExpandedCardInline(
                     car: userVehiclesVM.vehicles[selected],
                     ns: ns,
+                    isSource: true,
                     onSpecs: { showSpecsPopup = true },
                     onMods: { showModsPopup = true }
                 ) {
@@ -352,7 +353,11 @@ private extension CarsView {
                 ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
                     VStack {
                         JiggleWrapper {
-                            LiquidGlassCarCard(car: userVehiclesVM.vehicles[idx], ns: ns)
+                            LiquidGlassCarCard(
+                                car: userVehiclesVM.vehicles[idx],
+                                ns: ns,
+                                isSource: selectedCarIndex != idx
+                            )
                                 .frame(width: selectedCarIndex == idx ? 320 : 260,
                                        height: selectedCarIndex == idx ? 340 : 270)
                                 .scaleEffect(currentGarageIndex == idx ? 1.05 : 0.95)
@@ -533,6 +538,7 @@ private extension CarsView {
 private struct LiquidGlassCarCard: View {
     let car: Car
     var ns: Namespace.ID
+    var isSource: Bool = true
 
     var body: some View {
         ZStack {
@@ -547,7 +553,7 @@ private struct LiquidGlassCarCard: View {
                 )
                 .shadow(color: Color("EmpireMint").opacity(0.14), radius: 14, x: 0, y: 8)
                 .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 6)
-                .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
+                .matchedGeometryEffect(id: "card-\(car.id)", in: ns, isSource: isSource)
 
             GeometryReader { proxy in
                 let size = proxy.size
@@ -562,7 +568,7 @@ private struct LiquidGlassCarCard: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width, height: size.height)
                     .opacity(0.55)
-                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
+                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns, isSource: isSource)
                     .clipped()
 
                     LinearGradient(
@@ -594,7 +600,7 @@ private struct LiquidGlassCarCard: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                     .foregroundStyle(.white)
-                    .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
+                    .matchedGeometryEffect(id: "title-\(car.id)", in: ns, isSource: isSource)
                 HStack(spacing: 6) {
                     StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                     StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
@@ -810,6 +816,7 @@ private struct StatCapsule: View {
 private struct CarExpandedCardInline: View {
     let car: Car
     var ns: Namespace.ID
+    var isSource: Bool = true
     var onSpecs: () -> Void = {}
     var onMods: () -> Void = {}
     var onClose: () -> Void
@@ -833,7 +840,7 @@ private struct CarExpandedCardInline: View {
                 )
                 .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(reduceMotion ? 0 : 1))
                 .shadow(color: Color("EmpireMint").opacity(0.18), radius: 22, x: 0, y: 14)
-                .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
+                .matchedGeometryEffect(id: "card-\(car.id)", in: ns, isSource: isSource)
                 .rotation3DEffect(.degrees(Double(tilt.width) * 0.06), axis: (x: 0, y: 1, z: 0))
                 .rotation3DEffect(.degrees(Double(-tilt.height) * 0.06), axis: (x: 1, y: 0, z: 0))
 
@@ -850,7 +857,7 @@ private struct CarExpandedCardInline: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width + (reduceMotion ? 0 : tilt.width * 0.4), height: size.height)
                     .opacity(0.5)
-                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
+                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns, isSource: isSource)
                     .clipped()
                     .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 : tilt.height * 0.04)
 
@@ -869,7 +876,7 @@ private struct CarExpandedCardInline: View {
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
                         .shadow(radius: 6)
-                        .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
+                        .matchedGeometryEffect(id: "title-\(car.id)", in: ns, isSource: isSource)
 
                     if let make = car.make, !make.isEmpty, let model = car.model, !model.isEmpty {
                         Text("\(make) \(model)")
