@@ -13,7 +13,10 @@ struct ExploreFeedView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var searchText: String = ""
-    @State private var selectedFilter: FeedFilter = .all
+    @State private var selectedPrimaryFilter: ExplorePrimaryFilter = .all
+    @State private var selectedStageFilter: ExploreStageFilter? = nil
+    @State private var selectedVehicleClassFilter: VehicleClass? = nil
+    @State private var expandedFilterMenu: ExpandedExploreFilterMenu? = nil
     @State private var showShareToFeed: Bool = false
 
     private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "" }
@@ -30,20 +33,23 @@ struct ExploreFeedView: View {
                     || (post.username?.lowercased().contains(q) ?? false)
             }()
             let matchesFilter: Bool = {
-                switch selectedFilter {
-                case .all:       return true
-                case .jailbreak: return post.isJailbreak
-                case .stock:     return post.stage == 0 && !post.isJailbreak
-                case .stage1:    return post.stage == 1
-                case .stage2:    return post.stage == 2
-                case .stage3:    return post.stage == 3
-                case .stage4:    return post.stage == 4
-                case .stage5:    return post.stage == 5
-                case .maxOut:    return post.stage >= 6 && !post.isJailbreak
-                case .liked:     return post.isLiked
+                switch selectedPrimaryFilter {
+                case .all: return true
+                case .liked: return post.isLiked
                 }
             }()
-            return matchesSearch && matchesFilter
+
+            let matchesStage: Bool = {
+                guard let selectedStageFilter else { return true }
+                return selectedStageFilter.matches(post: post)
+            }()
+
+            let matchesVehicleClass: Bool = {
+                guard let selectedVehicleClassFilter else { return true }
+                return VehicleClass.from(rawValue: post.vehicleClass) == selectedVehicleClassFilter
+            }()
+
+            return matchesSearch && matchesFilter && matchesStage && matchesVehicleClass
         }
     }
 
@@ -92,73 +98,245 @@ struct ExploreFeedView: View {
     // MARK: - Post list
 
     private var postList: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                filterChips
-                    .padding(.top, 6)
-                    .padding(.bottom, 12)
+        ZStack(alignment: .topLeading) {
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 0) {
+                    Color.clear.frame(height: 54)
 
-                ForEach(filtered) { post in
-                    FeedPostCard(
-                        post: post,
-                        currentUserId: currentUserId,
-                        communityVM: vm,
-                        avatarURL: vm.avatarURL(for: post)
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
-                    .onAppear {
-                        if post.id == filtered.last?.id {
-                            Task { await vm.loadMore() }
+                    ForEach(filtered) { post in
+                        FeedPostCard(
+                            post: post,
+                            currentUserId: currentUserId,
+                            communityVM: vm,
+                            avatarURL: vm.avatarURL(for: post)
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                        .onAppear {
+                            if post.id == filtered.last?.id {
+                                Task { await vm.loadMore() }
+                            }
                         }
                     }
-                }
 
-                if filtered.isEmpty && !vm.isLoading {
-                    VStack(spacing: 12) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 30))
-                            .foregroundStyle(Color("EmpireMint").opacity(0.5))
-                        Text("No posts match")
-                            .font(.headline).foregroundStyle(.white)
-                        Text("Try a different filter or search term.")
-                            .font(.caption).foregroundStyle(.white.opacity(0.6))
+                    if filtered.isEmpty && !vm.isLoading {
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 30))
+                                .foregroundStyle(Color("EmpireMint").opacity(0.5))
+                            Text("No posts match")
+                                .font(.headline).foregroundStyle(.white)
+                            Text("Try a different filter or search term.")
+                                .font(.caption).foregroundStyle(.white.opacity(0.6))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 60)
-                }
 
-                if vm.isLoadingMore {
-                    ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
-                }
+                    if vm.isLoadingMore {
+                        ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
+                    }
 
-                if !vm.hasMore && !filtered.isEmpty {
-                    Text("You've seen it all 🏁")
-                        .font(.caption).foregroundStyle(.white.opacity(0.4))
-                        .padding(.vertical, 20)
-                }
+                    if !vm.hasMore && !filtered.isEmpty {
+                        Text("You've seen it all 🏁")
+                            .font(.caption).foregroundStyle(.white.opacity(0.4))
+                            .padding(.vertical, 20)
+                    }
 
-                Color.clear.frame(height: 60)
+                    Color.clear.frame(height: 60)
+                }
             }
+            .refreshable { await vm.refresh() }
+
+            filterChips
+                .padding(.top, 6)
+                .zIndex(5)
         }
-        .refreshable { await vm.refresh() }
     }
 
     // MARK: - Filter chips
 
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(FeedFilter.allCases, id: \.self) { filter in
-                    FilterChip(filter: filter, isSelected: selectedFilter == filter) {
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(ExplorePrimaryFilter.allCases, id: \.self) { filter in
+                    FilterChip(
+                        label: filter.label,
+                        icon: filter.icon,
+                        accentColor: filter.accentColor,
+                        isSelected: selectedPrimaryFilter == filter
+                    ) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { selectedFilter = filter }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            selectedPrimaryFilter = filter
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    ExpandableFilterChip(
+                        label: selectedStageFilter?.label ?? "Stage Levels",
+                        icon: "slider.horizontal.3",
+                        accentColor: selectedStageFilter?.accentColor ?? Color("EmpireMint"),
+                        isSelected: selectedStageFilter != nil || expandedFilterMenu == .stageLevels,
+                        isExpanded: expandedFilterMenu == .stageLevels
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                            expandedFilterMenu = expandedFilterMenu == .stageLevels ? nil : .stageLevels
+                        }
+                    }
+
+                    if expandedFilterMenu == .stageLevels {
+                        expandedStageFilterList
+                            .frame(width: 148, alignment: .leading)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    ExpandableFilterChip(
+                        label: selectedVehicleClassFilter.map { "Class \($0.code)" } ?? "Vehicle Class",
+                        icon: "car.fill",
+                        accentColor: selectedVehicleClassFilter?.accentColor ?? Color("EmpireMint"),
+                        isSelected: selectedVehicleClassFilter != nil || expandedFilterMenu == .vehicleClass,
+                        isExpanded: expandedFilterMenu == .vehicleClass
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                            expandedFilterMenu = expandedFilterMenu == .vehicleClass ? nil : .vehicleClass
+                        }
+                    }
+
+                    if expandedFilterMenu == .vehicleClass {
+                        expandedVehicleClassFilterList
+                            .frame(width: 136, alignment: .leading)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 2)
         }
+    }
+
+    private var expandedStageFilterList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(ExploreStageFilter.allCases, id: \.self) { filter in
+                expandedFilterRow(
+                    label: filter.label,
+                    accentColor: filter.accentColor,
+                    isSelected: selectedStageFilter == filter
+                ) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        selectedStageFilter = selectedStageFilter == filter ? nil : filter
+                        expandedFilterMenu = nil
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.52), Color.black.opacity(0.34)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color.black.opacity(0.28), radius: 12, x: 0, y: 8)
+    }
+
+    private var expandedVehicleClassFilterList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(VehicleClass.allCases) { vehicleClass in
+                expandedFilterRow(
+                    label: "Class \(vehicleClass.code)",
+                    accentColor: vehicleClass.accentColor,
+                    isSelected: selectedVehicleClassFilter == vehicleClass
+                ) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        selectedVehicleClassFilter = selectedVehicleClassFilter == vehicleClass ? nil : vehicleClass
+                        expandedFilterMenu = nil
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.52), Color.black.opacity(0.34)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color.black.opacity(0.28), radius: 12, x: 0, y: 8)
+    }
+
+    private func expandedFilterRow(label: String, accentColor: Color, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(accentColor.opacity(isSelected ? 0.95 : 0.45))
+                    .frame(width: 7, height: 7)
+
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(isSelected ? accentColor : .white.opacity(0.78))
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(accentColor)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isSelected ? accentColor.opacity(0.15) : Color.white.opacity(0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? accentColor.opacity(0.52) : Color.white.opacity(0.08), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Empty / error states
@@ -236,74 +414,100 @@ struct ExploreFeedView: View {
 
 // MARK: - Feed filter enum
 
-enum FeedFilter: CaseIterable {
-    case all, liked, stock, stage1, stage2, stage3, stage4, stage5, maxOut, jailbreak
+enum ExplorePrimaryFilter: CaseIterable {
+    case all, liked
 
     var label: String {
         switch self {
-        case .all:       return "All"
-        case .liked:     return "Liked"
-        case .stock:     return "Stock"
-        case .stage1:    return "Stage 1"
-        case .stage2:    return "Stage 2"
-        case .stage3:    return "Stage 3"
-        case .stage4:    return "Stage 4"
-        case .stage5:    return "Stage 5"
-        case .maxOut:    return "MAX"
-        case .jailbreak: return "Jailbreak"
+        case .all: return "All"
+        case .liked: return "Liked"
         }
     }
 
     var icon: String {
         switch self {
-        case .all:       return "square.grid.2x2.fill"
-        case .liked:     return "heart.fill"
-        case .stock:     return "car.fill"
-        case .stage1:    return "bolt.fill"
-        case .stage2:    return "bolt.fill"
-        case .stage3:    return "flame.fill"
-        case .stage4:    return "flame.fill"
-        case .stage5:    return "aqi.medium"
-        case .maxOut:    return "sparkles"
-        case .jailbreak: return "lock.open.fill"
+        case .all: return "square.grid.2x2.fill"
+        case .liked: return "heart.fill"
         }
     }
 
     var accentColor: Color {
         switch self {
-        case .all:       return Color("EmpireMint")
-        case .liked:     return Color(red: 0.95, green: 0.3,  blue: 0.45)
-        case .stock:     return Color(white: 0.65)
-        case .stage1:    return Color("EmpireMint")
-        case .stage2:    return Color(red: 0.95, green: 0.78, blue: 0.1)
-        case .stage3:    return Color(red: 0.95, green: 0.28, blue: 0.22)
-        case .stage4:    return Color(red: 0.92, green: 0.20, blue: 0.16)
-        case .stage5:    return Color(red: 0.88, green: 0.16, blue: 0.28)
-        case .maxOut:    return Color(red: 0.76, green: 0.48, blue: 1.0)
+        case .all: return Color("EmpireMint")
+        case .liked: return Color(red: 0.95, green: 0.3,  blue: 0.45)
+        }
+    }
+}
+
+enum ExploreStageFilter: CaseIterable {
+    case stock, stage1, stage2, stage3, stage4, stage5, maxOut, jailbreak
+
+    var label: String {
+        switch self {
+        case .stock: return "Stock"
+        case .stage1: return "Stage 1"
+        case .stage2: return "Stage 2"
+        case .stage3: return "Stage 3"
+        case .stage4: return "Stage 4"
+        case .stage5: return "Stage 5"
+        case .maxOut: return "MAX"
+        case .jailbreak: return "Jailbreak"
+        }
+    }
+
+    var accentColor: Color {
+        switch self {
+        case .stock: return Color(white: 0.65)
+        case .stage1: return Color("EmpireMint")
+        case .stage2: return Color(red: 0.95, green: 0.78, blue: 0.1)
+        case .stage3: return Color(red: 0.95, green: 0.28, blue: 0.22)
+        case .stage4: return Color(red: 0.92, green: 0.20, blue: 0.16)
+        case .stage5: return Color(red: 0.88, green: 0.16, blue: 0.28)
+        case .maxOut: return Color(red: 0.76, green: 0.48, blue: 1.0)
         case .jailbreak: return Color(red: 0.65, green: 0.35, blue: 0.95)
         }
     }
+
+    func matches(post: CommunityPost) -> Bool {
+        switch self {
+        case .stock: return post.stage == 0 && !post.isJailbreak
+        case .stage1: return post.stage == 1 && !post.isJailbreak
+        case .stage2: return post.stage == 2 && !post.isJailbreak
+        case .stage3: return post.stage == 3 && !post.isJailbreak
+        case .stage4: return post.stage == 4 && !post.isJailbreak
+        case .stage5: return post.stage == 5 && !post.isJailbreak
+        case .maxOut: return post.stage >= 6 && !post.isJailbreak
+        case .jailbreak: return post.isJailbreak
+        }
+    }
+}
+
+private enum ExpandedExploreFilterMenu {
+    case stageLevels
+    case vehicleClass
 }
 
 // MARK: - Filter chip
 
 private struct FilterChip: View {
-    let filter: FeedFilter
+    let label: String
+    let icon: String
+    let accentColor: Color
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                Image(systemName: filter.icon).font(.system(size: 10, weight: .semibold))
-                Text(filter.label).font(.caption.weight(.semibold))
+                Image(systemName: icon).font(.system(size: 10, weight: .semibold))
+                Text(label).font(.caption.weight(.semibold))
             }
             .foregroundStyle(isSelected ? selectedForeground : .white.opacity(0.65))
             .padding(.horizontal, 12).padding(.vertical, 8)
-            .background(Capsule().fill(isSelected ? filter.accentColor.opacity(0.2) : Color.white.opacity(0.07)))
-            .overlay(Capsule().stroke(isSelected ? filter.accentColor.opacity(0.85) : Color.white.opacity(0.15),
+            .background(Capsule().fill(isSelected ? accentColor.opacity(0.2) : Color.white.opacity(0.07)))
+            .overlay(Capsule().stroke(isSelected ? accentColor.opacity(0.85) : Color.white.opacity(0.15),
                                       lineWidth: isSelected ? 1.5 : 1))
-            .shadow(color: isSelected ? filter.accentColor.opacity(0.3) : .clear, radius: 6, x: 0, y: 3)
+            .shadow(color: isSelected ? accentColor.opacity(0.3) : .clear, radius: 6, x: 0, y: 3)
             .scaleEffect(isSelected ? 1.03 : 1.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isSelected)
         }
@@ -311,7 +515,43 @@ private struct FilterChip: View {
     }
 
     private var selectedForeground: Color {
-        filter == .stage2 ? Color(red: 0.92, green: 0.72, blue: 0.05) : filter.accentColor
+        accentColor
+    }
+}
+
+private struct ExpandableFilterChip: View {
+    let label: String
+    let icon: String
+    let accentColor: Color
+    let isSelected: Bool
+    let isExpanded: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(isSelected ? accentColor : .white.opacity(0.65))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(isSelected ? accentColor.opacity(0.2) : Color.white.opacity(0.07)))
+            .overlay(
+                Capsule().stroke(
+                    isSelected ? accentColor.opacity(0.85) : Color.white.opacity(0.15),
+                    lineWidth: isSelected ? 1.5 : 1
+                )
+            )
+            .shadow(color: isSelected ? accentColor.opacity(0.25) : .clear, radius: 6, x: 0, y: 3)
+            .scaleEffect(isExpanded ? 1.03 : 1.0)
+            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isExpanded)
+        }
+        .buttonStyle(.plain)
     }
 }
 
