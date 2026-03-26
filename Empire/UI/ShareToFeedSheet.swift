@@ -356,13 +356,7 @@ private struct ShareVehicleRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 4) {
-                if car.isJailbreak {
-                    ShareStatChip(label: "Jailbreak", tint: .purple)
-                } else if car.stage == 0 {
-                    ShareStatChip(label: "Stock", tint: .gray)
-                } else {
-                    ShareStatChip(label: "Stage \(car.stage)", tint: stageTint(for: car.stage))
-                }
+                ShareStatChip(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                 ShareStatChip(label: "\(car.horsepower) WHP", tint: .cyan)
             }
 
@@ -404,12 +398,7 @@ private struct ShareStatChip: View {
 }
 
 private func stageTint(for stage: Int) -> Color {
-    switch stage {
-    case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
-    default: return .gray
-    }
+    StageSystem.accentColor(for: stage, isJailbreak: false)
 }
 
 // MARK: - Glass card modifier

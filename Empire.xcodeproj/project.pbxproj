@@ -73,6 +73,7 @@
 		70A0172D2F0DF49000A084C2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FB2F0DF49000A084C2 /* ProfileView.swift */; };
 		70A0172E2F0DF49000A084C2 /* StageChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A016FC2F0DF49000A084C2 /* StageChip.swift */; };
 		70A017302F0DF49000A084C2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 70A017002F0DF49000A084C2 /* Assets.xcassets */; };
+		70A017312F0DF49000A084C2 /* VehicleClassViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A017322F0DF49000A084C2 /* VehicleClassViews.swift */; };
 		70A2E4082F10ABDA004B950D /* EmpireLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */; };
 		70A6A7532F1ECCDE00483418 /* TopToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A6A7512F1ECCDD00483418 /* TopToast.swift */; };
 		70AAC8602F6B83C400BB4A58 /* MeetsParticipation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */; };
@@ -187,6 +188,7 @@
 		70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectBlur.swift; sourceTree = "<group>"; };
 		70A017002F0DF49000A084C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		70A017012F0DF49000A084C2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		70A017322F0DF49000A084C2 /* VehicleClassViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleClassViews.swift; sourceTree = "<group>"; };
 		70A2E4052F10ABDA004B950D /* EmpireLogoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireLogoView.swift; sourceTree = "<group>"; };
 		70A6A7512F1ECCDD00483418 /* TopToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopToast.swift; sourceTree = "<group>"; };
 		70AAC85E2F6B83C400BB4A58 /* MeetsParticipation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetsParticipation.swift; sourceTree = "<group>"; };
@@ -348,6 +350,7 @@
 				70A016FA2F0DF49000A084C2 /* ProfileStatCard.swift */,
 				70A016FB2F0DF49000A084C2 /* ProfileView.swift */,
 				70A016FC2F0DF49000A084C2 /* StageChip.swift */,
+				70A017322F0DF49000A084C2 /* VehicleClassViews.swift */,
 				70A016FE2F0DF49000A084C2 /* VisualEffectBlur.swift */,
 				70B0CF552F10634F003FCD20 /* LoginView.swift */,
 				70B0CF602F1064D0003FCD20 /* SignUpView.swift */,
@@ -651,6 +654,7 @@
 				70B0CF572F10646D003FCD20 /* LoginView.swift in Sources */,
 				70A0172D2F0DF49000A084C2 /* ProfileView.swift in Sources */,
 				70A0172E2F0DF49000A084C2 /* StageChip.swift in Sources */,
+				70A017312F0DF49000A084C2 /* VehicleClassViews.swift in Sources */,
 				703F05D82F63910800D4EF47 /* ErrorResponse.swift in Sources */,
 				704251B72F134C5E00322849 /* AddVehicleView.swift in Sources */,
 				70DF416E2F196E930034C5FB /* SettingsView.swift in Sources */,
@@ -819,7 +823,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 116;
+				CURRENT_PROJECT_VERSION = 130;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -861,7 +865,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 116;
+				CURRENT_PROJECT_VERSION = 130;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

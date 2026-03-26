@@ -36,13 +36,7 @@ struct CarCardView: View {
             .padding(16)
             
             HStack(spacing: 8) {
-                if car.isJailbreak {
-                    StatCapsule(label: "Jailbreak", value: "", tint: .purple)
-                } else if car.stage == 0 {
-                    StatCapsule(label: "Stock", value: "", tint: .gray)
-                } else {
-                    StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
-                }
+                StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                 StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
             }
             .padding(.horizontal, 16)
@@ -58,18 +52,33 @@ private struct StatCapsule: View {
     let label: String
     let value: String
     let tint: Color
+
+    private var hasValue: Bool {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
     var body: some View {
-        HStack(spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(tint.opacity(0.9))
-            Text(value)
-                .font(.caption2.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(.white)
+        Group {
+            if hasValue {
+                HStack(spacing: 6) {
+                    Text(label.uppercased())
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(tint.opacity(0.9))
+                    Text(value)
+                        .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(.white)
+                }
+            } else {
+                Text(label.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(tint.opacity(0.9))
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -79,14 +88,5 @@ private struct StatCapsule: View {
         .overlay(
             Capsule().stroke(tint.opacity(0.6), lineWidth: 1)
         )
-    }
-}
-
-private func stageTint(for stage: Int) -> Color {
-    switch stage {
-    case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
-    default: return .gray
     }
 }

@@ -88,6 +88,7 @@ struct CarsView: View {
                 CarExpandedCardInline(
                     car: userVehiclesVM.vehicles[selected],
                     ns: ns,
+                    isSource: true,
                     onSpecs: { showSpecsPopup = true },
                     onMods: { showModsPopup = true }
                 ) {
@@ -352,7 +353,11 @@ private extension CarsView {
                 ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
                     VStack {
                         JiggleWrapper {
-                            LiquidGlassCarCard(car: userVehiclesVM.vehicles[idx], ns: ns)
+                            LiquidGlassCarCard(
+                                car: userVehiclesVM.vehicles[idx],
+                                ns: ns,
+                                isSource: selectedCarIndex != idx
+                            )
                                 .frame(width: selectedCarIndex == idx ? 320 : 260,
                                        height: selectedCarIndex == idx ? 340 : 270)
                                 .scaleEffect(currentGarageIndex == idx ? 1.05 : 0.95)
@@ -533,6 +538,7 @@ private extension CarsView {
 private struct LiquidGlassCarCard: View {
     let car: Car
     var ns: Namespace.ID
+    var isSource: Bool = true
 
     var body: some View {
         ZStack {
@@ -547,7 +553,7 @@ private struct LiquidGlassCarCard: View {
                 )
                 .shadow(color: Color("EmpireMint").opacity(0.14), radius: 14, x: 0, y: 8)
                 .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 6)
-                .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
+                .matchedGeometryEffect(id: "card-\(car.id)", in: ns, isSource: isSource)
 
             GeometryReader { proxy in
                 let size = proxy.size
@@ -562,7 +568,7 @@ private struct LiquidGlassCarCard: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width, height: size.height)
                     .opacity(0.55)
-                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
+                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns, isSource: isSource)
                     .clipped()
 
                     LinearGradient(
@@ -594,15 +600,9 @@ private struct LiquidGlassCarCard: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                     .foregroundStyle(.white)
-                    .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
+                    .matchedGeometryEffect(id: "title-\(car.id)", in: ns, isSource: isSource)
                 HStack(spacing: 6) {
-                    if car.isJailbreak {
-                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
-                    } else if car.stage == 0 {
-                        StatCapsule(label: "Stock", value: "", tint: .gray)
-                    } else {
-                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
-                    }
+                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                     StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                 }
             }
@@ -692,8 +692,8 @@ struct CommunityPreviewTile: View {
 
     @ViewBuilder
     private var tileStageChip: some View {
-        let label: String = post.isJailbreak ? "Jailbreak" : (post.stage == 0 ? "Stock" : "Stage \(post.stage)")
-        let tint: Color   = post.isJailbreak ? .purple : stageTint(for: post.stage)
+        let label = StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak)
+        let tint = StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
         Text(label.uppercased())
             .font(.system(size: 8, weight: .bold, design: .rounded))
             .lineLimit(1)
@@ -776,16 +776,33 @@ private struct StatCapsule: View {
     let label: String
     let value: String
     let tint: Color
+
+    private var hasValue: Bool {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
     var body: some View {
-        HStack(spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .lineLimit(1).minimumScaleFactor(0.8)
-                .foregroundStyle(tint.opacity(0.9))
-            Text(value)
-                .font(.caption2.weight(.semibold))
-                .lineLimit(1).minimumScaleFactor(0.8)
-                .foregroundStyle(.white)
+        Group {
+            if hasValue {
+                HStack(spacing: 6) {
+                    Text(label.uppercased())
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(tint.opacity(0.9))
+                    Text(value)
+                        .font(.caption2.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(.white)
+                }
+            } else {
+                Text(label.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(tint.opacity(0.9))
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -799,6 +816,7 @@ private struct StatCapsule: View {
 private struct CarExpandedCardInline: View {
     let car: Car
     var ns: Namespace.ID
+    var isSource: Bool = true
     var onSpecs: () -> Void = {}
     var onMods: () -> Void = {}
     var onClose: () -> Void
@@ -822,7 +840,7 @@ private struct CarExpandedCardInline: View {
                 )
                 .overlay(HoloShimmerMask().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(reduceMotion ? 0 : 1))
                 .shadow(color: Color("EmpireMint").opacity(0.18), radius: 22, x: 0, y: 14)
-                .matchedGeometryEffect(id: "card-\(car.id)", in: ns)
+                .matchedGeometryEffect(id: "card-\(car.id)", in: ns, isSource: isSource)
                 .rotation3DEffect(.degrees(Double(tilt.width) * 0.06), axis: (x: 0, y: 1, z: 0))
                 .rotation3DEffect(.degrees(Double(-tilt.height) * 0.06), axis: (x: 1, y: 0, z: 0))
 
@@ -839,7 +857,7 @@ private struct CarExpandedCardInline: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width + (reduceMotion ? 0 : tilt.width * 0.4), height: size.height)
                     .opacity(0.5)
-                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns)
+                    .matchedGeometryEffect(id: "image-\(car.id)", in: ns, isSource: isSource)
                     .clipped()
                     .offset(x: reduceMotion ? 0 : tilt.width * 0.06, y: reduceMotion ? 0 : tilt.height * 0.04)
 
@@ -858,7 +876,7 @@ private struct CarExpandedCardInline: View {
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
                         .shadow(radius: 6)
-                        .matchedGeometryEffect(id: "title-\(car.id)", in: ns)
+                        .matchedGeometryEffect(id: "title-\(car.id)", in: ns, isSource: isSource)
 
                     if let make = car.make, !make.isEmpty, let model = car.model, !model.isEmpty {
                         Text("\(make) \(model)")
@@ -873,23 +891,17 @@ private struct CarExpandedCardInline: View {
                 .padding(.top, 8)
 
                 HStack(spacing: 10) {
-                    if car.isJailbreak {
-                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
-                    } else if car.stage == 0 {
-                        StatCapsule(label: "Stock", value: "", tint: .gray)
-                    } else {
-                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
-                    }
+                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                     StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                 }
 
                 VStack(spacing: 10) {
                     StatRow(name: "Horsepower", value: Double(car.horsepower), max: 700, accent: Color("EmpireMint"))
                     StatRow(
-                        name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"),
+                        name: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
                         value: Double(car.isJailbreak ? 1 : car.stage),
-                        max: car.isJailbreak ? 1 : 3,
-                        accent: car.isJailbreak ? .purple : stageTint(for: car.stage)
+                        max: car.isJailbreak ? 1 : 6,
+                        accent: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
                     )
                 }
                 .padding(14)
@@ -960,7 +972,9 @@ private struct StatRow: View {
     }
 
     private var normalized: Double {
-        if name == "Stage" { return max == 0 ? 0 : Double(Swift.max(0, Swift.min(Int(value), 3))) / 3.0 }
+        if name.hasPrefix("Stage") || name == "MAX" {
+            return max == 0 ? 0 : Double(Swift.max(0, Swift.min(Int(value), Int(max)))) / max
+        }
         return max == 0 ? 0 : Swift.min(value / max, 1)
     }
     private var barWidth: CGFloat { CGFloat(normalized) * 220 }
@@ -968,6 +982,7 @@ private struct StatRow: View {
         if name == "Horsepower" { return "\(Int(value)) WHP" }
         if name == "Jailbreak"  { return "Jailbreak" }
         if name == "Stock"      { return "Stock" }
+        if name == "MAX"        { return "MAX" }
         return String(format: "%.0f", value)
     }
 }
@@ -1058,12 +1073,7 @@ private struct PopupCard<Content: View>: View {
 // MARK: - Helpers
 
 private func stageTint(for stage: Int) -> Color {
-    switch stage {
-    case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
-    default: return .gray
-    }
+    StageSystem.accentColor(for: stage, isJailbreak: false)
 }
 
 private func hapticTap() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }

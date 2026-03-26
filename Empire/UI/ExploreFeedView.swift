@@ -13,7 +13,10 @@ struct ExploreFeedView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var searchText: String = ""
-    @State private var selectedFilter: FeedFilter = .all
+    @State private var selectedPrimaryFilter: ExplorePrimaryFilter = .all
+    @State private var selectedStageFilter: ExploreStageFilter? = nil
+    @State private var selectedVehicleClassFilter: VehicleClass? = nil
+    @State private var expandedFilterMenu: ExpandedExploreFilterMenu? = nil
     @State private var showShareToFeed: Bool = false
 
     private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "" }
@@ -30,17 +33,23 @@ struct ExploreFeedView: View {
                     || (post.username?.lowercased().contains(q) ?? false)
             }()
             let matchesFilter: Bool = {
-                switch selectedFilter {
-                case .all:       return true
-                case .jailbreak: return post.isJailbreak
-                case .stock:     return post.stage == 0 && !post.isJailbreak
-                case .stage1:    return post.stage == 1
-                case .stage2:    return post.stage == 2
-                case .stage3:    return post.stage == 3
-                case .liked:     return post.isLiked
+                switch selectedPrimaryFilter {
+                case .all: return true
+                case .liked: return post.isLiked
                 }
             }()
-            return matchesSearch && matchesFilter
+
+            let matchesStage: Bool = {
+                guard let selectedStageFilter else { return true }
+                return selectedStageFilter.matches(post: post)
+            }()
+
+            let matchesVehicleClass: Bool = {
+                guard let selectedVehicleClassFilter else { return true }
+                return VehicleClass.from(rawValue: post.vehicleClass) == selectedVehicleClassFilter
+            }()
+
+            return matchesSearch && matchesFilter && matchesStage && matchesVehicleClass
         }
     }
 
@@ -89,73 +98,245 @@ struct ExploreFeedView: View {
     // MARK: - Post list
 
     private var postList: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                filterChips
-                    .padding(.top, 6)
-                    .padding(.bottom, 12)
+        ZStack(alignment: .topLeading) {
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 0) {
+                    Color.clear.frame(height: 54)
 
-                ForEach(filtered) { post in
-                    FeedPostCard(
-                        post: post,
-                        currentUserId: currentUserId,
-                        communityVM: vm,
-                        avatarURL: vm.avatarURL(for: post)
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
-                    .onAppear {
-                        if post.id == filtered.last?.id {
-                            Task { await vm.loadMore() }
+                    ForEach(filtered) { post in
+                        FeedPostCard(
+                            post: post,
+                            currentUserId: currentUserId,
+                            communityVM: vm,
+                            avatarURL: vm.avatarURL(for: post)
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                        .onAppear {
+                            if post.id == filtered.last?.id {
+                                Task { await vm.loadMore() }
+                            }
                         }
                     }
-                }
 
-                if filtered.isEmpty && !vm.isLoading {
-                    VStack(spacing: 12) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 30))
-                            .foregroundStyle(Color("EmpireMint").opacity(0.5))
-                        Text("No posts match")
-                            .font(.headline).foregroundStyle(.white)
-                        Text("Try a different filter or search term.")
-                            .font(.caption).foregroundStyle(.white.opacity(0.6))
+                    if filtered.isEmpty && !vm.isLoading {
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 30))
+                                .foregroundStyle(Color("EmpireMint").opacity(0.5))
+                            Text("No posts match")
+                                .font(.headline).foregroundStyle(.white)
+                            Text("Try a different filter or search term.")
+                                .font(.caption).foregroundStyle(.white.opacity(0.6))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 60)
-                }
 
-                if vm.isLoadingMore {
-                    ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
-                }
+                    if vm.isLoadingMore {
+                        ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
+                    }
 
-                if !vm.hasMore && !filtered.isEmpty {
-                    Text("You've seen it all 🏁")
-                        .font(.caption).foregroundStyle(.white.opacity(0.4))
-                        .padding(.vertical, 20)
-                }
+                    if !vm.hasMore && !filtered.isEmpty {
+                        Text("You've seen it all 🏁")
+                            .font(.caption).foregroundStyle(.white.opacity(0.4))
+                            .padding(.vertical, 20)
+                    }
 
-                Color.clear.frame(height: 60)
+                    Color.clear.frame(height: 60)
+                }
             }
+            .refreshable { await vm.refresh() }
+
+            filterChips
+                .padding(.top, 6)
+                .zIndex(5)
         }
-        .refreshable { await vm.refresh() }
     }
 
     // MARK: - Filter chips
 
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(FeedFilter.allCases, id: \.self) { filter in
-                    FilterChip(filter: filter, isSelected: selectedFilter == filter) {
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(ExplorePrimaryFilter.allCases, id: \.self) { filter in
+                    FilterChip(
+                        label: filter.label,
+                        icon: filter.icon,
+                        accentColor: filter.accentColor,
+                        isSelected: selectedPrimaryFilter == filter
+                    ) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { selectedFilter = filter }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            selectedPrimaryFilter = filter
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    ExpandableFilterChip(
+                        label: selectedStageFilter?.label ?? "Stage Levels",
+                        icon: "slider.horizontal.3",
+                        accentColor: selectedStageFilter?.accentColor ?? Color("EmpireMint"),
+                        isSelected: selectedStageFilter != nil || expandedFilterMenu == .stageLevels,
+                        isExpanded: expandedFilterMenu == .stageLevels
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                            expandedFilterMenu = expandedFilterMenu == .stageLevels ? nil : .stageLevels
+                        }
+                    }
+
+                    if expandedFilterMenu == .stageLevels {
+                        expandedStageFilterList
+                            .frame(width: 148, alignment: .leading)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    ExpandableFilterChip(
+                        label: selectedVehicleClassFilter.map { "Class \($0.code)" } ?? "Vehicle Class",
+                        icon: "car.fill",
+                        accentColor: selectedVehicleClassFilter?.accentColor ?? Color("EmpireMint"),
+                        isSelected: selectedVehicleClassFilter != nil || expandedFilterMenu == .vehicleClass,
+                        isExpanded: expandedFilterMenu == .vehicleClass
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                            expandedFilterMenu = expandedFilterMenu == .vehicleClass ? nil : .vehicleClass
+                        }
+                    }
+
+                    if expandedFilterMenu == .vehicleClass {
+                        expandedVehicleClassFilterList
+                            .frame(width: 136, alignment: .leading)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 2)
         }
+    }
+
+    private var expandedStageFilterList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(ExploreStageFilter.allCases, id: \.self) { filter in
+                expandedFilterRow(
+                    label: filter.label,
+                    accentColor: filter.accentColor,
+                    isSelected: selectedStageFilter == filter
+                ) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        selectedStageFilter = selectedStageFilter == filter ? nil : filter
+                        expandedFilterMenu = nil
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.52), Color.black.opacity(0.34)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color.black.opacity(0.28), radius: 12, x: 0, y: 8)
+    }
+
+    private var expandedVehicleClassFilterList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(VehicleClass.allCases) { vehicleClass in
+                expandedFilterRow(
+                    label: "Class \(vehicleClass.code)",
+                    accentColor: vehicleClass.accentColor,
+                    isSelected: selectedVehicleClassFilter == vehicleClass
+                ) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        selectedVehicleClassFilter = selectedVehicleClassFilter == vehicleClass ? nil : vehicleClass
+                        expandedFilterMenu = nil
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.52), Color.black.opacity(0.34)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color.black.opacity(0.28), radius: 12, x: 0, y: 8)
+    }
+
+    private func expandedFilterRow(label: String, accentColor: Color, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(accentColor.opacity(isSelected ? 0.95 : 0.45))
+                    .frame(width: 7, height: 7)
+
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(isSelected ? accentColor : .white.opacity(0.78))
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(accentColor)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isSelected ? accentColor.opacity(0.15) : Color.white.opacity(0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? accentColor.opacity(0.52) : Color.white.opacity(0.08), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Empty / error states
@@ -233,65 +414,100 @@ struct ExploreFeedView: View {
 
 // MARK: - Feed filter enum
 
-enum FeedFilter: CaseIterable {
-    case all, liked, stock, stage1, stage2, stage3, jailbreak
+enum ExplorePrimaryFilter: CaseIterable {
+    case all, liked
 
     var label: String {
         switch self {
-        case .all:       return "All"
-        case .liked:     return "Liked"
-        case .stock:     return "Stock"
-        case .stage1:    return "Stage 1"
-        case .stage2:    return "Stage 2"
-        case .stage3:    return "Stage 3"
-        case .jailbreak: return "Jailbreak"
+        case .all: return "All"
+        case .liked: return "Liked"
         }
     }
 
     var icon: String {
         switch self {
-        case .all:       return "square.grid.2x2.fill"
-        case .liked:     return "heart.fill"
-        case .stock:     return "car.fill"
-        case .stage1:    return "bolt.fill"
-        case .stage2:    return "bolt.fill"
-        case .stage3:    return "flame.fill"
-        case .jailbreak: return "lock.open.fill"
+        case .all: return "square.grid.2x2.fill"
+        case .liked: return "heart.fill"
         }
     }
 
     var accentColor: Color {
         switch self {
-        case .all:       return Color("EmpireMint")
-        case .liked:     return Color(red: 0.95, green: 0.3,  blue: 0.45)
-        case .stock:     return Color(white: 0.65)
-        case .stage1:    return Color("EmpireMint")
-        case .stage2:    return Color(red: 0.95, green: 0.78, blue: 0.1)
-        case .stage3:    return Color(red: 0.95, green: 0.28, blue: 0.22)
+        case .all: return Color("EmpireMint")
+        case .liked: return Color(red: 0.95, green: 0.3,  blue: 0.45)
+        }
+    }
+}
+
+enum ExploreStageFilter: CaseIterable {
+    case stock, stage1, stage2, stage3, stage4, stage5, maxOut, jailbreak
+
+    var label: String {
+        switch self {
+        case .stock: return "Stock"
+        case .stage1: return "Stage 1"
+        case .stage2: return "Stage 2"
+        case .stage3: return "Stage 3"
+        case .stage4: return "Stage 4"
+        case .stage5: return "Stage 5"
+        case .maxOut: return "MAX"
+        case .jailbreak: return "Jailbreak"
+        }
+    }
+
+    var accentColor: Color {
+        switch self {
+        case .stock: return Color(white: 0.65)
+        case .stage1: return Color("EmpireMint")
+        case .stage2: return Color(red: 0.95, green: 0.78, blue: 0.1)
+        case .stage3: return Color(red: 0.95, green: 0.28, blue: 0.22)
+        case .stage4: return Color(red: 0.92, green: 0.20, blue: 0.16)
+        case .stage5: return Color(red: 0.88, green: 0.16, blue: 0.28)
+        case .maxOut: return Color(red: 0.76, green: 0.48, blue: 1.0)
         case .jailbreak: return Color(red: 0.65, green: 0.35, blue: 0.95)
         }
     }
+
+    func matches(post: CommunityPost) -> Bool {
+        switch self {
+        case .stock: return post.stage == 0 && !post.isJailbreak
+        case .stage1: return post.stage == 1 && !post.isJailbreak
+        case .stage2: return post.stage == 2 && !post.isJailbreak
+        case .stage3: return post.stage == 3 && !post.isJailbreak
+        case .stage4: return post.stage == 4 && !post.isJailbreak
+        case .stage5: return post.stage == 5 && !post.isJailbreak
+        case .maxOut: return post.stage >= 6 && !post.isJailbreak
+        case .jailbreak: return post.isJailbreak
+        }
+    }
+}
+
+private enum ExpandedExploreFilterMenu {
+    case stageLevels
+    case vehicleClass
 }
 
 // MARK: - Filter chip
 
 private struct FilterChip: View {
-    let filter: FeedFilter
+    let label: String
+    let icon: String
+    let accentColor: Color
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                Image(systemName: filter.icon).font(.system(size: 10, weight: .semibold))
-                Text(filter.label).font(.caption.weight(.semibold))
+                Image(systemName: icon).font(.system(size: 10, weight: .semibold))
+                Text(label).font(.caption.weight(.semibold))
             }
             .foregroundStyle(isSelected ? selectedForeground : .white.opacity(0.65))
             .padding(.horizontal, 12).padding(.vertical, 8)
-            .background(Capsule().fill(isSelected ? filter.accentColor.opacity(0.2) : Color.white.opacity(0.07)))
-            .overlay(Capsule().stroke(isSelected ? filter.accentColor.opacity(0.85) : Color.white.opacity(0.15),
+            .background(Capsule().fill(isSelected ? accentColor.opacity(0.2) : Color.white.opacity(0.07)))
+            .overlay(Capsule().stroke(isSelected ? accentColor.opacity(0.85) : Color.white.opacity(0.15),
                                       lineWidth: isSelected ? 1.5 : 1))
-            .shadow(color: isSelected ? filter.accentColor.opacity(0.3) : .clear, radius: 6, x: 0, y: 3)
+            .shadow(color: isSelected ? accentColor.opacity(0.3) : .clear, radius: 6, x: 0, y: 3)
             .scaleEffect(isSelected ? 1.03 : 1.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isSelected)
         }
@@ -299,7 +515,43 @@ private struct FilterChip: View {
     }
 
     private var selectedForeground: Color {
-        filter == .stage2 ? Color(red: 0.92, green: 0.72, blue: 0.05) : filter.accentColor
+        accentColor
+    }
+}
+
+private struct ExpandableFilterChip: View {
+    let label: String
+    let icon: String
+    let accentColor: Color
+    let isSelected: Bool
+    let isExpanded: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(isSelected ? accentColor : .white.opacity(0.65))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(isSelected ? accentColor.opacity(0.2) : Color.white.opacity(0.07)))
+            .overlay(
+                Capsule().stroke(
+                    isSelected ? accentColor.opacity(0.85) : Color.white.opacity(0.15),
+                    lineWidth: isSelected ? 1.5 : 1
+                )
+            )
+            .shadow(color: isSelected ? accentColor.opacity(0.25) : .clear, radius: 6, x: 0, y: 3)
+            .scaleEffect(isExpanded ? 1.03 : 1.0)
+            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isExpanded)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -318,7 +570,6 @@ struct FeedPostCard: View {
     @State private var showDeleteConfirm = false
     @State private var showComments = false
     @State private var showUserPosts = false
-    @State private var tilt: CGSize = .zero
     @State private var currentPhotoIndex = 0
     @State private var photoDragOffset: CGFloat = 0
 
@@ -329,13 +580,7 @@ struct FeedPostCard: View {
     private var photoURLs: [URL] { communityVM.photoURLs(for: post) }
 
     private var stageAccent: Color {
-        if post.isJailbreak { return .purple }
-        switch post.stage {
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return Color(white: 0.6)
-        }
+        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     var body: some View {
@@ -343,18 +588,20 @@ struct FeedPostCard: View {
 
             // Glass card base
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.085), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(LinearGradient(colors: [Color.white.opacity(0.3), Color.white.opacity(0.05)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                        .blendMode(.screen)
                 )
                 .overlay(PostShimmer().clipShape(RoundedRectangle(cornerRadius: 24)))
-                .shadow(color: stageAccent.opacity(0.2), radius: 20, x: 0, y: 12)
-                .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 6)
-                .rotation3DEffect(.degrees(Double(tilt.width) * 0.04), axis: (x: 0, y: 1, z: 0))
-                .rotation3DEffect(.degrees(Double(-tilt.height) * 0.04), axis: (x: 1, y: 0, z: 0))
+                .shadow(color: .black.opacity(0.32), radius: 12, x: 0, y: 8)
 
             // Hero photo
             Group {
@@ -454,7 +701,6 @@ struct FeedPostCard: View {
                                    startPoint: .bottomLeading, endPoint: .topTrailing),
                     lineWidth: 1.5
                 )
-                .blendMode(.plusLighter)
                 .allowsHitTesting(false)
         }
         .frame(height: 340)
@@ -494,9 +740,7 @@ struct FeedPostCard: View {
     // MARK: - Helpers
 
     private var stageLabel: String {
-        if post.isJailbreak { return "Jailbreak" }
-        if post.stage == 0  { return "Stock" }
-        return "Stage \(post.stage)"
+        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     private var carDisplayName: String {
@@ -530,7 +774,7 @@ struct FeedPostCard: View {
         .background(.ultraThinMaterial)
         .clipShape(Circle())
         .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
-        .shadow(color: .black.opacity(0.4), radius: 4)
+        .shadow(color: .black.opacity(0.22), radius: 2, y: 1)
     }
 
     private var placeholderPersonIcon: some View {
@@ -545,10 +789,8 @@ struct FeedPostCard: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(post.username ?? "Empire Driver")
                     .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.6), radius: 4)
                 Text(post.createdAt.relativeFormatted)
                     .font(.caption2).foregroundStyle(.white.opacity(0.6))
-                    .shadow(color: .black.opacity(0.6), radius: 4)
             }
         }
 
@@ -578,12 +820,13 @@ struct FeedPostCard: View {
                     Text(post.carName)
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.5), radius: 4)
                         .lineLimit(1)
-                    if let cls = post.vehicleClass {
-                        Text(cls.components(separatedBy: " - ").first ?? "")
+                    if let vehicleClass = VehicleClass.from(rawValue: post.vehicleClass) {
+                        Text(vehicleClass.code)
                             .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(vehicleClass.accentColor)
+                            .shadow(color: vehicleClass.accentColor.opacity(0.9), radius: 8, x: 0, y: 0)
+                            .shadow(color: vehicleClass.accentColor.opacity(0.45), radius: 16, x: 0, y: 0)
                     }
                 }
 
@@ -592,7 +835,6 @@ struct FeedPostCard: View {
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.72))
                         .lineLimit(1)
-                        .shadow(color: .black.opacity(0.35), radius: 3)
                 }
             }
             .padding(.top, 10)
@@ -629,7 +871,7 @@ struct FeedPostCard: View {
                     .font(.system(size: 15))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
-                    .background(Capsule().fill(.ultraThinMaterial))
+                    .background(Capsule().fill(Color.black.opacity(0.28)))
                     .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
@@ -647,7 +889,7 @@ struct FeedPostCard: View {
                     .font(.system(size: 15))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
-                    .background(Capsule().fill(.ultraThinMaterial))
+                    .background(Capsule().fill(Color.black.opacity(0.28)))
                     .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
@@ -658,7 +900,7 @@ struct FeedPostCard: View {
                             .font(.system(size: 14))
                             .foregroundStyle(.white.opacity(0.85))
                             .padding(8)
-                            .background(Circle().fill(.ultraThinMaterial))
+                            .background(Circle().fill(Color.black.opacity(0.28)))
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
                 }
@@ -669,7 +911,6 @@ struct FeedPostCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(3)
-                    .shadow(color: .black.opacity(0.4), radius: 4)
             }
         }
     }
@@ -916,12 +1157,14 @@ struct CommunityProfilePostsView: View {
                     .font(.system(.headline, design: .rounded).weight(.semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.88)
 
                 HStack(spacing: 6) {
                     Text("@\(displayHandle)")
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.45))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.84)
 
                     Circle()
                         .fill(Color("EmpireMint").opacity(0.6))
@@ -932,34 +1175,42 @@ struct CommunityProfilePostsView: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
+            .layoutPriority(1)
 
             Spacer(minLength: 10)
 
             VStack(alignment: .trailing, spacing: 6) {
                 profileMetric(value: "\(vm.totalPostsCount)", label: "Posts")
                 if let headerStats = currentHeaderStats {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
+                        if let classCode = headerStats.classCode,
+                           let classTint = headerStats.classTint {
+                            Text(classCode)
+                                .font(.system(size: 11, weight: .black, design: .rounded))
+                                .foregroundStyle(classTint)
+                                .shadow(color: classTint.opacity(0.9), radius: 8, x: 0, y: 0)
+                                .shadow(color: classTint.opacity(0.45), radius: 16, x: 0, y: 0)
+                        }
+
                         Text("\(headerStats.horsepower) WHP")
                             .font(.system(size: 10, weight: .bold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.72)
                             .foregroundStyle(Color.cyan.opacity(0.95))
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 7)
                             .padding(.vertical, 5)
                             .background(Capsule().fill(Color.cyan.opacity(0.16)))
                             .overlay(Capsule().stroke(Color.cyan.opacity(0.45), lineWidth: 1))
-                            .fixedSize(horizontal: false, vertical: true)
 
                         Text(headerStats.stageLabel)
                             .font(.system(size: 10, weight: .bold, design: .rounded))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.72)
+                            .minimumScaleFactor(0.82)
                             .foregroundStyle(headerStats.tint.opacity(0.95))
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 7)
                             .padding(.vertical, 5)
                             .background(Capsule().fill(headerStats.tint.opacity(0.16)))
                             .overlay(Capsule().stroke(headerStats.tint.opacity(0.45), lineWidth: 1))
-                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -1069,26 +1320,23 @@ struct CommunityProfilePostsView: View {
     }
 
     private func stageTintForHeader(_ post: CommunityPost) -> Color {
-        if post.isJailbreak { return .purple }
-        switch post.stage {
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return .gray
-        }
+        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     private func latestStageLabel(for post: CommunityPost) -> String {
-        if post.isJailbreak { return "JAILBREAK" }
-        return post.stage == 0 ? "STOCK" : "STAGE \(post.stage)"
+        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak).uppercased()
     }
 
-    private var currentHeaderStats: (horsepower: Int, stageLabel: String, tint: Color)? {
+    private var currentHeaderStats: (horsepower: Int, stageLabel: String, tint: Color, classCode: String?, classTint: Color?)? {
+        let latestClass = VehicleClass.from(rawValue: vm.posts.first?.vehicleClass)
+
         if let currentHeaderCar {
             return (
                 horsepower: currentHeaderCar.horsepower,
-                stageLabel: currentHeaderCar.isJailbreak ? "JAILBREAK" : (currentHeaderCar.stage == 0 ? "STOCK" : "STAGE \(currentHeaderCar.stage)"),
-                tint: currentHeaderCar.isJailbreak ? .purple : stageTint(for: currentHeaderCar.stage)
+                stageLabel: StageSystem.displayLabel(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak).uppercased(),
+                tint: StageSystem.accentColor(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak),
+                classCode: currentHeaderCar.vehicleClass?.code ?? latestClass?.code,
+                classTint: currentHeaderCar.vehicleClass?.accentColor ?? latestClass?.accentColor
             )
         }
 
@@ -1096,7 +1344,9 @@ struct CommunityProfilePostsView: View {
         return (
             horsepower: latest.horsepower,
             stageLabel: latestStageLabel(for: latest),
-            tint: stageTintForHeader(latest)
+            tint: stageTintForHeader(latest),
+            classCode: latestClass?.code,
+            classTint: latestClass?.accentColor
         )
     }
 
@@ -1264,18 +1514,11 @@ private struct CommunityProfileGridTile: View {
     }
 
     private var profileStageLabel: String {
-        if post.isJailbreak { return "JAILBREAK" }
-        return post.stage == 0 ? "STOCK" : "STAGE \(post.stage)"
+        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak).uppercased()
     }
 
     private var stageColor: Color {
-        if post.isJailbreak { return .purple }
-        switch post.stage {
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return .gray
-        }
+        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
     }
 }
 
@@ -1336,16 +1579,9 @@ private struct ExpandedCommunityPostCard: View {
     var allowsProfileNavigation = false
 
     @State private var showComments = false
-    @State private var tilt: CGSize = .zero
 
     private var stageAccent: Color {
-        if post.isJailbreak { return .purple }
-        switch post.stage {
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return Color(white: 0.6)
-        }
+        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     var body: some View {
@@ -1422,8 +1658,8 @@ private struct ExpandedCommunityPostCard: View {
                 HStack(spacing: 8) {
                     expandedChip(label: stageLabel.uppercased(), tint: stageAccent)
                     expandedChip(label: "\(post.horsepower) WHP", tint: .cyan)
-                    if let cls = post.vehicleClass {
-                        expandedChip(label: cls.components(separatedBy: " - ").first ?? cls, tint: .white.opacity(0.7))
+                    if let cls = VehicleClass.from(rawValue: post.vehicleClass) {
+                        expandedChip(label: "\(cls.code) \(cls.displayName)", tint: cls.accentColor)
                     }
                 }
 
@@ -1469,7 +1705,13 @@ private struct ExpandedCommunityPostCard: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.085), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
         )
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
@@ -1483,25 +1725,7 @@ private struct ExpandedCommunityPostCard: View {
                     lineWidth: 2
                 )
         )
-        .shadow(color: stageAccent.opacity(0.28), radius: 26, y: 14)
-        .shadow(color: .black.opacity(0.35), radius: 18, y: 10)
-        .rotation3DEffect(.degrees(Double(tilt.width) * 0.05), axis: (x: 0, y: 1, z: 0))
-        .rotation3DEffect(.degrees(Double(-tilt.height) * 0.05), axis: (x: 1, y: 0, z: 0))
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    let w = max(-20, min(20, value.translation.width))
-                    let h = max(-20, min(20, value.translation.height))
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.85)) {
-                        tilt = CGSize(width: w, height: h)
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.88)) {
-                        tilt = .zero
-                    }
-                }
-        )
+        .shadow(color: .black.opacity(0.32), radius: 14, y: 8)
         .sheet(isPresented: $showComments) {
             CommentSheetView(post: post, currentUserId: currentUserId, communityVM: communityVM)
                 .presentationDetents([.medium, .large])
@@ -1535,8 +1759,7 @@ private struct ExpandedCommunityPostCard: View {
     }
 
     private var stageLabel: String {
-        if post.isJailbreak { return "Jailbreak" }
-        return post.stage == 0 ? "Stock" : "Stage \(post.stage)"
+        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak)
     }
 
     private var makeModelLine: String? {
@@ -1578,7 +1801,7 @@ private struct ExpandedCommunityPostCard: View {
         .foregroundStyle(tint)
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(Capsule().fill(.ultraThinMaterial))
+        .background(Capsule().fill(Color.white.opacity(0.08)))
         .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
     }
 }
@@ -1591,7 +1814,7 @@ private struct PostShimmer: View {
         LinearGradient(
             gradient: Gradient(stops: [
                 .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.06), location: 0.45),
+                .init(color: .white.opacity(0.05), location: 0.45),
                 .init(color: .clear, location: 0.9)
             ]),
             startPoint: .topLeading, endPoint: .bottomTrailing
@@ -1600,15 +1823,11 @@ private struct PostShimmer: View {
         .offset(x: -120 + phase * 240)
         .onAppear { withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) { phase = 1 } }
         .onDisappear { phase = 0 }
-        .blendMode(.screen).allowsHitTesting(false)
+        .opacity(0.55)
+        .allowsHitTesting(false)
     }
 }
 
 private func stageTint(for stage: Int) -> Color {
-    switch stage {
-    case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
-    default: return .gray
-    }
+    StageSystem.accentColor(for: stage, isJailbreak: false)
 }

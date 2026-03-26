@@ -124,7 +124,7 @@ extension CarEntity {
     func toDomain() -> Car {
         let specsDomain = Self.orderedSpecs(specs.map { SpecItem(id: $0.id, key: $0.key, value: $0.value) })
         let modsDomain: [ModItem] = mods.map { ModItem(id: $0.id, title: $0.title, notes: $0.notes, isMajor: $0.isMajor) }
-        let vehicleClass: VehicleClass? = vehicleClassRaw.flatMap { VehicleClass(rawValue: $0) }
+        let vehicleClass: VehicleClass? = VehicleClass.from(rawValue: vehicleClassRaw)
         return Car(
             id: id,
             name: name,

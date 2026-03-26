@@ -210,20 +210,14 @@ struct CarExpandedCard: View {
 
                     // Compact badges
                     HStack(spacing: 10) {
-                        if car.isJailbreak {
-                            StatCapsule(label: "Jailbreak", value: "", tint: .purple)
-                        } else if car.stage == 0 {
-                            StatCapsule(label: "Stock", value: "", tint: .gray)
-                        } else {
-                            StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
-                        }
+                        StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                         StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                     }
 
                     // Stat meters with unified animation
                     VStack(spacing: 10) {
                         LiquidStatRow(name: "Horsepower", value: Double(car.horsepower), max: 1200, accent: Color("EmpireMint"))
-                        StatRow(name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"), value: Double(car.isJailbreak ? 1 : car.stage), max: car.isJailbreak ? 1 : 3, accent: car.isJailbreak ? .purple : stageTint(for: car.stage))
+                        StatRow(name: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: Double(car.isJailbreak ? 1 : car.stage), max: car.isJailbreak ? 1 : 6, accent: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                     }
                     .padding(14)
                     .background(
@@ -290,18 +284,10 @@ struct CarExpandedCard: View {
     }
 
     private func stageAccentColor() -> Color {
-        if car.isJailbreak { return .purple }
-        switch car.stage {
-        case 0: return .gray
-        case 1: return Color("EmpireMint")
-        case 2: return .yellow
-        case 3: return .red
-        default: return .gray
-        }
+        StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
     }
     private func stageDisplayName() -> String {
-        if car.isJailbreak { return "Jailbreak" }
-        return car.stage == 0 ? "Stock" : "Stage"
+        StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak)
     }
     private func stageDisplayValue() -> Int {
         if car.isJailbreak { return 1 }
@@ -309,12 +295,10 @@ struct CarExpandedCard: View {
     }
     private func stageMax() -> Double {
         if car.isJailbreak { return 1 }
-        return 3
+        return 6
     }
     private func stageBarTitle() -> String {
-        if car.isJailbreak { return "Jailbreak" }
-        if car.stage == 0 { return "Stock" }
-        return "Stage"
+        StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak)
     }
     private func stageBarValue() -> Int {
         if car.isJailbreak { return 1 }
@@ -322,7 +306,7 @@ struct CarExpandedCard: View {
     }
     private func stageBarMax() -> Double {
         if car.isJailbreak { return 1 }
-        return 3
+        return 6
     }
 }
 
@@ -444,7 +428,7 @@ private struct StatRow: View {
     }
 
     private var normalized: Double {
-        if name == "Stage" || name == "Stock" || name == "Jailbreak" {
+        if name.hasPrefix("Stage") || name == "Stock" || name == "Jailbreak" || name == "MAX" {
             let clamped = Swift.max(0, Swift.min(Int(value), Int(max)))
             return max == 0 ? 0 : Double(clamped) / max
         }
@@ -455,7 +439,8 @@ private struct StatRow: View {
         if name == "Horsepower" { return "\(Int(value)) WHP" }
         if name == "Jailbreak" { return "Jailbreak" }
         if name == "Stock" { return "Stock" }
-        if name == "Stage" { return "\(Int(value))" }
+        if name.hasPrefix("Stage") { return "\(Int(value))" }
+        if name == "MAX" { return "MAX" }
         return String(format: "%.0f", value)
     }
 }
@@ -586,12 +571,7 @@ private struct PopupCard<Content: View>: View {
 }
 
 private func stageTint(for stage: Int) -> Color {
-    switch stage {
-    case 1: return Color("EmpireMint")
-    case 2: return .yellow
-    case 3: return .red
-    default: return .gray
-    }
+    StageSystem.accentColor(for: stage, isJailbreak: false)
 }
 
 private struct GalleryTile: View {
@@ -605,20 +585,14 @@ private struct GalleryTile: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    if car.isJailbreak {
-                        StatCapsule(label: "Jailbreak", value: "", tint: .purple)
-                    } else if car.stage == 0 {
-                        StatCapsule(label: "Stock", value: "", tint: .gray)
-                    } else {
-                        StatCapsule(label: "Stage", value: "\(car.stage)", tint: stageTint(for: car.stage))
-                    }
+                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
                     StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
                 }
                 StatRow(
-                    name: car.isJailbreak ? "Jailbreak" : (car.stage == 0 ? "Stock" : "Stage"),
+                    name: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
                     value: Double(car.isJailbreak ? 1 : car.stage),
-                    max: car.isJailbreak ? 1 : 3,
-                    accent: car.isJailbreak ? .purple : stageTint(for: car.stage)
+                    max: car.isJailbreak ? 1 : 6,
+                    accent: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
                 )
             }
             .padding(10)

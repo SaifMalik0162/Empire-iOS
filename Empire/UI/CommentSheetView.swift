@@ -13,6 +13,7 @@ struct CommentSheetView: View {
     @State private var isPosting = false
     @State private var draftText = ""
     @State private var errorMessage: String? = nil
+    @State private var resolvedCurrentUserId = ""
     @FocusState private var inputFocused: Bool
 
     private let service = SupabaseCommunityService()
@@ -50,7 +51,7 @@ struct CommentSheetView: View {
                                     ForEach(comments) { comment in
                                         CommentRow(
                                             comment: comment,
-                                            currentUserId: currentUserId,
+                                            currentUserId: resolvedCurrentUserId,
                                             onDelete: {
                                                 Task { await deleteComment(comment) }
                                             }
@@ -97,7 +98,7 @@ struct CommentSheetView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .task { await loadComments() }
+        .task { await bootstrap() }
     }
 
     // MARK: - Empty state
@@ -196,7 +197,7 @@ struct CommentSheetView: View {
         do {
             comments = try await service.fetchComments(postId: post.id)
         } catch {
-            showError("Couldn't load comments.")
+            showError(error.localizedDescription)
         }
         isLoading = false
     }
@@ -212,7 +213,7 @@ struct CommentSheetView: View {
         do {
             let comment = try await service.postComment(
                 postId: post.id,
-                userId: currentUserId,
+                preferredUserId: resolvedCurrentUserId.isEmpty ? currentUserId : resolvedCurrentUserId,
                 body: trimmed
             )
             await MainActor.run {
@@ -226,7 +227,7 @@ struct CommentSheetView: View {
             await MainActor.run {
                 draftText = draft
                 isPosting = false
-                showError("Couldn't post comment.")
+                showError(error.localizedDescription)
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
             }
         }
@@ -241,8 +242,17 @@ struct CommentSheetView: View {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
             }
         } catch {
-            showError("Couldn't delete comment.")
+            showError(error.localizedDescription)
         }
+    }
+
+    private func bootstrap() async {
+        do {
+            resolvedCurrentUserId = try await service.authenticatedUserId()
+        } catch {
+            resolvedCurrentUserId = currentUserId
+        }
+        await loadComments()
     }
 
     private func showError(_ msg: String) {
@@ -261,50 +271,93 @@ private struct CommentRow: View {
     let onDelete: () -> Void
 
     @State private var showDeleteConfirm = false
+    @State private var dragOffset: CGFloat = 0
 
-    private var isOwn: Bool { comment.userId == currentUserId }
+    private var isOwn: Bool {
+        comment.userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            == currentUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private let revealWidth: CGFloat = 92
+    private var revealedWidth: CGFloat { max(0, -dragOffset) }
+    private var isDeleteRevealed: Bool { revealedWidth > 12 }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            // Avatar
-            avatarView
-                .frame(width: 34, height: 34)
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 4) {
-                // Username + timestamp
-                HStack(spacing: 6) {
-                    Text(comment.username ?? "Driver")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
-                    Text("·")
-                        .foregroundStyle(.white.opacity(0.3))
-                        .font(.caption2)
-                    Text(comment.createdAt.relativeFormatted)
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.4))
+        ZStack(alignment: .trailing) {
+            if isOwn {
+                HStack {
                     Spacer()
-                    if isOwn {
-                        Button {
-                            showDeleteConfirm = true
-                        } label: {
-                            Image(systemName: "trash")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.white.opacity(0.35))
-                        }
-                        .buttonStyle(.plain)
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(width: revealWidth)
+                            .frame(maxHeight: .infinity)
+                    }
+                    .tint(.red)
+                    .buttonStyle(.borderless)
+                    .opacity(isDeleteRevealed ? 1 : 0)
+                    .allowsHitTesting(isDeleteRevealed)
+                }
+                .frame(width: revealedWidth)
+                .clipped()
+            }
+
+            HStack(alignment: .top, spacing: 10) {
+                avatarView
+                    .frame(width: 34, height: 34)
+                    .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(comment.username ?? "Driver")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("·")
+                            .foregroundStyle(.white.opacity(0.3))
+                            .font(.caption2)
+                        Text(comment.createdAt.relativeFormatted)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.4))
+                        Spacer()
+                    }
+
+                    Text(comment.body)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.clear)
+            .offset(x: dragOffset)
+            .contentShape(Rectangle())
+            .allowsHitTesting(!(isOwn && isDeleteRevealed))
+        }
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 10)
+                .onChanged { value in
+                    guard isOwn else { return }
+                    let proposed = value.translation.width
+                    dragOffset = max(-revealWidth, min(0, proposed))
+                }
+                .onEnded { value in
+                    guard isOwn else { return }
+                    withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+                        dragOffset = value.translation.width < -40 ? -revealWidth : 0
                     }
                 }
-
-                // Body
-                Text(comment.body)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.9))
-                    .fixedSize(horizontal: false, vertical: true)
+        )
+        .onTapGesture {
+            if dragOffset != 0 {
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.86)) {
+                    dragOffset = 0
+                }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
         .confirmationDialog("Delete this comment?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) { onDelete() }
             Button("Cancel", role: .cancel) {}

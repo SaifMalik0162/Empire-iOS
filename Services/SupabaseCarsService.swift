@@ -100,7 +100,7 @@ final class SupabaseCarsService {
                 specs: specs,
                 mods: mods,
                 isJailbreak: row.is_jailbreak,
-                vehicleClass: row.vehicle_class.flatMap(VehicleClass.init(rawValue:))
+                vehicleClass: VehicleClass.from(rawValue: row.vehicle_class)
             )
             cars.append(car)
         }
