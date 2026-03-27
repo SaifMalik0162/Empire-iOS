@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import SwiftData
+import UIKit
 
 @main
 struct EmpireApp: App {
@@ -38,6 +39,7 @@ struct EmpireApp: App {
             }
             .id(authViewModel.isAuthenticated ? "auth" : "loggedOut")
             .onAppear {
+                Self.normalizeLegacyCarPhotosIfNeeded()
                 dismissObserver = NotificationCenter.default.publisher(for: .empireRequestDismiss)
                     .receive(on: RunLoop.main)
                     .sink { _ in
@@ -52,6 +54,31 @@ struct EmpireApp: App {
         .modelContainer(for: [CarEntity.self, SpecItemEntity.self, ModItemEntity.self, MerchItemEntity.self])
     }
     
+}
+
+private extension EmpireApp {
+    static func normalizeLegacyCarPhotosIfNeeded() {
+        let defaultsKey = "normalized_legacy_car_photos_v1"
+        guard UserDefaults.standard.bool(forKey: defaultsKey) == false else { return }
+        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        guard let fileURLs = try? FileManager.default.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil) else { return }
+
+        let targetURLs = fileURLs.filter { url in
+            let name = url.lastPathComponent.lowercased()
+            return name.hasPrefix("car_") && (name.hasSuffix(".jpg") || name.hasSuffix(".jpeg") || name.hasSuffix(".png"))
+        }
+
+        for url in targetURLs {
+            guard let data = try? Data(contentsOf: url),
+                  let image = UIImage(data: data),
+                  let normalized = image.jpegData(compressionQuality: 0.96) else {
+                continue
+            }
+            try? normalized.write(to: url, options: [.atomic])
+        }
+
+        UserDefaults.standard.set(true, forKey: defaultsKey)
+    }
 }
 
 fileprivate struct ContextBridge: View {

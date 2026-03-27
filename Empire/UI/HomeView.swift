@@ -13,6 +13,8 @@ struct HomeView: View {
     @State private var meetsError: String? = nil
     @State private var featuredUserCarPhotoData: Data? = nil
     @State private var featuredMerch: [MerchItem] = []
+    @State private var isRefreshingFeaturedMerch = false
+    @State private var lastFeaturedMerchRefreshAt: Date? = nil
 
     // MARK: - Data Sources
     private let communityCars: [Car] = [
@@ -385,7 +387,7 @@ struct HomeView: View {
                   UIImage(data: data) != nil else {
                 continue
             }
-            featuredUserCarPhotoData = data
+            featuredUserCarPhotoData = normalizedDisplayImageData(from: data)
             return
         }
 
@@ -433,7 +435,24 @@ struct HomeView: View {
             featuredMerch = Array(MerchCatalog.featured.prefix(3))
         }
 
+        if isRefreshingFeaturedMerch {
+            return
+        }
+
+        if let lastFeaturedMerchRefreshAt,
+           Date().timeIntervalSince(lastFeaturedMerchRefreshAt) < 30 {
+            return
+        }
+
+        isRefreshingFeaturedMerch = true
+        lastFeaturedMerchRefreshAt = Date()
+
         Task {
+            defer {
+                Task { @MainActor in
+                    isRefreshingFeaturedMerch = false
+                }
+            }
             do {
                 let fresh = try await SupabaseMerchService().fetchMerch()
                 guard !fresh.isEmpty else { return }
@@ -445,6 +464,11 @@ struct HomeView: View {
                 AppTelemetry.shared.record(error: error, context: "home.featured_merch")
             }
         }
+    }
+
+    private func normalizedDisplayImageData(from data: Data) -> Data {
+        guard let image = UIImage(data: data) else { return data }
+        return image.jpegData(compressionQuality: 0.96) ?? data
     }
 }
 

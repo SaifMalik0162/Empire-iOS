@@ -1137,6 +1137,9 @@ struct CommunityProfilePostsView: View {
             await vm.refresh()
             await refreshHeaderCar()
         }
+        .onChange(of: vm.posts.map(\.id)) { _, _ in
+            Task { await refreshHeaderCar() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
             Task {
                 await vm.refresh()
@@ -1362,7 +1365,11 @@ struct CommunityProfilePostsView: View {
 
         do {
             let remoteCars = try await carsService.fetchCars(for: userId)
-            currentHeaderCar = resolveHeaderCar(from: remoteCars)
+            if let resolved = resolveHeaderCar(from: remoteCars) {
+                currentHeaderCar = resolved
+            } else if userId != currentUserId {
+                currentHeaderCar = nil
+            }
         } catch {
             if userId != currentUserId {
                 currentHeaderCar = nil
@@ -1375,6 +1382,18 @@ struct CommunityProfilePostsView: View {
         if let latestCarId = vm.posts.first?.carId,
            let matched = cars.first(where: { $0.id == latestCarId }) {
             return matched
+        }
+        if let latestPost = vm.posts.first {
+            let latestPostName = latestPost.carName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let latestMake = latestPost.make?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let latestModel = latestPost.model?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if let matchedByMetadata = cars.first(where: { car in
+                car.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == latestPostName
+                    && car.make?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == latestMake
+                    && car.model?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == latestModel
+            }) {
+                return matchedByMetadata
+            }
         }
         return cars.first
     }
@@ -1422,6 +1441,9 @@ private struct CommunityProfileGridTile: View {
                 HStack(spacing: 6) {
                     Text(profileStageLabel)
                         .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .fixedSize(horizontal: true, vertical: true)
                         .foregroundStyle(stageColor)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 4)
@@ -1430,6 +1452,9 @@ private struct CommunityProfileGridTile: View {
 
                     Text("\(post.horsepower) WHP")
                         .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .fixedSize(horizontal: true, vertical: true)
                         .foregroundStyle(Color.cyan)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 4)
