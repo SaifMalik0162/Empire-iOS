@@ -770,6 +770,34 @@ private struct CompactShineAnimation: ViewModifier {
     }
 }
 
+// MARK: - Holo shimmer
+
+private struct HoloShimmerMask: View {
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        LinearGradient(
+            gradient: Gradient(stops: [
+                .init(color: .clear, location: 0.0),
+                .init(color: .white.opacity(0.3), location: 0.45),
+                .init(color: .clear, location: 0.9)
+            ]),
+            startPoint: .topLeading, endPoint: .bottomTrailing
+        )
+        .scaleEffect(x: 1.8)
+        .offset(x: -120 + phase * 240)
+        .onAppear {
+            withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
+                phase = 1
+            }
+        }
+        .onDisappear { phase = 0 }
+        .blendMode(.screen)
+        .opacity(0.6)
+        .allowsHitTesting(false)
+    }
+}
+
 // MARK: - Stat capsule
 
 private struct StatCapsule: View {
@@ -1004,27 +1032,6 @@ private struct GlassButton: View {
         }
         .buttonStyle(.plain)
         .shadow(color: Color("EmpireMint").opacity(0.2), radius: 6, x: 0, y: 3)
-    }
-}
-
-// MARK: - Holo shimmer
-
-private struct HoloShimmerMask: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.3), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading, endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.8)
-        .offset(x: -120 + phase * 240)
-        .onAppear { withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) { phase = 1 } }
-        .onDisappear { phase = 0 }
-        .blendMode(.screen).opacity(0.6).allowsHitTesting(false)
     }
 }
 

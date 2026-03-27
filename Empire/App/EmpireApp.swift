@@ -60,24 +60,29 @@ private extension EmpireApp {
     static func normalizeLegacyCarPhotosIfNeeded() {
         let defaultsKey = "normalized_legacy_car_photos_v1"
         guard UserDefaults.standard.bool(forKey: defaultsKey) == false else { return }
-        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        guard let fileURLs = try? FileManager.default.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil) else { return }
 
-        let targetURLs = fileURLs.filter { url in
-            let name = url.lastPathComponent.lowercased()
-            return name.hasPrefix("car_") && (name.hasSuffix(".jpg") || name.hasSuffix(".jpeg") || name.hasSuffix(".png"))
-        }
+        Task.detached(priority: .utility) {
+            guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+            guard let fileURLs = try? FileManager.default.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil) else { return }
 
-        for url in targetURLs {
-            guard let data = try? Data(contentsOf: url),
-                  let image = UIImage(data: data),
-                  let normalized = image.jpegData(compressionQuality: 0.96) else {
-                continue
+            let targetURLs = fileURLs.filter { url in
+                let name = url.lastPathComponent.lowercased()
+                return name.hasPrefix("car_") && (name.hasSuffix(".jpg") || name.hasSuffix(".jpeg") || name.hasSuffix(".png"))
             }
-            try? normalized.write(to: url, options: [.atomic])
-        }
 
-        UserDefaults.standard.set(true, forKey: defaultsKey)
+            for url in targetURLs {
+                autoreleasepool {
+                    guard let data = try? Data(contentsOf: url),
+                          let image = UIImage(data: data),
+                          let normalized = image.jpegData(compressionQuality: 0.96) else {
+                        return
+                    }
+                    try? normalized.write(to: url, options: [.atomic])
+                }
+            }
+
+            UserDefaults.standard.set(true, forKey: defaultsKey)
+        }
     }
 }
 

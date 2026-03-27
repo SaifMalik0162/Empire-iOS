@@ -1335,10 +1335,17 @@ private struct QuickAddModsRow: View {
 }
 
 private struct StageSuggestionBanner: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let majorModsCount: Int
     let hasTune: Bool
     var onApply: () -> Void
     @State private var animatePhase: CGFloat = 0
+    @State private var isAnimating = false
+
+    private var animationsEnabled: Bool {
+        scenePhase == .active && !reduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
 
     var body: some View {
         if majorModsCount >= 3 && hasTune {
@@ -1374,14 +1381,31 @@ private struct StageSuggestionBanner: View {
                 )
                 .padding(.horizontal, 20)
                 .shadow(color: Color("EmpireMint").opacity(0.25), radius: 10, x: 0, y: 6)
-                .onAppear {
-                    withAnimation(.linear(duration: 2.2).repeatForever(autoreverses: false)) {
-                        animatePhase = 1
-                    }
-                }
+                .onAppear { updateAnimationState() }
+                .onChange(of: animationsEnabled) { _, _ in updateAnimationState() }
+                .onDisappear { stopAnimation() }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func updateAnimationState() {
+        animationsEnabled ? startAnimation() : stopAnimation()
+    }
+
+    private func startAnimation() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        animatePhase = 0
+        withAnimation(.linear(duration: 2.2).repeatForever(autoreverses: false)) {
+            animatePhase = 1
+        }
+    }
+
+    private func stopAnimation() {
+        guard isAnimating || animatePhase != 0 else { return }
+        isAnimating = false
+        animatePhase = 0
     }
 }
 

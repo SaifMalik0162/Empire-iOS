@@ -238,7 +238,6 @@ struct MarketplaceSection: View {
                             .blendMode(.screen)
                     )
                     .shadow(color: Color("EmpireMint").opacity(0.18), radius: 16, x: 0, y: 8)
-                    .overlay(CompactShimmerOverlay().clipShape(RoundedRectangle(cornerRadius: 24)))
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 16) {
@@ -310,7 +309,6 @@ struct MarketplaceItemCard: View {
                         .opacity(0.22)
                         .blur(radius: 8)
                         .rotationEffect(.degrees(16))
-                        .modifier(CompactShine())
                     }
                     .shadow(color: Color("EmpireMint").opacity(0.35), radius: 6, x: 0, y: 3)
 
@@ -331,65 +329,6 @@ struct MarketplaceItemCard: View {
             }
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Subtle Shimmer & Badge
-private struct CompactShimmer: ViewModifier {
-    @State private var phase: CGFloat = -1
-    func body(content: Content) -> some View {
-        content
-            .offset(x: phase * 160, y: phase * 60)
-            .onAppear {
-                phase = -1
-                withAnimation(.linear(duration: 5.0).repeatForever(autoreverses: false)) {
-                    phase = 1.2
-                }
-            }
-            .onDisappear { phase = -1 }
-            .allowsHitTesting(false)
-            .clipped()
-    }
-}
-
-private struct CompactShine: ViewModifier {
-    @State private var phase: CGFloat = -1
-    func body(content: Content) -> some View {
-        content
-            .opacity(0.5)
-            .offset(x: phase * 160, y: phase * 80)
-            .onAppear {
-                phase = -1
-                withAnimation(.linear(duration: 5).repeatForever(autoreverses: false)) {
-                    phase = 1.2
-                }
-            }
-            .onDisappear { phase = -1 }
-            .allowsHitTesting(false)
-    }
-}
-
-private struct CompactShimmerOverlay: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.25), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.6)
-        .offset(x: -120 + phase * 240)
-        .onAppear {
-            withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 }
-        }
-        .onDisappear { phase = 0 }
-        .blendMode(.screen)
-        .opacity(0.5)
-        .allowsHitTesting(false)
     }
 }
 

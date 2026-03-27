@@ -200,7 +200,6 @@ struct HomeView: View {
                                             .opacity(0.22)
                                             .blur(radius: 8)
                                             .rotationEffect(.degrees(16))
-                                            .modifier(HomeCompactShine())
                                         }
 
                                         ForEach(communityCars.indices, id: \.self) { idx in
@@ -245,7 +244,6 @@ struct HomeView: View {
                                                 .opacity(0.22)
                                                 .blur(radius: 8)
                                                 .rotationEffect(.degrees(16))
-                                                .modifier(HomeCompactShine())
                                             }
                                         }
                                         Spacer(minLength: 0)
@@ -295,7 +293,6 @@ struct HomeView: View {
                                                             .blendMode(.screen)
                                                     )
                                                     .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, y: 3)
-                                                    .overlay(HomeShimmerOverlay().clipShape(RoundedRectangle(cornerRadius: 18)))
 
                                                 // Full-bleed merch image
                                                 Image(item.imageName)
@@ -501,7 +498,6 @@ struct GlassCard<Content: View>: View {
                         lineWidth: 1
                     )
                     .blendMode(.screen)
-                HomeShimmerOverlay().clipShape(RoundedRectangle(cornerRadius: 24))
             }
         )
         .cornerRadius(24)
@@ -541,43 +537,5 @@ private struct HomeHeader: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Shimmer Helpers
-private struct HomeShimmerOverlay: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.25), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.6)
-        .offset(x: -120 + phase * 240)
-        .onAppear { withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 } }
-        .onDisappear { phase = 0 }
-        .blendMode(.screen)
-        .opacity(0.5)
-        .allowsHitTesting(false)
-    }
-}
-
-private struct HomeCompactShine: ViewModifier {
-    @State private var phase: CGFloat = -1
-    func body(content: Content) -> some View {
-        content
-            .opacity(0.5)
-            .offset(x: phase * 160, y: phase * 80)
-            .onAppear {
-                phase = -1
-                withAnimation(.linear(duration: 5).repeatForever(autoreverses: false)) { phase = 1.2 }
-            }
-            .onDisappear { phase = -1 }
-            .allowsHitTesting(false)
     }
 }

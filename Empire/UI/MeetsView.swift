@@ -338,12 +338,6 @@ private struct MeetCard: View {
                             lineWidth: 1
                         )
                 )
-                .overlay(
-                    ShimmerMask()
-                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                        .opacity(0.4)
-                        .blendMode(.screen)
-                )
         )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
@@ -868,33 +862,6 @@ struct CheckInSuccessView: View {
 }
 
 // MARK: - Effects / Utils
-
-private struct ShimmerMask: View {
-    @State private var phase: CGFloat = 0
-
-    var body: some View {
-        GeometryReader { geo in
-            LinearGradient(
-                gradient: Gradient(stops: [
-                    .init(color: .clear, location: 0.0),
-                    .init(color: Color.white.opacity(0.3), location: 0.45),
-                    .init(color: .clear, location: 0.9)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(width: geo.size.width)
-            .offset(x: -geo.size.width + phase * (geo.size.width * 2))
-            .onAppear {
-                withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: false)) {
-                    phase = 1
-                }
-            }
-            .onDisappear { phase = 0 }
-        }
-        .allowsHitTesting(false)
-    }
-}
 
 private struct ParallaxEffect: ViewModifier {
     let y: CGFloat

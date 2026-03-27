@@ -14,7 +14,7 @@ final class CommunityViewModel: ObservableObject {
 
     private let service = SupabaseCommunityService()
     private let logger = Logger(subsystem: "com.empire.app", category: "community-vm")
-    private let pageSize = 40
+    private let pageSize = 16
     private var currentOffset = 0
     private let authorUserId: String?
     private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "" }
@@ -35,20 +35,23 @@ final class CommunityViewModel: ObservableObject {
         hasMore = true
 
         do {
-            async let fetchedTask = service.fetchFeed(
+            let fetched = try await service.fetchFeed(
                 currentUserId: currentUserId,
                 limit: pageSize,
                 offset: 0,
                 authorUserId: authorUserId
             )
-            async let totalTask = service.countPosts(authorUserId: authorUserId)
 
-            let fetched = try await fetchedTask
-            let total = try await totalTask
+            // Publish the first page as soon as it's ready so the feed can scroll immediately.
             posts = fetched
-            totalPostsCount = total
             currentOffset = fetched.count
             hasMore = fetched.count == pageSize
+
+            if authorUserId != nil {
+                totalPostsCount = try await service.countPosts(authorUserId: authorUserId)
+            } else {
+                totalPostsCount = fetched.count
+            }
         } catch {
             let msg = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
             errorMessage = msg.isEmpty ? "Failed to load feed." : msg

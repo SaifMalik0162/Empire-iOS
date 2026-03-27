@@ -1,10 +1,16 @@
 import SwiftUI
 public struct EmpireInteractiveBackground: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var t1: CGFloat = 0
     @State private var t2: CGFloat = 0
     @State private var t3: CGFloat = 0
-    @State private var animate = false
+    @State private var isAnimating = false
     public init() {}
+
+    private var animationsEnabled: Bool {
+        scenePhase == .active && !reduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
     public var body: some View {
         ZStack {
             Color.black
@@ -20,18 +26,9 @@ public struct EmpireInteractiveBackground: View {
             .blendMode(.plusLighter) // preserves glow when blobs overlap
         }
         .ignoresSafeArea()
-        .onAppear {
-            animate = true
-            withAnimation(.linear(duration: 12).repeatForever(autoreverses: false)) { t1 = 2 * .pi }
-            withAnimation(.linear(duration: 14).repeatForever(autoreverses: false)) { t2 = 2 * .pi }
-            withAnimation(.linear(duration: 16).repeatForever(autoreverses: false)) { t3 = 2 * .pi }
-        }
-        .onDisappear {
-            animate = false
-            t1 = 0
-            t2 = 0
-            t3 = 0
-        }
+        .onAppear { updateAnimationState() }
+        .onChange(of: animationsEnabled) { _, _ in updateAnimationState() }
+        .onDisappear { stopAnimations() }
     }
 
     @ViewBuilder
@@ -42,5 +39,28 @@ public struct EmpireInteractiveBackground: View {
             .frame(width: radius * 2, height: radius * 2)
             .offset(x: x, y: y)
             .blur(radius: 26)
+    }
+
+    private func updateAnimationState() {
+        animationsEnabled ? startAnimations() : stopAnimations()
+    }
+
+    private func startAnimations() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        t1 = 0
+        t2 = 0
+        t3 = 0
+        withAnimation(.linear(duration: 12).repeatForever(autoreverses: false)) { t1 = 2 * .pi }
+        withAnimation(.linear(duration: 14).repeatForever(autoreverses: false)) { t2 = 2 * .pi }
+        withAnimation(.linear(duration: 16).repeatForever(autoreverses: false)) { t3 = 2 * .pi }
+    }
+
+    private func stopAnimations() {
+        guard isAnimating || t1 != 0 || t2 != 0 || t3 != 0 else { return }
+        isAnimating = false
+        t1 = 0
+        t2 = 0
+        t3 = 0
     }
 }

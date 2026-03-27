@@ -310,6 +310,34 @@ struct CarExpandedCard: View {
     }
 }
 
+private struct HoloShimmerMask: View {
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        LinearGradient(
+            gradient: Gradient(stops: [
+                .init(color: .clear, location: 0.0),
+                .init(color: .white.opacity(0.3), location: 0.45),
+                .init(color: .clear, location: 0.9)
+            ]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .scaleEffect(x: 1.8)
+        .offset(x: -120 + phase * 240)
+        .onAppear {
+            withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
+                phase = 1
+            }
+        }
+        .onDisappear { phase = 0 }
+        .blendMode(.screen)
+        .opacity(accessibilityReduceMotion ? 0.0 : 0.6)
+        .allowsHitTesting(false)
+    }
+}
+
 private struct LiquidStatRow: View {
     let name: String
     let value: Double
@@ -473,33 +501,6 @@ private struct GlassButton: View {
         }
         .buttonStyle(.plain)
         .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, x: 0, y: 4)
-    }
-}
-
-private struct HoloShimmerMask: View {
-    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.3), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.8)
-        .offset(x: -120 + phase * 240)
-        .onAppear {
-            withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
-                phase = 1
-            }
-        }
-        .onDisappear { phase = 0 }
-        .blendMode(.screen)
-        .opacity(accessibilityReduceMotion ? 0.0 : 0.6)
-        .allowsHitTesting(false)
     }
 }
 

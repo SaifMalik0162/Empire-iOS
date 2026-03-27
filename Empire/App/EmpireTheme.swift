@@ -142,8 +142,16 @@ extension View {
 }
 
 private struct _ShimmerModifier: ViewModifier {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let speed: Double
     @State private var phase: CGFloat = -1
+    @State private var isAnimating = false
+
+    private var animationsEnabled: Bool {
+        scenePhase == .active && !reduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
     func body(content: Content) -> some View {
         content
             .mask(
@@ -153,41 +161,74 @@ private struct _ShimmerModifier: ViewModifier {
                     )
                     .offset(x: phase * 200)
             )
-            .onAppear {
-                withAnimation(.linear(duration: 1.5 / max(speed, 0.1)).repeatForever(autoreverses: false)) {
-                    phase = 1.2
-                }
-            }
-            .onDisappear {
-                phase = -1
-            }
+            .onAppear { updateAnimationState() }
+            .onChange(of: animationsEnabled) { _, _ in updateAnimationState() }
+            .onDisappear { stopAnimation() }
+    }
+
+    private func updateAnimationState() {
+        animationsEnabled ? startAnimation() : stopAnimation()
+    }
+
+    private func startAnimation() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        phase = -1
+        withAnimation(.linear(duration: 1.5 / max(speed, 0.1)).repeatForever(autoreverses: false)) {
+            phase = 1.2
+        }
+    }
+
+    private func stopAnimation() {
+        guard isAnimating || phase != -1 else { return }
+        isAnimating = false
+        phase = -1
     }
 }
 
 #if os(iOS)
 import CoreMotion
 private struct _ParallaxMotion: ViewModifier {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let amount: CGFloat
     @State private var x: CGFloat = 0
     @State private var y: CGFloat = 0
     private let motion = CMMotionManager()
+
+    private var animationsEnabled: Bool {
+        scenePhase == .active && !reduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
     func body(content: Content) -> some View {
         content
             .offset(x: x, y: y)
-            .onAppear {
-                guard motion.isDeviceMotionAvailable else { return }
-                motion.deviceMotionUpdateInterval = 1.0 / 30.0
-                motion.startDeviceMotionUpdates(to: .main) { data, _ in
-                    guard let data = data else { return }
-                    let roll = data.attitude.roll
-                    let pitch = data.attitude.pitch
-                    x = CGFloat(roll) * amount
-                    y = CGFloat(pitch) * amount
-                }
-            }
-            .onDisappear {
-                motion.stopDeviceMotionUpdates()
-            }
+            .onAppear { updateMotionState() }
+            .onChange(of: animationsEnabled) { _, _ in updateMotionState() }
+            .onDisappear { stopMotionUpdates() }
+    }
+
+    private func updateMotionState() {
+        guard animationsEnabled, motion.isDeviceMotionAvailable else {
+            stopMotionUpdates()
+            return
+        }
+
+        motion.deviceMotionUpdateInterval = 1.0 / 30.0
+        guard motion.isDeviceMotionActive == false else { return }
+        motion.startDeviceMotionUpdates(to: .main) { data, _ in
+            guard let data = data else { return }
+            let roll = data.attitude.roll
+            let pitch = data.attitude.pitch
+            x = CGFloat(roll) * amount
+            y = CGFloat(pitch) * amount
+        }
+    }
+
+    private func stopMotionUpdates() {
+        motion.stopDeviceMotionUpdates()
+        x = 0
+        y = 0
     }
 }
 #endif

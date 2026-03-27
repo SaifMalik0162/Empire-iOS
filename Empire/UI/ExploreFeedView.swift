@@ -21,7 +21,7 @@ struct ExploreFeedView: View {
 
     private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "" }
 
-    private var filtered: [CommunityPost] {
+    private var filteredPosts: [CommunityPost] {
         vm.posts.filter { post in
             let matchesSearch: Bool = {
                 let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -103,7 +103,7 @@ struct ExploreFeedView: View {
                 LazyVStack(spacing: 0) {
                     Color.clear.frame(height: 54)
 
-                    ForEach(filtered) { post in
+                    ForEach(filteredPosts) { post in
                         FeedPostCard(
                             post: post,
                             currentUserId: currentUserId,
@@ -113,13 +113,13 @@ struct ExploreFeedView: View {
                         .padding(.horizontal, 16)
                         .padding(.bottom, 16)
                         .onAppear {
-                            if post.id == filtered.last?.id {
+                            if post.id == filteredPosts.last?.id {
                                 Task { await vm.loadMore() }
                             }
                         }
                     }
 
-                    if filtered.isEmpty && !vm.isLoading {
+                    if filteredPosts.isEmpty && !vm.isLoading {
                         VStack(spacing: 12) {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 30))
@@ -137,7 +137,7 @@ struct ExploreFeedView: View {
                         ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
                     }
 
-                    if !vm.hasMore && !filtered.isEmpty {
+                    if !vm.hasMore && !filteredPosts.isEmpty {
                         Text("You've seen it all 🏁")
                             .font(.caption).foregroundStyle(.white.opacity(0.4))
                             .padding(.vertical, 20)
@@ -600,7 +600,6 @@ struct FeedPostCard: View {
                         .stroke(LinearGradient(colors: [Color.white.opacity(0.3), Color.white.opacity(0.05)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                 )
-                .overlay(PostShimmer().clipShape(RoundedRectangle(cornerRadius: 24)))
                 .shadow(color: .black.opacity(0.32), radius: 12, x: 0, y: 8)
 
             // Hero photo
@@ -761,7 +760,7 @@ struct FeedPostCard: View {
     private var avatarView: some View {
         Group {
             if let url = avatarURL {
-                AsyncImage(url: url) { phase in
+                AsyncImage(url: url, transaction: Transaction(animation: nil)) { phase in
                     switch phase {
                     case .success(let img): img.resizable().scaledToFill()
                     default: placeholderPersonIcon
@@ -916,7 +915,7 @@ struct FeedPostCard: View {
     }
 
     private func communityPhoto(url: URL) -> some View {
-        AsyncImage(url: url) { phase in
+        AsyncImage(url: url, transaction: Transaction(animation: nil)) { phase in
             switch phase {
             case .success(let img):
                 img.resizable().scaledToFill()
@@ -1828,28 +1827,6 @@ private struct ExpandedCommunityPostCard: View {
         .padding(.vertical, 9)
         .background(Capsule().fill(Color.white.opacity(0.08)))
         .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
-    }
-}
-
-// MARK: - Post card shimmer
-
-private struct PostShimmer: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.05), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading, endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.8)
-        .offset(x: -120 + phase * 240)
-        .onAppear { withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) { phase = 1 } }
-        .onDisappear { phase = 0 }
-        .opacity(0.55)
-        .allowsHitTesting(false)
     }
 }
 
