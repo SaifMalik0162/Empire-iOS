@@ -10,13 +10,15 @@ struct CarsView: View {
     @EnvironmentObject private var authViewModel: AuthViewModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var showAddVehicle: Bool = false
-    @State private var editingIndex: Int? = nil
+    @State private var editingCarID: UUID? = nil
     @State private var showVehicleEditor: Bool = false
     @State private var userKey: String = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
     @State private var showQuickMods: Bool = false
     @State private var showQuickSpecs: Bool = false
     @State private var currentGarageIndex: Int = 0
+    @State private var centeredGarageCarID: UUID? = nil
     @State private var showManageGarage: Bool = false
+    @GestureState private var garageDragOffset: CGFloat = 0
 
     // MARK: - Community feed
     @StateObject private var communityVM = CommunityViewModel()
@@ -46,7 +48,7 @@ struct CarsView: View {
                     if userVehiclesVM.vehicles.isEmpty {
                         Button {
                             if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
-                                editingIndex = idx
+                                editingCarID = userVehiclesVM.vehicles[safe: idx]?.id
                                 showVehicleEditor = true
                             }
                         } label: {
@@ -160,7 +162,7 @@ struct CarsView: View {
             .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showVehicleEditor) {
-            if let idx = editingIndex, userVehiclesVM.vehicles.indices.contains(idx) {
+            if let idx = editingVehicleIndex {
                 VehicleEditorView(car: $userVehiclesVM.vehicles[idx]) { updated in
                     userVehiclesVM.updateVehicle(at: idx, with: updated)
                 }
@@ -170,7 +172,7 @@ struct CarsView: View {
                     userVehiclesVM.updateVehicle(at: first, with: updated)
                 }
                 .preferredColorScheme(.dark)
-                .onAppear { editingIndex = first }
+                .onAppear { editingCarID = userVehiclesVM.vehicles[first].id }
             } else {
                 VStack(spacing: 12) {
                     ProgressView().tint(Color("EmpireMint"))
@@ -182,7 +184,7 @@ struct CarsView: View {
                 .preferredColorScheme(.dark)
                 .task {
                     if let newIdx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
-                        await MainActor.run { editingIndex = newIdx }
+                        await MainActor.run { editingCarID = userVehiclesVM.vehicles[safe: newIdx]?.id }
                     }
                 }
             }
@@ -239,7 +241,10 @@ struct CarsView: View {
                 await communityVM.refresh()
             }
             userKey = UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
-            if let idx = editingIndex, !userVehiclesVM.vehicles.indices.contains(idx) { editingIndex = nil }
+            if let editingCarID,
+               userVehiclesVM.vehicles.contains(where: { $0.id == editingCarID }) == false {
+                self.editingCarID = nil
+            }
             if let sel = selectedCarIndex, !userVehiclesVM.vehicles.indices.contains(sel) { selectedCarIndex = nil }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -348,21 +353,35 @@ private extension CarsView {
                 .fixedSize()
             }
             .padding(.horizontal, 20)
+            .padding(.bottom, 22)
 
-            TabView(selection: $currentGarageIndex) {
-                ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
-                    VStack {
+            GeometryReader { proxy in
+                let cardWidth: CGFloat = min(252, max(224, proxy.size.width - 132))
+                let cardHeight: CGFloat = 286
+                let spacing: CGFloat = 18
+                let stride = cardWidth + spacing
+                let baseOffset = (proxy.size.width - cardWidth) / 2
+                let canSwipeGarage = userVehiclesVM.vehicles.count > 1
+
+                HStack(spacing: spacing) {
+                    ForEach(userVehiclesVM.vehicles.indices, id: \.self) { idx in
+                        let car = userVehiclesVM.vehicles[idx]
+                        let isActive = idx == currentGarageIndex
+
                         JiggleWrapper {
                             LiquidGlassCarCard(
-                                car: userVehiclesVM.vehicles[idx],
+                                car: car,
                                 ns: ns,
-                                isSource: selectedCarIndex != idx
+                                isSource: selectedCarIndex != idx,
+                                isCentered: isActive
                             )
-                                .frame(width: selectedCarIndex == idx ? 320 : 260,
-                                       height: selectedCarIndex == idx ? 340 : 270)
-                                .scaleEffect(currentGarageIndex == idx ? 1.05 : 0.95)
+                            .frame(width: cardWidth, height: cardHeight)
+                            .scaleEffect(isActive ? 1.0 : 0.94)
+                            .opacity(isActive ? 1.0 : 0.82)
+                            .rotation3DEffect(.degrees(isActive ? 0 : (idx < currentGarageIndex ? 8 : -8)), axis: (x: 0, y: 1, z: 0), perspective: 0.82)
+                            .offset(y: isActive ? 0 : 6)
                         } onLongPress: {
-                            editingIndex = idx
+                            editingCarID = car.id
                             showVehicleEditor = true
                         } onTap: {
                             withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
@@ -374,13 +393,62 @@ private extension CarsView {
                                 selectedCarIndex = nil
                             }
                         }
-                        .padding(.horizontal, 32)
                     }
-                    .tag(idx)
+                }
+                .offset(x: baseOffset - (CGFloat(currentGarageIndex) * stride) + garageDragOffset, y: 0)
+                .gesture(
+                    DragGesture(minimumDistance: 10)
+                        .updating($garageDragOffset) { value, state, _ in
+                            guard canSwipeGarage else {
+                                state = 0
+                                return
+                            }
+                            state = value.translation.width
+                        }
+                        .onEnded { value in
+                            guard canSwipeGarage else { return }
+                            let threshold = stride * 0.22
+                            var newIndex = currentGarageIndex
+
+                            if value.translation.width <= -threshold {
+                                newIndex = min(currentGarageIndex + 1, userVehiclesVM.vehicles.count - 1)
+                            } else if value.translation.width >= threshold {
+                                newIndex = max(currentGarageIndex - 1, 0)
+                            }
+
+                            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+                                currentGarageIndex = newIndex
+                                centeredGarageCarID = userVehiclesVM.vehicles[safe: newIndex]?.id
+                            }
+                        }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            }
+            .frame(height: 314)
+            .clipped()
+            .onAppear {
+                if let centeredGarageCarID,
+                   let idx = userVehiclesVM.vehicles.firstIndex(where: { $0.id == centeredGarageCarID }) {
+                    currentGarageIndex = idx
+                } else {
+                    currentGarageIndex = 0
+                    centeredGarageCarID = userVehiclesVM.vehicles.first?.id
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 340)
+            .onChange(of: userVehiclesVM.vehicles.map(\.id)) { _, ids in
+                guard !ids.isEmpty else {
+                    centeredGarageCarID = nil
+                    currentGarageIndex = 0
+                    return
+                }
+                if let centeredGarageCarID,
+                   let matchedIndex = ids.firstIndex(of: centeredGarageCarID) {
+                    currentGarageIndex = matchedIndex
+                } else {
+                    currentGarageIndex = 0
+                    centeredGarageCarID = ids.first
+                }
+            }
 
             HStack(spacing: 6) {
                 ForEach(userVehiclesVM.vehicles.indices, id: \.self) { i in
@@ -390,8 +458,8 @@ private extension CarsView {
                         .animation(.easeInOut(duration: 0.2), value: currentGarageIndex)
                 }
             }
-            .padding(.top, 6)
-            .padding(.bottom, 2)
+            .padding(.top, 12)
+            .padding(.bottom, 18)
             .frame(maxWidth: .infinity)
         }
     }
@@ -399,7 +467,7 @@ private extension CarsView {
     // MARK: Community section
 
     var communitySection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
 
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -444,6 +512,7 @@ private extension CarsView {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
+            .padding(.top, 0)
 
             if communityVM.isLoading && communityVM.posts.isEmpty {
                 HStack(spacing: 10) {
@@ -524,12 +593,19 @@ private extension CarsView {
         .task {
             if let newIdx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
                 await MainActor.run {
-                    editingIndex = newIdx
+                    editingCarID = userVehiclesVM.vehicles[safe: newIdx]?.id
                     flag.wrappedValue = false
                     showVehicleEditor = true
                 }
             }
         }
+    }
+}
+
+private extension CarsView {
+    var editingVehicleIndex: Int? {
+        guard let editingCarID else { return nil }
+        return userVehiclesVM.vehicles.firstIndex(where: { $0.id == editingCarID })
     }
 }
 
@@ -539,20 +615,46 @@ private struct LiquidGlassCarCard: View {
     let car: Car
     var ns: Namespace.ID
     var isSource: Bool = true
+    var isCentered: Bool = false
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .background(Color.white.opacity(0.02))
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(isCentered ? 0.12 : 0.08), Color.white.opacity(isCentered ? 0.035 : 0.02)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.black.opacity(isCentered ? 0.18 : 0.14))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(
+                    RadialGradient(
+                        colors: [Color("EmpireMint").opacity(isCentered ? 0.24 : 0.1), .clear],
+                        center: .bottomLeading,
+                        startRadius: 12,
+                        endRadius: 180
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 22)
-                        .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                               startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color("EmpireMint").opacity(isCentered ? 0.55 : 0.18), Color.white.opacity(isCentered ? 0.14 : 0.06)],
+                                startPoint: .bottomLeading,
+                                endPoint: .topTrailing
+                            ),
+                            lineWidth: isCentered ? 1.3 : 1
+                        )
                         .blendMode(.screen)
                 )
-                .shadow(color: Color("EmpireMint").opacity(0.14), radius: 14, x: 0, y: 8)
-                .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 6)
+                .shadow(color: Color("EmpireMint").opacity(isCentered ? 0.24 : 0.12), radius: isCentered ? 20 : 12, x: 0, y: isCentered ? 12 : 8)
+                .shadow(color: .black.opacity(isCentered ? 0.42 : 0.35), radius: isCentered ? 18 : 10, x: 0, y: isCentered ? 12 : 6)
                 .matchedGeometryEffect(id: "card-\(car.id)", in: ns, isSource: isSource)
 
             GeometryReader { proxy in
@@ -567,28 +669,34 @@ private struct LiquidGlassCarCard: View {
                     }
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width, height: size.height)
-                    .opacity(0.55)
+                    .opacity(isCentered ? 0.68 : 0.58)
                     .matchedGeometryEffect(id: "image-\(car.id)", in: ns, isSource: isSource)
                     .clipped()
 
                     LinearGradient(
-                        colors: [Color.black.opacity(0.0), Color.black.opacity(0.15), Color.black.opacity(0.45)],
+                        colors: [Color.black.opacity(0.0), Color.black.opacity(isCentered ? 0.1 : 0.15), Color.black.opacity(isCentered ? 0.34 : 0.45)],
                         startPoint: .top, endPoint: .bottom
+                    )
+
+                    LinearGradient(
+                        colors: [Color.white.opacity(isCentered ? 0.08 : 0.02), .clear, Color.black.opacity(isCentered ? 0.18 : 0.1)],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
 
                     LinearGradient(
                         gradient: Gradient(stops: [
                             .init(color: .clear, location: 0.0),
-                            .init(color: .white.opacity(0.22), location: 0.48),
+                            .init(color: .white.opacity(isCentered ? 0.18 : 0.1), location: 0.48),
                             .init(color: .clear, location: 1.0)
                         ]),
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     )
                     .blendMode(.screen)
-                    .opacity(0.28)
-                    .blur(radius: 10)
+                    .opacity(isCentered ? 0.22 : 0.1)
+                    .blur(radius: 14)
                     .rotationEffect(.degrees(18))
-                    .modifier(CompactShineAnimation(cardCorner: 22))
+                    .modifier(CompactShineAnimation(isActive: isCentered))
                 }
                 .mask(RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
@@ -608,6 +716,8 @@ private struct LiquidGlassCarCard: View {
             }
             .padding(14)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .compositingGroup()
     }
 }
 
@@ -755,16 +865,26 @@ private struct JiggleWrapper<Content: View>: View {
 
 private struct CompactShineAnimation: ViewModifier {
     @State private var phase: CGFloat = -1.1
-    let cardCorner: CGFloat
+    let isActive: Bool
 
     func body(content: Content) -> some View {
         content
-            .offset(x: phase * 220, y: phase * 80)
+            .offset(x: phase * 180, y: phase * 58)
             .onAppear {
                 phase = -1.1
-                withAnimation(.linear(duration: 5.5).repeatForever(autoreverses: false)) { phase = 1.3 }
+                guard isActive else { return }
+                withAnimation(.linear(duration: 9.5).repeatForever(autoreverses: false)) {
+                    phase = 1.15
+                }
             }
             .onDisappear { phase = -1.1 }
+            .onChange(of: isActive) { _, newValue in
+                phase = -1.1
+                guard newValue else { return }
+                withAnimation(.linear(duration: 9.5).repeatForever(autoreverses: false)) {
+                    phase = 1.15
+                }
+            }
             .allowsHitTesting(false)
             .clipped()
     }

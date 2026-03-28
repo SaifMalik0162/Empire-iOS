@@ -81,12 +81,23 @@ final class CommunityViewModel: ObservableObject {
 
     // MARK: - Share
 
-    func sharePost(car: Car, caption: String?, photoDataList: [Data]?) async throws -> CommunityPost {
+    func sharePost(
+        car: Car,
+        caption: String?,
+        photoDataList: [Data]?,
+        metadata: CommunityPostProgramMetadata? = nil
+    ) async throws -> CommunityPost {
         let userId = currentUserId
         guard !userId.isEmpty else {
             throw NSError(domain: "Community", code: 2, userInfo: [NSLocalizedDescriptionKey: "Not signed in."])
         }
-        let post = try await service.sharePost(car: car, caption: caption, currentUserId: userId, photoDataList: photoDataList)
+        let post = try await service.sharePost(
+            car: car,
+            caption: caption,
+            currentUserId: userId,
+            photoDataList: photoDataList,
+            metadata: metadata
+        )
         posts.insert(post, at: 0)
         if authorUserId == nil || authorUserId == userId {
             totalPostsCount += 1

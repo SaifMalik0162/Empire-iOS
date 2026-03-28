@@ -7,6 +7,7 @@ import SwiftData
 @Model
 final class CarEntity {
     @Attribute(.unique) var id: UUID
+    var sortOrder: Int?
     var name: String
     var carDescription: String
     var make: String?
@@ -23,6 +24,7 @@ final class CarEntity {
     @Relationship(deleteRule: .cascade) var mods: [ModItemEntity]
 
     init(id: UUID = UUID(),
+         sortOrder: Int? = nil,
          name: String,
          carDescription: String,
             make: String? = nil,
@@ -37,6 +39,7 @@ final class CarEntity {
          specs: [SpecItemEntity] = [],
          mods: [ModItemEntity] = []) {
         self.id = id
+        self.sortOrder = sortOrder
         self.name = name
         self.carDescription = carDescription
         self.make = make
@@ -142,11 +145,12 @@ extension CarEntity {
         )
     }
 
-    static func fromDomain(_ car: Car, userKey: String) -> CarEntity {
+    static func fromDomain(_ car: Car, userKey: String, sortOrder: Int = 0) -> CarEntity {
         let specEntities = orderedSpecs(car.specs).map { SpecItemEntity(id: $0.id, key: $0.key, value: $0.value) }
         let modEntities = car.mods.map { ModItemEntity(id: $0.id, title: $0.title, notes: $0.notes, isMajor: $0.isMajor) }
         return CarEntity(
             id: car.id,
+            sortOrder: sortOrder,
             name: car.name,
             carDescription: car.description,
             make: car.make,
@@ -163,7 +167,7 @@ extension CarEntity {
         )
     }
 
-    func update(from car: Car, userKey: String) {
+    func update(from car: Car, userKey: String, sortOrder: Int? = nil) {
         self.name = car.name
         self.carDescription = car.description
         self.make = car.make
@@ -175,6 +179,9 @@ extension CarEntity {
         self.isJailbreak = car.isJailbreak
         self.vehicleClassRaw = car.vehicleClass?.rawValue
         self.userKey = userKey
+        if let sortOrder {
+            self.sortOrder = sortOrder
+        }
         // Replace specs/mods to keep it simple in 
         self.specs = Self.orderedSpecs(car.specs).map { SpecItemEntity(id: $0.id, key: $0.key, value: $0.value) }
         self.mods = car.mods.map { ModItemEntity(id: $0.id, title: $0.title, notes: $0.notes, isMajor: $0.isMajor) }
@@ -214,10 +221,33 @@ final class LocalStore {
     // MARK: Vehicles
 
     func fetchCars(context: ModelContext, userKey: String) -> [Car] {
-        let descriptor = FetchDescriptor<CarEntity>(predicate: #Predicate { $0.userKey == userKey })
+        let descriptor = FetchDescriptor<CarEntity>(
+            predicate: #Predicate { $0.userKey == userKey }
+        )
         do {
             let entities = try context.fetch(descriptor)
-            return entities.map { $0.toDomain() }
+            let orderedEntities = entities
+                .enumerated()
+                .sorted { lhs, rhs in
+                    let leftOrder = lhs.element.sortOrder ?? lhs.offset
+                    let rightOrder = rhs.element.sortOrder ?? rhs.offset
+                    if leftOrder != rightOrder { return leftOrder < rightOrder }
+                    return lhs.offset < rhs.offset
+                }
+                .map(\.element)
+
+            let needsNormalization = orderedEntities.enumerated().contains { index, entity in
+                entity.sortOrder != index
+            }
+
+            if needsNormalization {
+                for (index, entity) in orderedEntities.enumerated() {
+                    entity.sortOrder = index
+                }
+                try? context.save()
+            }
+
+            return orderedEntities.map { $0.toDomain() }
         } catch {
             print("[LocalStore] fetchCars error: \(error)")
             return []
@@ -230,7 +260,15 @@ final class LocalStore {
             if let existing = try context.fetch(descriptor).first {
                 existing.update(from: car, userKey: userKey)
             } else {
-                let entity = CarEntity.fromDomain(car, userKey: userKey)
+                let existingCars = try context.fetch(FetchDescriptor<CarEntity>(
+                    predicate: #Predicate { $0.userKey == userKey }
+                ))
+                let nextSortOrder = (existingCars.compactMap(\.sortOrder).max() ?? (existingCars.count - 1)) + 1
+                let entity = CarEntity.fromDomain(
+                    car,
+                    userKey: userKey,
+                    sortOrder: nextSortOrder
+                )
                 context.insert(entity)
             }
             try context.save()
@@ -245,7 +283,9 @@ final class LocalStore {
         do {
             let existing = try context.fetch(descriptor)
             for e in existing { context.delete(e) }
-            for c in cars { context.insert(CarEntity.fromDomain(c, userKey: userKey)) }
+            for (index, car) in cars.enumerated() {
+                context.insert(CarEntity.fromDomain(car, userKey: userKey, sortOrder: index))
+            }
             try context.save()
         } catch {
             print("[LocalStore] replaceAllCars error: \(error)")

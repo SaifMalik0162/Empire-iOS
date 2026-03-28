@@ -15,10 +15,10 @@ enum SupabaseClientProvider {
             options: SupabaseClientOptions(
                 auth: .init(
                     storageKey: "empire-auth-token",
-                    // Avoid eagerly restoring/emitting the cached session during
-                    // client bootstrap; we validate session state explicitly in
-                    // AuthViewModel.checkAuthStatus() after launch instead.
-                    emitLocalSessionAsInitialSession: false
+                    // Opt into Supabase's updated initial-session behavior so
+                    // the bootstrap sequence is explicit and the SDK warning is silenced.
+                    // AuthViewModel still validates expiry before authenticating a user.
+                    emitLocalSessionAsInitialSession: true
                 )
             )
         )

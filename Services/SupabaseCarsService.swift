@@ -47,12 +47,22 @@ final class SupabaseCarsService {
     // Fetch all cars for a user and stitch specs/mods
     func fetchCars(for userId: String) async throws -> [Car] {
         // 1) Fetch car rows
-        let carRows: [SBCarRow] = try await client
+        let carsQuery = client
             .from("cars")
             .select()
-            .eq("user_id", value: userId)
-            .execute()
-            .value
+
+        let carRows: [SBCarRow]
+        if let userUUID = UUID(uuidString: userId) {
+            carRows = try await carsQuery
+                .eq("user_id", value: userUUID)
+                .execute()
+                .value
+        } else {
+            carRows = try await carsQuery
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+        }
 
         if carRows.isEmpty { return [] }
 

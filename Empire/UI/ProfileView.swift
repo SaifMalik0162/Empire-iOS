@@ -29,6 +29,7 @@ struct ProfileView: View {
     @StateObject private var communityVM = CommunityViewModel(
         userId: UserDefaults.standard.string(forKey: "currentUserId")
     )
+    @StateObject private var communitySocialStore = CommunitySocialStore()
     
     private var computedStats: [(String, Int)] {
         [("Meets", profileStatsVM.meetsCount), ("Cars", vehiclesVM.vehicles.count), ("Merch", profileStatsVM.merchCount)]
@@ -374,7 +375,8 @@ struct ProfileView: View {
                         userId: currentUserId,
                         username: authViewModel.currentUser?.username,
                         avatarURL: avatarURL,
-                        currentUserId: currentUserId
+                        currentUserId: currentUserId,
+                        socialStore: communitySocialStore
                     )
                     .preferredColorScheme(.dark)
                 }

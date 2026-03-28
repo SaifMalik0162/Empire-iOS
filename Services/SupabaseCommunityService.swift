@@ -9,6 +9,9 @@ struct CommunityPost: Identifiable, Equatable {
     let userId: String
     let carId: UUID?
     let caption: String?
+    let challengeID: String?
+    let linkedMeetId: UUID?
+    let linkedMeetTitle: String?
     let photoPath: String?
     let photoPaths: [String]
     let make: String?
@@ -37,6 +40,35 @@ struct PostComment: Identifiable, Equatable {
 
     var username: String?
     var avatarPath: String?
+}
+
+enum CommunityInboxItemKind: String, CaseIterable {
+    case like
+    case comment
+    case reply
+}
+
+struct CommunityInboxItem: Identifiable, Equatable {
+    let id: String
+    let kind: CommunityInboxItemKind
+    let actorUserId: String
+    let actorUsername: String?
+    let actorAvatarPath: String?
+    let postId: UUID
+    let postCarName: String
+    let postPhotoPath: String?
+    let previewText: String?
+    let createdAt: Date
+}
+
+struct CommunityPostProgramMetadata {
+    let challengeID: String?
+    let linkedMeetId: UUID?
+    let linkedMeetTitle: String?
+
+    var isEmpty: Bool {
+        challengeID == nil && linkedMeetId == nil && linkedMeetTitle == nil
+    }
 }
 
 // MARK: - Supabase row shapes
@@ -80,6 +112,12 @@ private struct SBLikeRow: Codable {
     let user_id: String
 }
 
+private struct SBLikeActivityRow: Codable {
+    let post_id: String
+    let user_id: String
+    let created_at: String?
+}
+
 private struct SBLikeInsert: Encodable {
     let post_id: UUID
     let user_id: UUID
@@ -115,6 +153,20 @@ private struct SBCommentCountRow: Codable {
     let post_id: String
 }
 
+private struct SBInboxPostRow: Codable {
+    let id: String
+    let user_id: String
+    let car_name: String
+    let photo_path: String?
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
 // MARK: - Service
 
 final class SupabaseCommunityService {
@@ -128,6 +180,79 @@ final class SupabaseCommunityService {
         return f
     }()
     private let isoBasic = ISO8601DateFormatter()
+
+    private enum ProgramMetadataCodec {
+        static let prefix = "[[empire:"
+
+        static func encode(caption: String?, metadata: CommunityPostProgramMetadata?) -> String? {
+            let trimmedCaption = caption?.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let metadata, !metadata.isEmpty else {
+                return trimmedCaption?.nilIfEmpty
+            }
+
+            var parts: [String] = []
+            if let challengeID = metadata.challengeID?.nilIfEmpty {
+                parts.append("challenge=\(challengeID)")
+            }
+            if let linkedMeetId = metadata.linkedMeetId {
+                parts.append("meetId=\(linkedMeetId.uuidString.lowercased())")
+            }
+            if let linkedMeetTitle = metadata.linkedMeetTitle?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+               let encoded = linkedMeetTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                parts.append("meetTitle=\(encoded)")
+            }
+
+            guard !parts.isEmpty else {
+                return trimmedCaption?.nilIfEmpty
+            }
+
+            let metadataPrefix = "\(prefix)\(parts.joined(separator: ";"))]]"
+            if let trimmedCaption = trimmedCaption?.nilIfEmpty {
+                return "\(metadataPrefix) \(trimmedCaption)"
+            }
+            return metadataPrefix
+        }
+
+        static func decode(_ rawCaption: String?) -> (caption: String?, metadata: CommunityPostProgramMetadata) {
+            guard let rawCaption, rawCaption.hasPrefix(prefix), let closeRange = rawCaption.range(of: "]]") else {
+                return (
+                    rawCaption?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+                    CommunityPostProgramMetadata(challengeID: nil, linkedMeetId: nil, linkedMeetTitle: nil)
+                )
+            }
+
+            let metadataPayload = String(rawCaption[rawCaption.index(rawCaption.startIndex, offsetBy: prefix.count)..<closeRange.lowerBound])
+            let strippedCaption = String(rawCaption[closeRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+
+            var challengeID: String?
+            var linkedMeetId: UUID?
+            var linkedMeetTitle: String?
+
+            for item in metadataPayload.split(separator: ";") {
+                let pair = item.split(separator: "=", maxSplits: 1).map(String.init)
+                guard pair.count == 2 else { continue }
+                switch pair[0] {
+                case "challenge":
+                    challengeID = pair[1].nilIfEmpty
+                case "meetId":
+                    linkedMeetId = UUID(uuidString: pair[1])
+                case "meetTitle":
+                    linkedMeetTitle = pair[1].removingPercentEncoding?.nilIfEmpty ?? pair[1].nilIfEmpty
+                default:
+                    break
+                }
+            }
+
+            return (
+                strippedCaption,
+                CommunityPostProgramMetadata(
+                    challengeID: challengeID,
+                    linkedMeetId: linkedMeetId,
+                    linkedMeetTitle: linkedMeetTitle
+                )
+            )
+        }
+    }
 
     func authenticatedUserId() async throws -> String {
         do {
@@ -253,11 +378,15 @@ final class SupabaseCommunityService {
         return rows.compactMap { row -> CommunityPost? in
             guard let date = parseDate(row.created_at) else { return nil }
             let profile = profilesByUserId[row.user_id]
+            let decoded = ProgramMetadataCodec.decode(row.caption)
             var post = CommunityPost(
                 id: UUID(uuidString: row.id) ?? UUID(),
                 userId: row.user_id,
                 carId: row.car_id.flatMap { UUID(uuidString: $0) },
-                caption: row.caption,
+                caption: decoded.caption,
+                challengeID: decoded.metadata.challengeID,
+                linkedMeetId: decoded.metadata.linkedMeetId,
+                linkedMeetTitle: decoded.metadata.linkedMeetTitle,
                 photoPath: row.photo_path,
                 photoPaths: normalizedPhotoPaths(primary: row.photo_path, paths: row.photo_paths),
                 make: row.make,
@@ -298,7 +427,13 @@ final class SupabaseCommunityService {
 
     // MARK: - Share post
 
-    func sharePost(car: Car, caption: String?, currentUserId: String, photoDataList: [Data]?) async throws -> CommunityPost {
+    func sharePost(
+        car: Car,
+        caption: String?,
+        currentUserId: String,
+        photoDataList: [Data]?,
+        metadata: CommunityPostProgramMetadata? = nil
+    ) async throws -> CommunityPost {
         let authenticatedUserId = try await requireAuthenticatedUserId()
         var photoPaths: [String] = []
 
@@ -327,11 +462,12 @@ final class SupabaseCommunityService {
         }
 
         let primaryPhotoPath = photoPaths.first
+        let encodedCaption = ProgramMetadataCodec.encode(caption: caption, metadata: metadata)
 
         let insert = SBInsertPost(
             user_id: authenticatedUserId,
             car_id: car.id.uuidString,
-            caption: caption?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : caption?.trimmingCharacters(in: .whitespacesAndNewlines),
+            caption: encodedCaption,
             photo_path: primaryPhotoPath,
             photo_paths: photoPaths.isEmpty ? nil : photoPaths,
             make: car.make,
@@ -354,11 +490,15 @@ final class SupabaseCommunityService {
             throw NSError(domain: "CommunityService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Post created but could not read back row."])
         }
 
+        let decoded = ProgramMetadataCodec.decode(row.caption)
         return CommunityPost(
             id: UUID(uuidString: row.id) ?? UUID(),
             userId: row.user_id,
             carId: UUID(uuidString: row.car_id ?? ""),
-            caption: row.caption,
+            caption: decoded.caption,
+            challengeID: decoded.metadata.challengeID,
+            linkedMeetId: decoded.metadata.linkedMeetId,
+            linkedMeetTitle: decoded.metadata.linkedMeetTitle,
             photoPath: row.photo_path,
             photoPaths: normalizedPhotoPaths(primary: row.photo_path, paths: row.photo_paths),
             make: row.make,
@@ -549,6 +689,268 @@ final class SupabaseCommunityService {
             .delete()
             .eq("id", value: commentId.uuidString)
             .execute()
+    }
+
+    // MARK: - Inbox activity
+
+    func fetchInboxItems(currentUserId: String, limit: Int = 32) async throws -> [CommunityInboxItem] {
+        let postRows: [SBInboxPostRow] = try await {
+            if let userUUID = UUID(uuidString: currentUserId) {
+                return try await client
+                    .from("community_posts")
+                    .select("id, user_id, car_name, photo_path")
+                    .eq("user_id", value: userUUID)
+                    .order("created_at", ascending: false)
+                    .limit(limit)
+                    .execute()
+                    .value
+            } else {
+                return try await client
+                    .from("community_posts")
+                    .select("id, user_id, car_name, photo_path")
+                    .eq("user_id", value: currentUserId)
+                    .order("created_at", ascending: false)
+                    .limit(limit)
+                    .execute()
+                    .value
+            }
+        }()
+
+        let ownedPostsById = Dictionary(uniqueKeysWithValues: postRows.map { ($0.id, $0) })
+        let ownedPostIds = Array(ownedPostsById.keys)
+        let ownedPostUUIDs = ownedPostIds.compactMap(UUID.init(uuidString:))
+
+        let ownPostComments: [SBCommentRow]
+        if ownedPostUUIDs.count == ownedPostIds.count, !ownedPostUUIDs.isEmpty {
+            ownPostComments = (try? await client
+                .from("post_comments")
+                .select("id, post_id, user_id, body, created_at")
+                .in("post_id", values: ownedPostUUIDs)
+                .order("created_at", ascending: false)
+                .limit(limit * 2)
+                .execute()
+                .value) ?? []
+        } else if !ownedPostIds.isEmpty {
+            ownPostComments = (try? await client
+                .from("post_comments")
+                .select("id, post_id, user_id, body, created_at")
+                .in("post_id", values: ownedPostIds)
+                .order("created_at", ascending: false)
+                .limit(limit * 2)
+                .execute()
+                .value) ?? []
+        } else {
+            ownPostComments = []
+        }
+
+        let ownPostLikes: [SBLikeActivityRow]
+        if ownedPostUUIDs.count == ownedPostIds.count, !ownedPostUUIDs.isEmpty {
+            ownPostLikes = (try? await client
+                .from("post_likes")
+                .select("post_id, user_id, created_at")
+                .in("post_id", values: ownedPostUUIDs)
+                .order("created_at", ascending: false)
+                .limit(limit * 2)
+                .execute()
+                .value) ?? []
+        } else if !ownedPostIds.isEmpty {
+            ownPostLikes = (try? await client
+                .from("post_likes")
+                .select("post_id, user_id, created_at")
+                .in("post_id", values: ownedPostIds)
+                .order("created_at", ascending: false)
+                .limit(limit * 2)
+                .execute()
+                .value) ?? []
+        } else {
+            ownPostLikes = []
+        }
+
+        let myCommentRows: [SBCommentRow]
+        if let userUUID = UUID(uuidString: currentUserId) {
+            myCommentRows = (try? await client
+                .from("post_comments")
+                .select("id, post_id, user_id, body, created_at")
+                .eq("user_id", value: userUUID)
+                .order("created_at", ascending: false)
+                .limit(limit * 3)
+                .execute()
+                .value) ?? []
+        } else {
+            myCommentRows = (try? await client
+                .from("post_comments")
+                .select("id, post_id, user_id, body, created_at")
+                .eq("user_id", value: currentUserId)
+                .order("created_at", ascending: false)
+                .limit(limit * 3)
+                .execute()
+                .value) ?? []
+        }
+
+        let replyPostIds = Array(
+            Set(
+                myCommentRows
+                    .map(\.post_id)
+                    .filter { ownedPostsById[$0] == nil }
+            )
+        )
+        let replyPostUUIDs = replyPostIds.compactMap(UUID.init(uuidString:))
+
+        let replyRows: [SBCommentRow]
+        if replyPostUUIDs.count == replyPostIds.count, !replyPostUUIDs.isEmpty {
+            replyRows = (try? await client
+                .from("post_comments")
+                .select("id, post_id, user_id, body, created_at")
+                .in("post_id", values: replyPostUUIDs)
+                .order("created_at", ascending: false)
+                .limit(limit * 3)
+                .execute()
+                .value) ?? []
+        } else if !replyPostIds.isEmpty {
+            replyRows = (try? await client
+                .from("post_comments")
+                .select("id, post_id, user_id, body, created_at")
+                .in("post_id", values: replyPostIds)
+                .order("created_at", ascending: false)
+                .limit(limit * 3)
+                .execute()
+                .value) ?? []
+        } else {
+            replyRows = []
+        }
+
+        let replyPostRows: [SBInboxPostRow]
+        if replyPostUUIDs.count == replyPostIds.count, !replyPostUUIDs.isEmpty {
+            replyPostRows = (try? await client
+                .from("community_posts")
+                .select("id, user_id, car_name, photo_path")
+                .in("id", values: replyPostUUIDs)
+                .execute()
+                .value) ?? []
+        } else if !replyPostIds.isEmpty {
+            replyPostRows = (try? await client
+                .from("community_posts")
+                .select("id, user_id, car_name, photo_path")
+                .in("id", values: replyPostIds)
+                .execute()
+                .value) ?? []
+        } else {
+            replyPostRows = []
+        }
+
+        let replyPostsById = Dictionary(uniqueKeysWithValues: replyPostRows.map { ($0.id, $0) })
+
+        let actorUserIds = Set(
+            ownPostComments.map(\.user_id)
+            + ownPostLikes.map(\.user_id)
+            + replyRows.map(\.user_id)
+        ).subtracting([currentUserId])
+
+        let actorProfilesByUserId: [String: SBProfileRow]
+        do {
+            let actorIds = Array(actorUserIds)
+            let actorUUIDs = actorIds.compactMap(UUID.init(uuidString:))
+            let profiles: [SBProfileRow]
+            if actorUUIDs.count == actorIds.count, !actorUUIDs.isEmpty {
+                profiles = try await client
+                    .from("profiles")
+                    .select("id, username, avatar_path")
+                    .in("id", values: actorUUIDs)
+                    .execute()
+                    .value
+            } else if !actorIds.isEmpty {
+                profiles = try await client
+                    .from("profiles")
+                    .select("id, username, avatar_path")
+                    .in("id", values: actorIds)
+                    .execute()
+                    .value
+            } else {
+                profiles = []
+            }
+            actorProfilesByUserId = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+        } catch {
+            actorProfilesByUserId = [:]
+        }
+
+        let latestOwnCommentByPostId = Dictionary(
+            myCommentRows.map { ($0.post_id, parseDate($0.created_at) ?? .distantPast) },
+            uniquingKeysWith: max
+        )
+
+        var items: [CommunityInboxItem] = []
+
+        for like in ownPostLikes where like.user_id != currentUserId {
+            guard let createdAtString = like.created_at,
+                  let createdAt = parseDate(createdAtString),
+                  let post = ownedPostsById[like.post_id],
+                  let postId = UUID(uuidString: like.post_id) else { continue }
+            let profile = actorProfilesByUserId[like.user_id]
+            items.append(
+                CommunityInboxItem(
+                    id: "like-\(like.post_id)-\(like.user_id)-\(createdAtString)",
+                    kind: .like,
+                    actorUserId: like.user_id,
+                    actorUsername: profile?.username,
+                    actorAvatarPath: profile?.avatar_path,
+                    postId: postId,
+                    postCarName: post.car_name,
+                    postPhotoPath: post.photo_path,
+                    previewText: nil,
+                    createdAt: createdAt
+                )
+            )
+        }
+
+        for comment in ownPostComments where comment.user_id != currentUserId {
+            guard let createdAt = parseDate(comment.created_at),
+                  let post = ownedPostsById[comment.post_id],
+                  let postId = UUID(uuidString: comment.post_id) else { continue }
+            let profile = actorProfilesByUserId[comment.user_id]
+            items.append(
+                CommunityInboxItem(
+                    id: "comment-\(comment.id)",
+                    kind: .comment,
+                    actorUserId: comment.user_id,
+                    actorUsername: profile?.username,
+                    actorAvatarPath: profile?.avatar_path,
+                    postId: postId,
+                    postCarName: post.car_name,
+                    postPhotoPath: post.photo_path,
+                    previewText: comment.body,
+                    createdAt: createdAt
+                )
+            )
+        }
+
+        for reply in replyRows where reply.user_id != currentUserId {
+            guard let createdAt = parseDate(reply.created_at),
+                  let latestMyComment = latestOwnCommentByPostId[reply.post_id],
+                  createdAt > latestMyComment,
+                  let post = replyPostsById[reply.post_id],
+                  let postId = UUID(uuidString: reply.post_id) else { continue }
+            let profile = actorProfilesByUserId[reply.user_id]
+            items.append(
+                CommunityInboxItem(
+                    id: "reply-\(reply.id)",
+                    kind: .reply,
+                    actorUserId: reply.user_id,
+                    actorUsername: profile?.username,
+                    actorAvatarPath: profile?.avatar_path,
+                    postId: postId,
+                    postCarName: post.car_name,
+                    postPhotoPath: post.photo_path,
+                    previewText: reply.body,
+                    createdAt: createdAt
+                )
+            )
+        }
+
+        return Array(
+            items
+                .sorted { $0.createdAt > $1.createdAt }
+                .prefix(limit)
+        )
     }
 
     // MARK: - Public URL helpers
