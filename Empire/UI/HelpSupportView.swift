@@ -147,7 +147,6 @@ private struct HelpGlassCard<Content: View>: View {
                     .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                     .blendMode(.screen)
             )
-            .overlay(ShimmerMask().clipShape(RoundedRectangle(cornerRadius: 18)).opacity(0.35))
             .shadow(color: Color("EmpireMint").opacity(0.22), radius: 14, y: 6)
     }
 }
@@ -306,37 +305,9 @@ private struct CompactQuickHelpPill: View {
     }
 }
 
-private struct ShimmerMask: View {
-    var body: some View {
-        TimelineView(.animation) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            let phase = CGFloat(fmod(t / 3.5, 1.0))
-
-            Rectangle()
-                .fill(Color.clear)
-                .overlay(
-                    LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: .clear, location: max(0, phase - 0.25)),
-                            .init(color: .white.opacity(0.25), location: phase),
-                            .init(color: .clear, location: min(1, phase + 0.25))
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .blendMode(.screen)
-                .opacity(0.5)
-                .compositingGroup()
-                .drawingGroup(opaque: false, colorMode: .linear)
-                .allowsHitTesting(false)
-        }
-    }
-}
 
 #Preview {
     HelpSupportView()
         .environmentObject(AuthViewModel())
         .preferredColorScheme(.dark)
 }
-
