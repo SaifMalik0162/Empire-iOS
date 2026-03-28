@@ -139,6 +139,10 @@ final class SupabaseCommunityService {
         }
     }
 
+    private func requireAuthenticatedUserId() async throws -> String {
+        try await authenticatedUserId()
+    }
+
     // MARK: - Fetch feed
 
     func fetchFeed(
@@ -295,12 +299,13 @@ final class SupabaseCommunityService {
     // MARK: - Share post
 
     func sharePost(car: Car, caption: String?, currentUserId: String, photoDataList: [Data]?) async throws -> CommunityPost {
+        let authenticatedUserId = try await requireAuthenticatedUserId()
         var photoPaths: [String] = []
 
         if let photoDataList {
             for data in photoDataList.prefix(5) {
                 let compressed = compressImageData(data, maxBytes: 900_000) ?? data
-                let path = "\(currentUserId.lowercased())/community_\(UUID().uuidString).jpg"
+                let path = "\(authenticatedUserId)/community_\(UUID().uuidString).jpg"
                 do {
                     try await client.storage
                         .from(photosBucket)
@@ -316,7 +321,7 @@ final class SupabaseCommunityService {
         }
 
         if photoPaths.isEmpty, let existingFileName = car.photoFileName {
-            let existing = "\(currentUserId.lowercased())/\(car.id.uuidString).jpg"
+            let existing = "\(authenticatedUserId)/\(car.id.uuidString).jpg"
             photoPaths = [existing]
             _ = existingFileName
         }
@@ -324,7 +329,7 @@ final class SupabaseCommunityService {
         let primaryPhotoPath = photoPaths.first
 
         let insert = SBInsertPost(
-            user_id: currentUserId,
+            user_id: authenticatedUserId,
             car_id: car.id.uuidString,
             caption: caption?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : caption?.trimmingCharacters(in: .whitespacesAndNewlines),
             photo_path: primaryPhotoPath,
@@ -372,14 +377,15 @@ final class SupabaseCommunityService {
     // MARK: - Like / Unlike
 
     func likePost(postId: UUID, userId: String) async throws {
-        if let userUUID = UUID(uuidString: userId) {
+        let authenticatedUserId = try await requireAuthenticatedUserId()
+        if let userUUID = UUID(uuidString: authenticatedUserId) {
             let row = SBLikeInsert(post_id: postId, user_id: userUUID)
             _ = try await client
                 .from("post_likes")
                 .upsert(row, onConflict: "post_id, user_id")
                 .execute()
         } else {
-            let row = SBLikeRow(post_id: postId.uuidString, user_id: userId)
+            let row = SBLikeRow(post_id: postId.uuidString, user_id: authenticatedUserId)
             _ = try await client
                 .from("post_likes")
                 .upsert(row, onConflict: "post_id, user_id")
@@ -388,7 +394,8 @@ final class SupabaseCommunityService {
     }
 
     func unlikePost(postId: UUID, userId: String) async throws {
-        if let userUUID = UUID(uuidString: userId) {
+        let authenticatedUserId = try await requireAuthenticatedUserId()
+        if let userUUID = UUID(uuidString: authenticatedUserId) {
             _ = try await client
                 .from("post_likes")
                 .delete()
@@ -400,7 +407,7 @@ final class SupabaseCommunityService {
                 .from("post_likes")
                 .delete()
                 .eq("post_id", value: postId.uuidString)
-                .eq("user_id", value: userId)
+                .eq("user_id", value: authenticatedUserId)
                 .execute()
         }
     }
@@ -408,6 +415,11 @@ final class SupabaseCommunityService {
     // MARK: - Delete post
 
     func deletePost(post: CommunityPost) async throws {
+        let authenticatedUserId = try await requireAuthenticatedUserId()
+        guard post.userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == authenticatedUserId else {
+            throw NSError(domain: "CommunityService", code: 403, userInfo: [NSLocalizedDescriptionKey: "You can only delete your own posts."])
+        }
+
         let pathsToRemove = Array(
             Set(
                 ([post.photoPath].compactMap { $0 } + post.photoPaths)
@@ -488,8 +500,7 @@ final class SupabaseCommunityService {
     /// Posts a new comment and returns it enriched with the current user's profile.
     func postComment(postId: UUID, preferredUserId: String, body: String) async throws -> PostComment {
         let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
-        let fallbackUserId = preferredUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let userId = (try? await authenticatedUserId()) ?? fallbackUserId
+        let userId = try await requireAuthenticatedUserId()
         let insert = SBInsertComment(
             post_id: postId.uuidString.lowercased(),
             user_id: userId,
@@ -532,6 +543,7 @@ final class SupabaseCommunityService {
 
     /// Deletes a comment by ID.
     func deleteComment(commentId: UUID) async throws {
+        _ = try await requireAuthenticatedUserId()
         _ = try await client
             .from("post_comments")
             .delete()

@@ -74,13 +74,12 @@ class NetworkManager {
     
     func clearAuthToken() {
         if APIConfig.enableNetworkLogging {
-            let old = authToken ?? "nil"
-            print("[Network] clearAuthToken old=\(old)")
+            print("[Network] Clearing stored auth tokens")
         }
         _ = KeychainService.shared.delete(forKey: KeychainService.accessTokenKey)
         _ = KeychainService.shared.delete(forKey: KeychainService.refreshTokenKey)
         if APIConfig.enableNetworkLogging {
-            print("[Network] clearAuthToken new=\(authToken ?? "nil")")
+            print("[Network] Stored auth tokens cleared")
         }
     }
     
@@ -306,4 +305,3 @@ class NetworkManager {
         }
     }
 }
-

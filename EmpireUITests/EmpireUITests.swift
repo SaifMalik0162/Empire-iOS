@@ -8,9 +8,6 @@
 import XCTest
 
 final class EmpireUITests: XCTestCase {
-    private let supabaseURL = "https://matwihdeczmkdvsbuxvv.supabase.co"
-    private let supabaseAnonKey = "sb_publishable_Bd_9Istn0C4ep16Qg2M1RA_FCHJW4Bf"
-
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
 
@@ -28,8 +25,7 @@ final class EmpireUITests: XCTestCase {
     func testExample() throws {
         // UI tests must launch the application that they test.
         let app = XCUIApplication()
-        app.launchEnvironment["SUPABASE_URL"] = supabaseURL
-        app.launchEnvironment["SUPABASE_ANON_KEY"] = supabaseAnonKey
+        applySecurityConfig(to: app)
         app.launch()
 
         // Use XCTAssert and related functions to verify your tests produce the correct results.
@@ -40,9 +36,18 @@ final class EmpireUITests: XCTestCase {
         // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()
-            app.launchEnvironment["SUPABASE_URL"] = supabaseURL
-            app.launchEnvironment["SUPABASE_ANON_KEY"] = supabaseAnonKey
+            applySecurityConfig(to: app)
             app.launch()
+        }
+    }
+
+    private func applySecurityConfig(to app: XCUIApplication) {
+        let environment = ProcessInfo.processInfo.environment
+        if let url = environment["SUPABASE_URL"], !url.isEmpty {
+            app.launchEnvironment["SUPABASE_URL"] = url
+        }
+        if let anonKey = environment["SUPABASE_ANON_KEY"], !anonKey.isEmpty {
+            app.launchEnvironment["SUPABASE_ANON_KEY"] = anonKey
         }
     }
 }

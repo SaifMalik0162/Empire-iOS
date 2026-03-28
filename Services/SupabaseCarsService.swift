@@ -39,6 +39,11 @@ final class SupabaseCarsService {
     private let photosBucket = "car-photos"
     private let logger = AppLogger.supabaseCars
 
+    private func authenticatedUserId() async throws -> String {
+        let user = try await client.auth.user()
+        return user.id.uuidString.lowercased()
+    }
+
     // Fetch all cars for a user and stitch specs/mods
     func fetchCars(for userId: String) async throws -> [Car] {
         // 1) Fetch car rows
@@ -113,18 +118,19 @@ final class SupabaseCarsService {
 
     // Push a single car (upsert) along with specs/mods
     func upsertCarBundle(_ car: Car, userId: String) async throws {
+        let authenticatedUserId = try await authenticatedUserId()
         let remotePhotoPath: String?
         do {
-            remotePhotoPath = try await syncPhotoIfNeeded(car: car, userId: userId)
+            remotePhotoPath = try await syncPhotoIfNeeded(car: car, userId: authenticatedUserId)
         } catch {
-            remotePhotoPath = try await fetchCurrentPhotoPath(carId: car.id.uuidString, userId: userId)
+            remotePhotoPath = try await fetchCurrentPhotoPath(carId: car.id.uuidString, userId: authenticatedUserId)
             logger.warning("Photo sync failed for car \(car.id.uuidString, privacy: .public); continuing car upsert. Error: \(String(describing: error), privacy: .public)")
         }
 
         // Upsert car
         let carRow = SBCarRow(
             id: car.id.uuidString,
-            user_id: userId,
+            user_id: authenticatedUserId,
             name: car.name,
             car_description: car.description,
             make: car.make,
@@ -159,11 +165,15 @@ final class SupabaseCarsService {
     }
 
     func deleteCar(id: String) async throws {
-        if let userId = UserDefaults.standard.string(forKey: "currentUserId") {
-            let remotePath = "\(userId.lowercased())/\(id).jpg"
-            _ = try? await client.storage.from(photosBucket).remove(paths: [remotePath])
-        }
-        _ = try await client.from("cars").delete().eq("id", value: id).execute()
+        let authenticatedUserId = try await authenticatedUserId()
+        let remotePath = "\(authenticatedUserId)/\(id).jpg"
+        _ = try? await client.storage.from(photosBucket).remove(paths: [remotePath])
+        _ = try await client
+            .from("cars")
+            .delete()
+            .eq("id", value: id)
+            .eq("user_id", value: authenticatedUserId)
+            .execute()
     }
 
     private func syncPhotoIfNeeded(car: Car, userId: String) async throws -> String? {

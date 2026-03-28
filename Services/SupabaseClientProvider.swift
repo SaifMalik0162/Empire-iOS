@@ -9,16 +9,16 @@ enum SupabaseClientProvider {
     static let publishableKey = supabasePublishableKey
 
     static let client: SupabaseClient = {
-        // supabase-swift 2.41.1 force-unwraps `supabaseURL.host` during init,
-        // so we hand it a known-good host-bearing URL instead of depending on
-        // Info.plist/build-setting resolution in archived builds.
         let client = SupabaseClient(
             supabaseURL: projectURL,
             supabaseKey: publishableKey,
             options: SupabaseClientOptions(
                 auth: .init(
                     storageKey: "empire-auth-token",
-                    emitLocalSessionAsInitialSession: true
+                    // Avoid eagerly restoring/emitting the cached session during
+                    // client bootstrap; we validate session state explicitly in
+                    // AuthViewModel.checkAuthStatus() after launch instead.
+                    emitLocalSessionAsInitialSession: false
                 )
             )
         )

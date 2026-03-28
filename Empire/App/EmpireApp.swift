@@ -5,6 +5,7 @@ import UIKit
 
 @main
 struct EmpireApp: App {
+    private let modelContainer: ModelContainer
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var cart = Cart()
     @StateObject private var vehiclesVM = UserVehiclesViewModel()
@@ -14,6 +15,7 @@ struct EmpireApp: App {
 
     init() {
         AppTelemetry.shared.configure()
+        self.modelContainer = Self.makeModelContainer()
     }
     
     var body: some Scene {
@@ -51,12 +53,37 @@ struct EmpireApp: App {
                 dismissObserver = nil
             }
         }
-        .modelContainer(for: [CarEntity.self, SpecItemEntity.self, ModItemEntity.self, MerchItemEntity.self])
+        .modelContainer(modelContainer)
     }
     
 }
 
 private extension EmpireApp {
+    static func makeModelContainer() -> ModelContainer {
+        let schema = Schema([
+            CarEntity.self,
+            SpecItemEntity.self,
+            ModItemEntity.self,
+            MerchItemEntity.self
+        ])
+
+        do {
+            let appSupportURL = try FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+            let storeDirectory = appSupportURL.appendingPathComponent("Empire", isDirectory: true)
+            try FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
+            let storeURL = storeDirectory.appendingPathComponent("default.store")
+            let configuration = ModelConfiguration(schema: schema, url: storeURL)
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            fatalError("Failed to create SwiftData model container: \(error)")
+        }
+    }
+
     static func normalizeLegacyCarPhotosIfNeeded() {
         let defaultsKey = "normalized_legacy_car_photos_v1"
         guard UserDefaults.standard.bool(forKey: defaultsKey) == false else { return }
