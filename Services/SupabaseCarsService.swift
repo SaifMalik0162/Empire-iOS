@@ -234,7 +234,7 @@ final class SupabaseCarsService {
         do {
             let data = try await client.storage.from(photosBucket).download(path: remotePath)
             let localName = row.photo_file_name ?? "car_\(row.id).jpg"
-            try saveLocalImageData(normalizedImageDataForDisplay(from: data), fileName: localName)
+            try saveLocalImageData(data, fileName: localName)
             return localName
         } catch {
             return row.photo_file_name
@@ -270,10 +270,5 @@ final class SupabaseCarsService {
         }
 
         return result ?? data
-    }
-
-    private func normalizedImageDataForDisplay(from data: Data) -> Data {
-        guard let image = UIImage(data: data) else { return data }
-        return image.jpegData(compressionQuality: 0.96) ?? data
     }
 }

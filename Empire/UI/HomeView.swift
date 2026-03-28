@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var featuredMerch: [MerchItem] = []
     @State private var isRefreshingFeaturedMerch = false
     @State private var lastFeaturedMerchRefreshAt: Date? = nil
+    @State private var lastMeetsRefreshAt: Date? = nil
 
     // MARK: - Data Sources
     private let communityCars: [Car] = [
@@ -384,7 +385,7 @@ struct HomeView: View {
                   UIImage(data: data) != nil else {
                 continue
             }
-            featuredUserCarPhotoData = normalizedDisplayImageData(from: data)
+            featuredUserCarPhotoData = data
             return
         }
 
@@ -401,6 +402,11 @@ struct HomeView: View {
 
     private func loadHomeMeets() {
         if isLoadingMeets { return }
+        if let lastMeetsRefreshAt,
+           Date().timeIntervalSince(lastMeetsRefreshAt) < 120,
+           !meets.isEmpty {
+            return
+        }
         isLoadingMeets = true
         meetsError = nil
 
@@ -412,6 +418,7 @@ struct HomeView: View {
                     self.meets = items
                     self.isLoadingMeets = false
                     self.meetsError = nil
+                    self.lastMeetsRefreshAt = Date()
                 }
             } catch {
                 await MainActor.run {
@@ -463,10 +470,6 @@ struct HomeView: View {
         }
     }
 
-    private func normalizedDisplayImageData(from data: Data) -> Data {
-        guard let image = UIImage(data: data) else { return data }
-        return image.jpegData(compressionQuality: 0.96) ?? data
-    }
 }
 
 // MARK: — Glass Card Component

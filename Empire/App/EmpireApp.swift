@@ -87,29 +87,10 @@ private extension EmpireApp {
     static func normalizeLegacyCarPhotosIfNeeded() {
         let defaultsKey = "normalized_legacy_car_photos_v1"
         guard UserDefaults.standard.bool(forKey: defaultsKey) == false else { return }
-
-        Task.detached(priority: .utility) {
-            guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-            guard let fileURLs = try? FileManager.default.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil) else { return }
-
-            let targetURLs = fileURLs.filter { url in
-                let name = url.lastPathComponent.lowercased()
-                return name.hasPrefix("car_") && (name.hasSuffix(".jpg") || name.hasSuffix(".jpeg") || name.hasSuffix(".png"))
-            }
-
-            for url in targetURLs {
-                autoreleasepool {
-                    guard let data = try? Data(contentsOf: url),
-                          let image = UIImage(data: data),
-                          let normalized = image.jpegData(compressionQuality: 0.96) else {
-                        return
-                    }
-                    try? normalized.write(to: url, options: [.atomic])
-                }
-            }
-
-            UserDefaults.standard.set(true, forKey: defaultsKey)
-        }
+        // Legacy photo normalization used to rewrite every local car photo as JPEG
+        // on launch. That showed up in profiling as avoidable JPEG encode work, so
+        // we mark the migration complete without touching existing files.
+        UserDefaults.standard.set(true, forKey: defaultsKey)
     }
 }
 

@@ -35,6 +35,8 @@ extension SupabaseCarsService: CarsServiceProviding {}
     private let carsService: CarsServiceProviding
     
     private var modelContext: ModelContext? = nil
+    private var syncCarsTask: Task<Void, Never>? = nil
+    private var lastCarsSyncAt: Date? = nil
     
     private let userDefaultsUserKey = "currentUser"
 
@@ -56,9 +58,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
         if isAuthenticated, let userId = currentUser?.id {
-            Task {
-                await syncCarsFromBackend(userId: userId)
-            }
+            scheduleCarsSync(userId: userId, force: false)
         }
     }
     
@@ -89,7 +89,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
                 self.currentUser = backendUser
                 UserDefaults.standard.set(backendUser.id, forKey: "currentUserId")
                 self.persistCurrentUser(backendUser)
-                await self.syncCarsFromBackend(userId: backendUser.id)
+                await self.syncCarsFromBackend(userId: backendUser.id, force: false)
                 AppTelemetry.shared.track(event: "auth.check_status.authenticated", metadata: ["userId": backendUser.id])
             } else {
                 isAuthenticated = false
@@ -122,7 +122,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             self.persistCurrentUser(user)
         }
         
-        await self.syncCarsFromBackend(userId: user.id)
+        await self.syncCarsFromBackend(userId: user.id, force: true)
         
         await MainActor.run {
             self.shouldPromptAddVehicle = false
@@ -142,7 +142,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             self.persistCurrentUser(user)
         }
 
-        await self.syncCarsFromBackend(userId: user.id)
+        await self.syncCarsFromBackend(userId: user.id, force: true)
 
         await MainActor.run {
             self.shouldPromptAddVehicle = false
@@ -169,7 +169,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             self.persistCurrentUser(user)
         }
         
-        await self.syncCarsFromBackend(userId: user.id)
+        await self.syncCarsFromBackend(userId: user.id, force: true)
         AppTelemetry.shared.track(event: "auth.register.success", metadata: ["userId": user.id])
     }
     
@@ -241,14 +241,28 @@ extension SupabaseCarsService: CarsServiceProviding {}
     
     func refreshCarsFromBackendIfAuthenticated() async {
         guard let userId = currentUser?.id, isAuthenticated else { return }
-        await syncCarsFromBackend(userId: userId)
+        await syncCarsFromBackend(userId: userId, force: true)
     }
 
-    private func syncCarsFromBackend(userId: String) async {
+    private func scheduleCarsSync(userId: String, force: Bool) {
+        syncCarsTask?.cancel()
+        syncCarsTask = Task { [weak self] in
+            await self?.syncCarsFromBackend(userId: userId, force: force)
+        }
+    }
+
+    private func syncCarsFromBackend(userId: String, force: Bool) async {
+        if !force,
+           let lastCarsSyncAt,
+           Date().timeIntervalSince(lastCarsSyncAt) < 20 {
+            return
+        }
+
         do {
             let cars = try await carsService.fetchCars(for: userId)
             if let context = self.modelContext {
                 LocalStore.shared.replaceAllCars(cars, context: context, userKey: userId)
+                lastCarsSyncAt = Date()
                 print("[AuthVM] 🔄 Synced cars from Supabase and replaced local store: count=\(cars.count)")
                 NotificationCenter.default.post(
                     name: .empireCarsDidSync,
