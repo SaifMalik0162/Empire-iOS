@@ -36,10 +36,10 @@ struct VIPWelcomeView: View {
                         .animation(.spring(response: 0.8, dampingFraction: 0.7).repeatForever(autoreverses: true), value: animate)
                 }
 
-                Text("Welcome to Empire VIP")
+                Text("Welcome to Connect+")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.white)
-                Text("You now have access to exclusive perks and a premium experience.")
+                Text("You now have access to premium Empire perks, early access, and member bonuses.")
                     .foregroundStyle(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)

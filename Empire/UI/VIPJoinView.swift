@@ -24,13 +24,13 @@ struct VIPJoinView: View {
                 .font(.system(size: 56))
                 .foregroundStyle(.yellow)
                 .shadow(color: .yellow.opacity(0.6), radius: 12, x: 0, y: 6)
-            Text("Empire VIP")
+            Text("Connect+")
                 .font(.largeTitle.bold())
                 .foregroundStyle(.white)
-            Text("Unlock community perks built for car enthusiasts across North America.")
+            Text("Premium Empire perks built around early access, store rewards, and insider updates.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white.opacity(0.7))
-            Text("VIP access is planned after the beta.")
+            Text("Connect+ access is planned after the beta.")
                 .font(.headline)
                 .foregroundStyle(.yellow)
                 .padding(.top, 2)
@@ -40,11 +40,11 @@ struct VIPJoinView: View {
 
     private var perks: some View {
         VStack(alignment: .leading, spacing: 14) {
-            perkRow(icon: "sparkles", title: "VIP Meet Access", subtitle: "Early RSVP and priority entry at local meets.")
-            perkRow(icon: "person.3.fill", title: "Crew Finder", subtitle: "Discover and join local crews and drives.")
-            perkRow(icon: "text.bubble.fill", title: "VIP Threads", subtitle: "Member-only posts, polls, and shoutouts.")
-            perkRow(icon: "camera.fill", title: "Spotlight Features", subtitle: "Get featured on the community feed.")
-            perkRow(icon: "ticket.fill", title: "Event Perks", subtitle: "Discounts and giveaways at partner events.")
+            perkRow(icon: "bag.fill", title: "Empire Store Discount", subtitle: "Savings on merch and select drops.")
+            perkRow(icon: "calendar.badge.clock", title: "Early Show Registration", subtitle: "First access for eligible rides.")
+            perkRow(icon: "megaphone.fill", title: "Sneak Peeks & Announcements", subtitle: "Early looks at reveals and updates.")
+            perkRow(icon: "gift.fill", title: "Bonus Perks", subtitle: "Extra rewards tied to launches and events.")
+            perkRow(icon: "sparkles.rectangle.stack.fill", title: "Exclusive Drops & Giveaways", subtitle: "Priority access to special releases.")
         }
         .padding(16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -64,7 +64,10 @@ struct VIPJoinView: View {
             .frame(width: 36, height: 36)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).foregroundStyle(.white).font(.headline)
-                Text(subtitle).foregroundStyle(.white.opacity(0.7)).font(.subheadline)
+                Text(subtitle)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .font(.subheadline)
+                    .lineLimit(2)
             }
             Spacer()
         }
@@ -87,14 +90,10 @@ struct VIPJoinView: View {
     }
 
     private var legal: some View {
-        VStack(spacing: 6) {
-            Text("Beta testers will get an early look at the VIP roadmap before memberships open.")
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.7))
-            Text("Benefits may vary by region and event.")
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.6))
-        }
+        Text("By subscribing you agree to our Terms & Privacy. Benefits may vary by region and event.")
+            .font(.footnote)
+            .foregroundStyle(.white.opacity(0.6))
+            .multilineTextAlignment(.center)
     }
 }
 

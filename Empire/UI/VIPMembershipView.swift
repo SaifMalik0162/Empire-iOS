@@ -34,7 +34,7 @@ struct VIPMembershipView: View {
                                     Image(systemName: "crown.fill")
                                         .foregroundStyle(Color("EmpireMint"))
                                         .font(.system(size: 20, weight: .bold))
-                                    Text("Empire VIP")
+                                    Text("Connect+")
                                         .font(.title3.weight(.bold))
                                         .foregroundColor(.white)
                                     Spacer()
@@ -59,16 +59,16 @@ struct VIPMembershipView: View {
                                     }
                                 }
 
-                                Text("Unlock early meet RSVPs, member-only threads, and community perks across North America.")
+                                Text("Unlock store savings, early registration access, and insider Empire updates.")
                                     .font(.subheadline)
                                     .foregroundStyle(.white.opacity(0.75))
                                     .multilineTextAlignment(.leading)
 
                                 // Perk chips
                                 HStack(spacing: 8) {
-                                    vipChip(icon: "calendar.badge.plus", text: "Early RSVPs")
-                                    vipChip(icon: "text.bubble.fill", text: "VIP Threads")
-                                    vipChip(icon: "person.3.fill", text: "Crew Finder")
+                                    vipChip(icon: "bag.fill", text: "Store Discount")
+                                    vipChip(icon: "calendar.badge.clock", text: "Early Registration")
+                                    vipChip(icon: "megaphone.fill", text: "Insider Updates")
                                 }
 
                                 // CTA
@@ -80,7 +80,7 @@ struct VIPMembershipView: View {
                                     HStack(spacing: 8) {
                                         if store.purchaseInFlight { ProgressView().tint(.black).scaleEffect(0.8) }
                                         Image(systemName: "sparkles")
-                                        Text("Join VIP")
+                                        Text("Join Connect+")
                                     }
                                     .font(.headline.weight(.semibold))
                                     .foregroundStyle(.black.opacity(0.9))
@@ -105,7 +105,7 @@ struct VIPMembershipView: View {
                         .padding(.horizontal, 16)
 
                         if store.isVIP {
-                            Text("Your VIP membership is active.")
+                            Text("Your Connect+ membership is active.")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(Color("EmpireMint"))
                                 .padding(.horizontal, 16)
@@ -117,11 +117,11 @@ struct VIPMembershipView: View {
                                 .font(.headline)
                                 .foregroundStyle(.white)
 
-                            benefitRow("Early RSVP access to local meets")
-                            benefitRow("Member-only threads & polls")
-                            benefitRow("Spotlight features on the feed")
-                            benefitRow("Partner event discounts & giveaways")
-                            benefitRow("Exclusive badge on your profile")
+                            benefitRow("Discounts on Empire store drops and merch")
+                            benefitRow("Early registration for eligible shows")
+                            benefitRow("Sneak peeks and priority announcements")
+                            benefitRow("Extra bonuses tied to events and launches")
+                            benefitRow("Exclusive drops, raffles, and member giveaways")
                         }
                         .padding(16)
                         .background(
@@ -148,7 +148,7 @@ struct VIPMembershipView: View {
                     }
                 }
             }
-            .navigationTitle("VIP Perks")
+            .navigationTitle("Connect+ Perks")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
