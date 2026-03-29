@@ -2,6 +2,7 @@ import SwiftUI
 import Combine
 import SwiftData
 import UIKit
+import GoogleSignIn
 
 @main
 struct EmpireApp: App {
@@ -15,6 +16,10 @@ struct EmpireApp: App {
 
     init() {
         AppTelemetry.shared.configure()
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+            clientID: SupabaseConfig.googleClientID,
+            serverClientID: SupabaseConfig.googleServerClientID
+        )
         self.modelContainer = Self.makeModelContainer()
     }
     
@@ -39,6 +44,15 @@ struct EmpireApp: App {
                     .environmentObject(authViewModel)
                     .preferredColorScheme(.dark)
             }
+            .sheet(isPresented: Binding(get: { authViewModel.isPresentingPasswordRecovery }, set: { newValue in
+                if !newValue {
+                    authViewModel.dismissPasswordRecovery()
+                }
+            })) {
+                PasswordRecoveryView()
+                    .environmentObject(authViewModel)
+                    .preferredColorScheme(.dark)
+            }
             .id(authViewModel.isAuthenticated ? "auth" : "loggedOut")
             .onAppear {
                 Self.normalizeLegacyCarPhotosIfNeeded()
@@ -51,6 +65,14 @@ struct EmpireApp: App {
             .onDisappear {
                 dismissObserver?.cancel()
                 dismissObserver = nil
+            }
+            .onOpenURL { url in
+                if GIDSignIn.sharedInstance.handle(url) {
+                    return
+                }
+                Task {
+                    await authViewModel.handleIncomingURL(url)
+                }
             }
         }
         .modelContainer(modelContainer)

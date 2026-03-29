@@ -1,7 +1,12 @@
 // Shared app build settings.
-// Local secrets override placeholders via optional include below.
+// Supabase publishable config is safe to ship in a client app.
+// Only privileged keys such as service_role must never be added here.
+// Local overrides can still be supplied via the optional include below.
 
-SUPABASE_URL = YOUR_SUPABASE_URL
-SUPABASE_ANON_KEY = YOUR_SUPABASE_ANON_KEY
+SUPABASE_URL = https://matwihdeczmkdvsbuxvv.supabase.co
+SUPABASE_ANON_KEY = sb_publishable_Bd_9Istn0C4ep16Qg2M1RA_FCHJW4Bf
+GOOGLE_IOS_CLIENT_ID = 404305150-p4m9htb664lb1439rd4oioru7qvg6b62.apps.googleusercontent.com
+GOOGLE_WEB_CLIENT_ID = 404305150-j93e29ijdfvnnk134v2ih0bk1frcsf58.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID_SCHEME = com.googleusercontent.apps.404305150-p4m9htb664lb1439rd4oioru7qvg6b62
 
 #include? "Secrets.xcconfig"

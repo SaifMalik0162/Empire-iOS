@@ -1,14 +1,6 @@
 import SwiftUI
-import StoreKit
-import Combine
 
 struct VIPJoinView: View {
-    @StateObject private var store = StoreKitManager.shared
-    @State private var showWelcome = false
-    @State private var showError = false
-
-    private var vipProduct: Product? { store.products.first(where: { $0.id == store.vipProductID }) }
-
     var body: some View {
         ZStack {
             // Background gradient matching a premium feel
@@ -20,27 +12,9 @@ struct VIPJoinView: View {
                 perks
                 Spacer(minLength: 0)
                 cta
-                restore
                 legal
             }
             .padding(24)
-        }
-        .onReceive(store.$errorMessage.compactMap { $0 }) { _ in
-            showError = true
-        }
-        .alert("Purchase Error", isPresented: $showError, actions: {
-            Button("OK", role: .cancel) { store.errorMessage = nil }
-        }, message: {
-            Text(store.errorMessage ?? "Unknown error")
-        })
-        .fullScreenCover(isPresented: $showWelcome) {
-            VIPWelcomeView(onContinue: {})
-        }
-        .task {
-            await store.loadProducts()
-        }
-        .onChange(of: store.isVIP) { _, new in
-            if new { showWelcome = true }
         }
     }
 
@@ -56,12 +30,10 @@ struct VIPJoinView: View {
             Text("Unlock community perks built for car enthusiasts across North America.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white.opacity(0.7))
-            if let price = vipProduct?.displayPrice {
-                Text("Only \(price) / month")
-                    .font(.headline)
-                    .foregroundStyle(.yellow)
-                    .padding(.top, 2)
-            }
+            Text("VIP access is planned after the beta.")
+                .font(.headline)
+                .foregroundStyle(.yellow)
+                .padding(.top, 2)
         }
         .padding(.top, 20)
     }
@@ -114,39 +86,15 @@ struct VIPJoinView: View {
         .opacity(0.7)
     }
 
-    private var restore: some View {
-        Button("Restore Purchases") {
-            Task { await store.restorePurchases() }
-        }
-        .foregroundStyle(.white.opacity(0.8))
-    }
-
     private var legal: some View {
         VStack(spacing: 6) {
-            if let blurb = subscriptionBlurb {
-                Text(blurb)
-                    .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            Text("By subscribing you agree to our Terms & Privacy. Benefits may vary by region and event.")
+            Text("Beta testers will get an early look at the VIP roadmap before memberships open.")
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.7))
+            Text("Benefits may vary by region and event.")
                 .font(.footnote)
                 .foregroundStyle(.white.opacity(0.6))
         }
-    }
-
-    private var subscriptionBlurb: String? {
-        guard let sub = vipProduct?.subscription else { return nil }
-        let period = sub.subscriptionPeriod
-        let unit: String
-        switch period.unit {
-        case .day: unit = "day"
-        case .week: unit = "week"
-        case .month: unit = "month"
-        case .year: unit = "year"
-        @unknown default: unit = "period"
-        }
-        let duration = "\(period.value) \(unit)\(period.value > 1 ? "s" : "")"
-        return "Auto-renews every \(duration). Cancel anytime in Settings."
     }
 }
 

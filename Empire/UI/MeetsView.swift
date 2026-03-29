@@ -586,30 +586,6 @@ struct QRScanFlow: View {
                                 .foregroundStyle(.white.opacity(0.45))
                         }
 
-                        // Demo QR pill — remove before App Store submission
-                        if let meet {
-                            Button {
-                                let gen = UIImpactFeedbackGenerator(style: .medium)
-                                gen.impactOccurred()
-                                onCode(meet.id.uuidString)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "ant.fill")
-                                        .font(.system(size: 13, weight: .semibold))
-                                    Text("Demo QR")
-                                        .font(.system(size: 14, weight: .semibold))
-                                }
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.orange)
-                                        .shadow(color: Color.orange.opacity(0.5), radius: 10, y: 4)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
                     }
                     .padding(.horizontal, 28)
                     .padding(.vertical, 20)

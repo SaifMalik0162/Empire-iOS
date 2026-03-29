@@ -1,188 +1,121 @@
 import SwiftUI
 import AuthenticationServices
 import CryptoKit
+import GoogleSignIn
 
 struct LoginView: View {
-    @State private var email: String = ""
-    @State private var password: String = ""
-    @State private var showPassword: Bool = false
+    @State private var email = ""
+    @State private var password = ""
+    @State private var showPassword = false
     @State private var showSignUp = false
     @State private var showForgotPassword = false
-    @State private var showMainApp: Bool = false
-    @State private var appleNonce: String = ""
+    @State private var appleNonce = ""
+
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+
+    private let appleSignInController = AppleSignInController()
 
     @EnvironmentObject var authViewModel: AuthViewModel
 
-    // Backend integration
-    @State private var isLoading = false
-    @State private var errorMessage: String?
-    
-    @State private var animateGradient = false
-    
+    private var isLoginDisabled: Bool {
+        isLoading || email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.count < 6
+    }
+
     var body: some View {
-        ZStack {
-            ZStack {
-                EmpireTheme.mintTealGradient(start: animateGradient ? .topLeading : .bottomTrailing,
-                                             end: animateGradient ? .bottomTrailing : .topLeading)
-                EmpireTheme.mintTealGradient(start: animateGradient ? .bottomLeading : .topTrailing,
-                                             end: animateGradient ? .topTrailing : .bottomLeading)
-                    .opacity(0.45)
-                    .blendMode(.plusLighter)
-            }
-            .blur(radius: 8)
-            .ignoresSafeArea()
-            .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
-            .onAppear {
-                animateGradient = true
-            }
-            
-            VStack(spacing: 24) {
-                
-                // Logo
-                ZStack {
-                    EmpireLogoView(size: 220, style: .tinted(EmpireTheme.mintCore), shimmer: true, parallaxAmount: 0)
-                }
-                .padding(.bottom, 12)
-                .padding(.top, 12)
-                
+        AuthScreen {
+            AuthPanel {
                 VStack(spacing: 16) {
-                    // Email TextField
-                    TextField("Email", text: $email)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(.ultraThinMaterial)
+                    AuthHeader(
+                        title: "Welcome back to Empire",
+                        subtitle: "Sign in to continue."
+                    )
+
+                    VStack(spacing: 14) {
+                        AuthField(
+                            title: "Email",
+                            icon: "envelope.fill",
+                            text: $email,
+                            contentType: .emailAddress,
+                            keyboardType: .emailAddress
                         )
-                        .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                        .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
-                    
-                    // Password field with show/hide toggle
-                    ZStack(alignment: .trailing) {
-                        Group {
-                            if showPassword {
-                                TextField("Password", text: $password)
-                            } else {
-                                SecureField("Password", text: $password)
+
+                        AuthField(
+                            title: "Password",
+                            icon: "lock.fill",
+                            text: $password,
+                            contentType: .password,
+                            isSecure: true,
+                            revealSecureText: showPassword,
+                            onToggleSecure: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showPassword.toggle()
+                                }
                             }
+                        )
+
+                        HStack {
+                            Spacer()
+
+                            Button("Forgot password?") {
+                                showForgotPassword = true
+                            }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(EmpireTheme.mintCore)
                         }
-                        .textContentType(.password)
-                        .autocapitalization(.none)
-                        .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(.ultraThinMaterial)
-                        )
-                        .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                        .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
-                        
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                showPassword.toggle()
-                            }
-                        } label: {
-                            Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                .foregroundColor(EmpireTheme.mintCore.opacity(0.7))
-                                .padding(.trailing, 16)
+
+                        if let errorMessage {
+                            AuthMessage(text: errorMessage, tone: .error)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+
+                    AuthPrimaryButton(
+                        title: isLoading ? "Signing in..." : "Log In",
+                        isLoading: isLoading,
+                        isDisabled: isLoginDisabled
+                    ) {
+                        performLogin()
+                    }
+
+                    AuthDivider(label: "Or Continue With")
+
+                    VStack(spacing: 12) {
+                        AuthSocialButton(title: "Continue with Google") {
+                            GoogleBrandMark()
+                        } action: {
+                            performGoogleLogin()
+                        }
+                        .disabled(isLoading)
+                        .opacity(isLoading ? 0.55 : 1)
+
+                        AuthSocialButton(title: "Continue with Apple") {
+                            Image(systemName: "apple.logo")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(.white)
+                        } action: {
+                            beginAppleSignIn()
+                        }
+                        .disabled(isLoading)
+                        .opacity(isLoading ? 0.55 : 1)
+                    }
+
+                    HStack(spacing: 4) {
+                        Text("Don't have an account?")
+                            .foregroundStyle(AuthPalette.textSecondary)
+                        Button("Create one") {
+                            showSignUp = true
                         }
                         .buttonStyle(.plain)
+                        .foregroundStyle(EmpireTheme.mintCore)
                     }
-                    
-                    HStack {
-                        Spacer()
-                        Button("Forgot Password?") {
-                            showForgotPassword = true
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundColor(EmpireTheme.mintCore.opacity(0.85))
-                        .font(.footnote)
-                    }
-                    
-                    // Error message
-                    if let error = errorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .padding(.horizontal, 4)
-                            .transition(.opacity)
-                    }
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
-                
-                // Log In Button
-                Button {
-                    performLogin()
-                } label: {
-                    Text("Log In")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(EmpireTheme.mintCore)
-                        )
-                        .empireMintShadow(radius: 10, x: 0, y: 5, opacity: 0.6)
-                        .foregroundColor(.white)
-                }
-                .disabled(isLoading || email.isEmpty || password.count < 6)
-                .opacity((isLoading || email.isEmpty || password.count < 6) ? 0.5 : 1)
-                .animation(.easeInOut(duration: 0.2), value: isLoading || email.isEmpty || password.count < 6)
-                
-                // Divider with "or"
-                HStack {
-                    Divider()
-                        .background(EmpireTheme.mintCore.opacity(0.4))
-                    Text("or")
-                        .foregroundColor(EmpireTheme.mintCore.opacity(0.6))
-                        .font(.footnote)
-                        .fontWeight(.medium)
-                    Divider()
-                        .background(EmpireTheme.mintCore.opacity(0.4))
-                }
-                .padding(.vertical, 8)
-                
-                SignInWithAppleButton(.signIn) { request in
-                    let nonce = randomNonceString()
-                    appleNonce = nonce
-                    request.requestedScopes = [.fullName, .email]
-                    request.nonce = sha256(nonce)
-                } onCompletion: { result in
-                    handleAppleSignIn(result)
-                }
-                .signInWithAppleButtonStyle(.black)
-                .frame(height: 50)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(EmpireTheme.mintCore.opacity(0.35), lineWidth: 1)
-                )
-                
-                Spacer(minLength: 10)
-                
-                // Footer HStack
-                HStack(spacing: 4) {
-                    Text("Don’t have an account?")
-                        .foregroundColor(EmpireTheme.mintCore.opacity(0.7))
-                        .font(.footnote)
-                    Button("Sign Up") {
-                        showSignUp = true
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(EmpireTheme.mintCore)
-                }
-                .padding(.bottom, 10)
-                
             }
-            .padding(32)
-            .frame(maxWidth: 400)
-            .background(
-                RoundedRectangle(cornerRadius: 32, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .empireMintGlassStroke(cornerRadius: 32, lineWidth: 1.5)
-            .shadow(color: EmpireTheme.mintCore.opacity(0.3), radius: 20, x: 0, y: 10)
-            .padding(.horizontal, 24)
+        }
+        .onAppear {
+            appleSignInController.completion = handleAppleSignIn
         }
         .sheet(isPresented: $showSignUp) {
             SignUpView()
@@ -192,58 +125,109 @@ struct LoginView: View {
             ForgotPasswordView()
                 .environmentObject(authViewModel)
         }
-        .fullScreenCover(isPresented: $showMainApp) {
-            EmpireTabView()
-                .preferredColorScheme(.dark)
-        }
     }
-    
-    // Backend login function with AuthViewModel
+
     private func performLogin() {
         isLoading = true
         errorMessage = nil
-        
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
-        
+
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+
         Task {
             do {
                 try await authViewModel.login(email: email, password: password)
-                
+
                 await MainActor.run {
                     isLoading = false
-                    // No need to navigate - EmpireApp will automatically switch to main app
-                    let successGenerator = UINotificationFeedbackGenerator()
-                    successGenerator.notificationOccurred(.success)
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
             } catch let error as NetworkError {
                 await MainActor.run {
                     errorMessage = error.errorDescription
                     isLoading = false
-                    
-                    let errorGenerator = UINotificationFeedbackGenerator()
-                    errorGenerator.notificationOccurred(.error)
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
                 }
             } catch {
                 await MainActor.run {
                     let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-                    errorMessage = message.isEmpty ? "An unexpected error occurred" : message
+                    errorMessage = message.isEmpty ? "An unexpected error occurred." : message
                     isLoading = false
-                    
-                    let errorGenerator = UINotificationFeedbackGenerator()
-                    errorGenerator.notificationOccurred(.error)
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
                 }
             }
         }
     }
-    
-    private var animatedBackground: some View {
-        EmpireTheme.mintDarkGradient(start: animateGradient ? .topLeading : .bottomTrailing,
-                                 end: animateGradient ? .bottomTrailing : .topLeading)
-            .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
-            .onAppear {
-                animateGradient = true
+
+    private func performGoogleLogin() {
+        isLoading = true
+        errorMessage = nil
+
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+
+        Task {
+            do {
+                guard let presentingViewController = activePresentationRoot else {
+                    throw AuthUserFacingError.generic("Google sign-in is unavailable right now. Please try again.")
+                }
+
+                let googleNonce = randomNonceString()
+                let result = try await GIDSignIn.sharedInstance.signIn(
+                    withPresenting: presentingViewController,
+                    hint: nil,
+                    additionalScopes: nil,
+                    nonce: sha256(googleNonce)
+                )
+
+                guard let idToken = result.user.idToken?.tokenString else {
+                    throw AuthUserFacingError.generic("Google sign-in did not return an identity token.")
+                }
+
+                try await authViewModel.loginWithGoogle(
+                    idToken: idToken,
+                    accessToken: result.user.accessToken.tokenString,
+                    nonce: googleNonce
+                )
+
+                await MainActor.run {
+                    isLoading = false
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+            } catch let error as NSError
+                where error.domain == kGIDSignInErrorDomain &&
+                    error.code == -5 {
+                await MainActor.run {
+                    isLoading = false
+                }
+            } catch let error as NetworkError {
+                await MainActor.run {
+                    errorMessage = error.errorDescription
+                    isLoading = false
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
+            } catch {
+                await MainActor.run {
+                    let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    errorMessage = message.isEmpty ? "Google sign-in failed." : message
+                    isLoading = false
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
             }
+        }
+    }
+
+    private func beginAppleSignIn() {
+        errorMessage = nil
+        appleNonce = randomNonceString()
+        appleSignInController.startSignIn(hashedNonce: sha256(appleNonce))
+    }
+
+    private var activePresentationRoot: UIViewController? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?
+            .rootViewController?
+            .topMostViewController
     }
 
     private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
@@ -260,6 +244,7 @@ struct LoginView: View {
                 errorMessage = "Failed to read Apple credential."
                 return
             }
+
             guard let tokenData = credential.identityToken,
                   let idToken = String(data: tokenData, encoding: .utf8),
                   !appleNonce.isEmpty else {
@@ -291,7 +276,7 @@ struct LoginView: View {
             } catch {
                 await MainActor.run {
                     let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-                    errorMessage = message.isEmpty ? "Apple sign in failed." : message
+                    errorMessage = message.isEmpty ? "Apple sign-in failed." : message
                     isLoading = false
                     UINotificationFeedbackGenerator().notificationOccurred(.error)
                 }
@@ -333,10 +318,109 @@ struct LoginView: View {
     }
 }
 
+private final class AppleSignInController: NSObject {
+    var completion: ((Result<ASAuthorization, Error>) -> Void)?
+
+    func startSignIn(hashedNonce: String) {
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = hashedNonce
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        controller.performRequests()
+    }
+}
+
+extension AppleSignInController: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        if let window = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow) {
+            return window
+        }
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            return UIWindow(windowScene: windowScene)
+        }
+
+        fatalError("No active window scene available for Apple sign-in presentation.")
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        completion?(.success(authorization))
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        completion?(.failure(error))
+    }
+}
+
+private extension UIViewController {
+    var topMostViewController: UIViewController {
+        if let presentedViewController {
+            return presentedViewController.topMostViewController
+        }
+
+        if let navigationController = self as? UINavigationController,
+           let visibleViewController = navigationController.visibleViewController {
+            return visibleViewController.topMostViewController
+        }
+
+        if let tabBarController = self as? UITabBarController,
+           let selectedViewController = tabBarController.selectedViewController {
+            return selectedViewController.topMostViewController
+        }
+
+        return self
+    }
+}
+
+private struct GoogleBrandMark: View {
+    var body: some View {
+        Group {
+            if let image = googleLogoImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Text("G")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+            }
+        }
+    }
+
+    private var googleLogoImage: UIImage? {
+        let bundleNames = ["GoogleSignIn_GoogleSignIn", "GoogleSignIn"]
+        let candidateBundles = bundleNames.compactMap { bundleName -> Bundle? in
+            if let mainBundlePath = Bundle.main.path(forResource: bundleName, ofType: "bundle") {
+                return Bundle(path: mainBundlePath)
+            }
+
+            let frameworkBundle = Bundle(for: GIDSignIn.self)
+            if let frameworkBundlePath = frameworkBundle.path(forResource: bundleName, ofType: "bundle") {
+                return Bundle(path: frameworkBundlePath)
+            }
+
+            return nil
+        }
+
+        for bundle in candidateBundles {
+            if let image = UIImage(named: "google", in: bundle, compatibleWith: nil) {
+                return image
+            }
+        }
+
+        return nil
+    }
+}
+
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
         LoginView()
             .preferredColorScheme(.dark)
     }
 }
-

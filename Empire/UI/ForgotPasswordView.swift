@@ -2,179 +2,244 @@ import SwiftUI
 
 struct ForgotPasswordView: View {
     @EnvironmentObject private var authViewModel: AuthViewModel
-    @Environment(\.dismiss) var dismiss
-    @State private var email: String = ""
-    @State private var isSending: Bool = false
-    @State private var showValidation: Bool = false
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var email = ""
+    @State private var isSending = false
+    @State private var showValidation = false
     @State private var successMessage: String?
     @State private var errorMessage: String?
-    
-    @State private var animateGradient = false
-    
-    private var animatedGradient: LinearGradient {
-        EmpireTheme.mintDarkGradient(start: animateGradient ? .topLeading : .bottomTrailing,
-                                     end: animateGradient ? .bottomTrailing : .topLeading)
-    }
-    
+
     var body: some View {
-        ZStack {
-            ZStack {
-                EmpireTheme.mintTealGradient(start: animateGradient ? .topLeading : .bottomTrailing,
-                                             end: animateGradient ? .bottomTrailing : .topLeading)
-                EmpireTheme.mintTealGradient(start: animateGradient ? .bottomLeading : .topTrailing,
-                                             end: animateGradient ? .topTrailing : .bottomLeading)
-                    .opacity(0.45)
-                    .blendMode(.plusLighter)
-            }
-            .blur(radius: 8)
-            .ignoresSafeArea()
-            .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
-            .onAppear {
-                animateGradient = true
-            }
-            .onDisappear {
-                animateGradient = false
-            }
-            
-            VStack(spacing: 24) {
-                EmpireLogoView(size: 150, style: .tinted(EmpireTheme.mintCore), shimmer: true, parallaxAmount: 0)
-                
-                VStack(spacing: 8) {
-                    Text("Reset your password")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(.white)
-                    
-                    Text("Enter your email and we'll send you a reset link.")
-                        .font(.body)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.white.opacity(0.8))
-                        .padding(.horizontal, 16)
-                }
-                
-                VStack(spacing: 6) {
-                    TextField("Email", text: $email)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(.ultraThinMaterial)
+        AuthScreen {
+            ZStack(alignment: .topTrailing) {
+                AuthPanel {
+                    VStack(spacing: 16) {
+                        AuthHeader(
+                            title: "Reset your password",
+                            subtitle: "Enter your email to get a reset link.",
+                            logoSize: 88
                         )
-                        .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                        .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
-                    
-                    if showValidation && email.isEmpty {
-                        Text("Please enter your email.")
-                            .font(.footnote)
-                            .foregroundColor(.red.opacity(0.85))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 4)
-                    }
 
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundColor(.red.opacity(0.9))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 4)
-                    }
+                        VStack(spacing: 12) {
+                            AuthField(
+                                title: "Email",
+                                icon: "paperplane.fill",
+                                text: $email,
+                                contentType: .emailAddress,
+                                keyboardType: .emailAddress
+                            )
 
-                    if let successMessage {
-                        Text(successMessage)
-                            .font(.footnote)
-                            .foregroundColor(.green.opacity(0.95))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 4)
-                    }
-                }
-                
-                Button {
-                    showValidation = true
-                    guard !email.isEmpty else { return }
-                    let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !trimmedEmail.isEmpty else { return }
-
-                    isSending = true
-                    successMessage = nil
-                    errorMessage = nil
-
-                    Task {
-                        do {
-                            try await authViewModel.sendPasswordReset(email: trimmedEmail)
-                            await MainActor.run {
-                                isSending = false
-                                successMessage = "If an account exists, a reset link was sent to \(trimmedEmail)."
+                            if showValidation && email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                AuthMessage(text: "Please enter your email.", tone: .error)
                             }
-                        } catch {
-                            await MainActor.run {
-                                isSending = false
-                                let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-                                errorMessage = message.isEmpty ? "Failed to send reset link. Try again." : message
+
+                            if let errorMessage {
+                                AuthMessage(text: errorMessage, tone: .error)
+                            }
+
+                            if let successMessage {
+                                AuthMessage(text: successMessage, tone: .success)
                             }
                         }
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        if isSending {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+
+                        AuthPrimaryButton(
+                            title: isSending ? "Sending link..." : "Send Reset Link",
+                            isLoading: isSending,
+                            isDisabled: isSending
+                        ) {
+                            sendResetLink()
                         }
-                        Text(isSending ? "Sending..." : "Send Reset Link")
-                            .bold()
+
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Back to Login")
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundStyle(EmpireTheme.mintCore)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color.accentColor)
-                    )
-                    .foregroundStyle(.white)
-                    .empireMintShadow(radius: 10, x: 0, y: 5, opacity: 0.6)
                 }
-                .disabled(isSending)
-                
+
                 Button {
                     dismiss()
                 } label: {
-                    Text("Back to Login")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .padding(.vertical, 6)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.88))
+                        .frame(width: 36, height: 36)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(0.08))
+                        )
+                        .overlay(
+                            Circle()
+                                .strokeBorder(AuthPalette.border, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(14)
+            }
+        }
+    }
+
+    private func sendResetLink() {
+        showValidation = true
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedEmail.isEmpty else { return }
+
+        isSending = true
+        successMessage = nil
+        errorMessage = nil
+
+        Task {
+            do {
+                try await authViewModel.sendPasswordReset(email: trimmedEmail)
+                await MainActor.run {
+                    isSending = false
+                    successMessage = "If an account exists, a reset link was sent to \(trimmedEmail)."
+                }
+            } catch {
+                await MainActor.run {
+                    isSending = false
+                    let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    errorMessage = message.isEmpty ? "Failed to send reset link. Try again." : message
                 }
             }
-            .padding(30)
-            .frame(maxWidth: 420)
-            .background(
-                RoundedRectangle(cornerRadius: 32, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .empireMintGlassStroke(cornerRadius: 32, lineWidth: 1.5)
-            .shadow(color: EmpireTheme.mintCore.opacity(0.3), radius: 20, x: 0, y: 10)
-            .padding(.horizontal, 24)
-            
-            VStack {
-                HStack {
-                    Spacer()
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 2)
+        }
+    }
+}
+
+struct PasswordRecoveryView: View {
+    @EnvironmentObject private var authViewModel: AuthViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var showNewPassword = false
+    @State private var showConfirmPassword = false
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    @State private var successMessage: String?
+
+    private var isFormValid: Bool {
+        newPassword.count >= 6 && newPassword == confirmPassword
+    }
+
+    var body: some View {
+        NavigationStack {
+            AuthScreen {
+                ScrollView(showsIndicators: false) {
+                    AuthPanel {
+                        VStack(spacing: 20) {
+                        AuthHeader(
+                            title: "Choose a new password",
+                            subtitle: "Finish recovery with a password that feels strong and easy to remember.",
+                            logoSize: 104
+                        )
+
+                        VStack(spacing: 14) {
+                            AuthField(
+                                title: "New password",
+                                icon: "lock.rotation",
+                                text: $newPassword,
+                                contentType: .newPassword,
+                                isSecure: true,
+                                revealSecureText: showNewPassword,
+                                onToggleSecure: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        showNewPassword.toggle()
+                                    }
+                                }
+                            )
+
+                            AuthField(
+                                title: "Confirm password",
+                                icon: "checkmark.shield.fill",
+                                text: $confirmPassword,
+                                contentType: .newPassword,
+                                isSecure: true,
+                                revealSecureText: showConfirmPassword,
+                                onToggleSecure: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        showConfirmPassword.toggle()
+                                    }
+                                }
+                            )
+
+                            if let errorMessage {
+                                AuthMessage(text: errorMessage, tone: .error)
+                            }
+
+                            if let successMessage {
+                                AuthMessage(text: successMessage, tone: .success)
+                            }
+
+                            Text("Passwords must be at least 6 characters.")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(AuthPalette.textMuted)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        AuthPrimaryButton(
+                            title: isSaving ? "Updating password..." : "Update Password",
+                            isLoading: isSaving,
+                            isDisabled: isSaving || !isFormValid
+                        ) {
+                            completePasswordReset()
+                        }
                     }
                 }
-                Spacer()
+                .padding(.vertical, 8)
+                }
             }
-            .padding(.top, 24)
-            .padding(.trailing, 24)
+            .navigationTitle("Reset Password")
+            .navigationBarTitleDisplayMode(NavigationBarItem.TitleDisplayMode.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        authViewModel.dismissPasswordRecovery()
+                        dismiss()
+                    }
+                    .fontWeight(.bold)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func completePasswordReset() {
+        guard isFormValid else {
+            errorMessage = "Passwords must match and be at least 6 characters."
+            successMessage = nil
+            return
+        }
+
+        isSaving = true
+        errorMessage = nil
+        successMessage = nil
+
+        Task {
+            do {
+                try await authViewModel.completePasswordReset(newPassword)
+                await MainActor.run {
+                    isSaving = false
+                    successMessage = "Your password was updated. You can continue in the app now."
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    errorMessage = message.isEmpty ? "Could not update your password." : message
+                }
+            }
         }
     }
 }
 
 #Preview {
     ForgotPasswordView()
-    .environmentObject(AuthViewModel())
+        .environmentObject(AuthViewModel())
         .preferredColorScheme(.dark)
 }

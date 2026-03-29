@@ -14,7 +14,27 @@
 				<string>empireconnect</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.empireautoclub.empireconnect.google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_REVERSED_CLIENT_ID_SCHEME)</string>
+			</array>
+		</dict>
 	</array>
+	<key>GIDClientID</key>
+	<string>$(GOOGLE_IOS_CLIENT_ID)</string>
+	<key>GIDServerClientID</key>
+	<string>$(GOOGLE_WEB_CLIENT_ID)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Empire Connect uses the camera to scan meet QR codes for event check-in.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Empire Connect uses your calendar so you can save club meets and reminders.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Empire Connect uses calendar access to add club meets to your schedule.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>SUPABASE_ANON_KEY</key>

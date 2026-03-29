@@ -7,274 +7,178 @@ struct SignUpView: View {
     @State private var confirmPassword = ""
     @State private var showPassword = false
     @State private var showConfirmPassword = false
+    @State private var showValidation = false
+    @State private var isCreating = false
+    @State private var errorMessage: String?
+
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var authViewModel: AuthViewModel
 
-    @State private var animateGradient = false
-    @State private var showValidation: Bool = false
-    @State private var isCreating: Bool = false
-    @State private var errorMessage: String? = nil
+    private var normalizedEmail: String {
+        AuthViewModel.normalizedSignupEmail(email)
+    }
+
+    private var isAllowedSignupEmail: Bool {
+        AuthViewModel.isAllowedSignupEmail(email)
+    }
 
     private var isFormValid: Bool {
-        !username.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !email.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        isAllowedSignupEmail &&
         password.count >= 6 &&
         password == confirmPassword
     }
 
     var body: some View {
-        ZStack {
-            ZStack {
-                EmpireTheme.mintTealGradient(start: animateGradient ? .topLeading : .bottomTrailing,
-                                             end: animateGradient ? .bottomTrailing : .topLeading)
-                EmpireTheme.mintTealGradient(start: animateGradient ? .bottomLeading : .topTrailing,
-                                             end: animateGradient ? .topTrailing : .bottomLeading)
-                    .opacity(0.45)
-                    .blendMode(.plusLighter)
-            }
-            .blur(radius: 8)
-            .ignoresSafeArea()
-            .animation(.easeInOut(duration: 6).repeatForever(autoreverses: true), value: animateGradient)
-            .onAppear {
-                animateGradient = true
-            }
-            .onDisappear {
-                animateGradient = false
-            }
+        AuthScreen {
+            ZStack(alignment: .topTrailing) {
+                AuthPanel {
+                    VStack(spacing: 14) {
+                        AuthHeader(
+                            title: "Create your Empire account",
+                            subtitle: "Create your profile.",
+                            logoSize: 84
+                        )
 
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 10) {
-                    EmpireLogoView(size: 160, style: .tinted(EmpireTheme.mintCore), shimmer: true, parallaxAmount: 0)
+                        VStack(spacing: 10) {
+                            AuthField(
+                                title: "Username",
+                                icon: "person.fill",
+                                text: $username,
+                                contentType: .username
+                            )
 
-                    Text("Create your account")
-                        .font(.title)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                            AuthField(
+                                title: "Email",
+                                icon: "envelope.fill",
+                                text: $email,
+                                contentType: .emailAddress,
+                                keyboardType: .emailAddress
+                            )
 
-                    Text("Join us in a few taps")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-
-                // Fields
-                VStack(spacing: 16) {
-                    Group {
-                        TextField("Username", text: $username)
-                            .textContentType(.username)
-                            .autocapitalization(.none)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                    .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
-
-                    Group {
-                        TextField("Email", text: $email)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                    .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
-
-                    if showValidation && email.isEmpty {
-                        Text("Please enter your email.")
-                            .font(.footnote)
-                            .foregroundColor(.red.opacity(0.9))
-                    }
-
-                    // Password
-                    Group {
-                        if showPassword {
-                            TextField("Password", text: $password)
-                                .textContentType(.newPassword)
-                                .autocapitalization(.none)
-                        } else {
-                            SecureField("Password", text: $password)
-                                .textContentType(.newPassword)
-                        }
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        HStack {
-                            Spacer()
-                            Button {
-                                withAnimation {
-                                    showPassword.toggle()
+                            AuthField(
+                                title: "Password",
+                                icon: "lock.fill",
+                                text: $password,
+                                contentType: .newPassword,
+                                isSecure: true,
+                                revealSecureText: showPassword,
+                                onToggleSecure: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        showPassword.toggle()
+                                    }
                                 }
-                            } label: {
-                                Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                    .foregroundColor(EmpireTheme.mintCore.opacity(0.7))
-                            }
-                            .padding(.trailing, 12)
-                        }
-                    )
-                    .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                    .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
+                            )
 
-                    if showValidation && password.count < 6 {
-                        Text("Password must be at least 6 characters.")
-                            .font(.footnote)
-                            .foregroundColor(.red.opacity(0.9))
-                    }
-
-                    // Confirm Password
-                    Group {
-                        if showConfirmPassword {
-                            TextField("Confirm password", text: $confirmPassword)
-                                .textContentType(.newPassword)
-                                .autocapitalization(.none)
-                        } else {
-                            SecureField("Confirm password", text: $confirmPassword)
-                                .textContentType(.newPassword)
-                        }
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        HStack {
-                            Spacer()
-                            Button {
-                                withAnimation {
-                                    showConfirmPassword.toggle()
+                            AuthField(
+                                title: "Confirm password",
+                                icon: "checkmark.shield.fill",
+                                text: $confirmPassword,
+                                contentType: .newPassword,
+                                isSecure: true,
+                                revealSecureText: showConfirmPassword,
+                                onToggleSecure: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        showConfirmPassword.toggle()
+                                    }
                                 }
-                            } label: {
-                                Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
-                                    .foregroundColor(EmpireTheme.mintCore.opacity(0.7))
+                            )
+                        }
+
+                        if showValidation && email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            AuthMessage(text: "Please enter your email address.", tone: .error)
+                        } else if showValidation && !isAllowedSignupEmail {
+                            AuthMessage(text: "Use a Gmail address to sign up, or continue with Apple or Google.", tone: .error)
+                        } else if showValidation && password.count < 6 {
+                            AuthMessage(text: "Password must be at least 6 characters.", tone: .error)
+                        } else if showValidation && confirmPassword != password {
+                            AuthMessage(text: "Passwords don't match.", tone: .error)
+                        } else if let errorMessage {
+                            AuthMessage(text: errorMessage, tone: .error)
+                        }
+
+                        AuthPrimaryButton(
+                            title: isCreating ? "Creating account..." : "Create Account",
+                            isLoading: isCreating,
+                            isDisabled: !isFormValid || isCreating
+                        ) {
+                            let isValid = isFormValid
+                            showValidation = !isValid
+                            if isValid {
+                                performRegister()
                             }
-                            .padding(.trailing, 12)
                         }
-                    )
-                    .empireMintGlassStroke(cornerRadius: 16, lineWidth: 1.25)
-                    .shadow(color: EmpireTheme.mintCore.opacity(0.1), radius: 6, x: 0, y: 4)
 
-                    if showValidation && confirmPassword != password {
-                        Text("Passwords don't match.")
-                            .font(.footnote)
-                            .foregroundColor(.red.opacity(0.9))
-                    }
-                }
+                        VStack(spacing: 8) {
+                            Text("By creating an account you agree to our Terms of Service and Privacy Policy.")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(AuthPalette.textMuted)
+                                .multilineTextAlignment(.center)
 
-                // Create Account Button
-                Button {
-                    let isValid = !username.isEmpty && !email.isEmpty && password.count >= 6 && password == confirmPassword
-                    showValidation = !isValid
-                    if isValid {
-                        performRegister()
-                    }
-                } label: {
-                    HStack {
-                        if isCreating {
-                            ProgressView()
-                                .tint(.white)
+                            Button {
+                                dismiss()
+                            } label: {
+                                Text("Already have an account? Log In")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundStyle(EmpireTheme.mintCore)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        Text(isCreating ? "Creating..." : "Create Account")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
                     }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.accentColor)
-                            .empireMintShadow(radius: 10, x: 0, y: 5, opacity: 0.6)
-                    )
-                    .foregroundColor(.white)
-                }
-                .disabled(!isFormValid || isCreating)
-                .opacity(isCreating ? 0.8 : (isFormValid ? 1 : 0.55))
-
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundColor(.red.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 8)
                 }
 
-                // Footnote
-                Text("By creating an account you agree to our Terms of Service and Privacy Policy.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
-
-                // Secondary Button
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Already have an account? Log In")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.accentColor)
-                }
-            }
-            .padding(30)
-            .frame(maxWidth: 450)
-            .background(
-                RoundedRectangle(cornerRadius: 32, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .empireMintGlassStroke(cornerRadius: 32, lineWidth: 1.5)
-            .shadow(color: EmpireTheme.mintCore.opacity(0.3), radius: 20, x: 0, y: 10)
-            .padding(.horizontal, 20)
-
-            // Close Button
-            VStack {
-                HStack {
-                    Spacer()
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundColor(Color.white.opacity(0.75))
-                            .shadow(radius: 4)
-                    }
-                    .padding()
-                }
-                Spacer()
+                closeButton
             }
         }
     }
 
-    private var animatedBackground: some View {
-        EmpireTheme.mintDarkGradient(start: animateGradient ? .topLeading : .bottomTrailing,
-                                end: animateGradient ? .bottomTrailing : .topLeading)
-        .animation(.easeInOut(duration: 5).repeatForever(autoreverses: true), value: animateGradient)
-        .onAppear {
-            animateGradient.toggle()
+    private var closeButton: some View {
+        Button {
+            dismiss()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.88))
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle()
+                        .fill(Color.white.opacity(0.08))
+                )
+                .overlay(
+                    Circle()
+                        .strokeBorder(AuthPalette.border, lineWidth: 1)
+                )
         }
-        .onDisappear {
-            animateGradient = false
-        }
+        .buttonStyle(.plain)
+        .padding(14)
     }
 
     private func performRegister() {
+        guard isAllowedSignupEmail else {
+            errorMessage = "Use a Gmail address to sign up, or continue with Apple or Google."
+            return
+        }
+
         isCreating = true
         errorMessage = nil
 
         Task {
             do {
                 let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-                try await authViewModel.register(email: email, password: password, username: normalizedUsername)
+                try await authViewModel.register(email: normalizedEmail, password: password, username: normalizedUsername)
                 await MainActor.run {
                     isCreating = false
                     dismiss()
+                }
+            } catch let error as AuthSignupError {
+                await MainActor.run {
+                    isCreating = false
+                    errorMessage = error.errorDescription
+                }
+            } catch let error as AuthUserFacingError {
+                await MainActor.run {
+                    isCreating = false
+                    errorMessage = error.errorDescription
                 }
             } catch let error as NetworkError {
                 await MainActor.run {
@@ -284,28 +188,10 @@ struct SignUpView: View {
             } catch {
                 await MainActor.run {
                     isCreating = false
-                    errorMessage = "Could not create account. Please try again."
+                    let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                    errorMessage = message.isEmpty ? "Could not create account. Please try again." : message
                 }
             }
         }
     }
-}
-
-// MARK: - Color Hex Helper
-extension Color {
-    init(hex: UInt, alpha: Double = 1) {
-        self.init(
-            .sRGB,
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255,
-            opacity: alpha
-        )
-    }
-}
-
-#Preview {
-    SignUpView()
-    .environmentObject(AuthViewModel())
-        .preferredColorScheme(.dark)
 }
