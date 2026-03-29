@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Combine
 
 struct ExploreFeedView: View {
 
@@ -10,18 +11,25 @@ struct ExploreFeedView: View {
 
     @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject private var vm = CommunityViewModel()
+    @StateObject private var socialStore = CommunitySocialStore()
 
     @Environment(\.dismiss) private var dismiss
     @State private var searchText: String = ""
-    @State private var selectedPrimaryFilter: ExplorePrimaryFilter = .all
+    @State private var showLikedOnly = false
+    @State private var showSavedOnly = false
+    @State private var selectedFeedMode: ExploreFeedMode = .forYou
     @State private var selectedStageFilter: ExploreStageFilter? = nil
     @State private var selectedVehicleClassFilter: VehicleClass? = nil
     @State private var expandedFilterMenu: ExpandedExploreFilterMenu? = nil
     @State private var showShareToFeed: Bool = false
+    @State private var upcomingMeets: [Meet] = []
+    @State private var selectedMeetFilterID: UUID? = nil
+
+    private let meetsService = SupabaseMeetsService()
 
     private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "" }
 
-    private var filtered: [CommunityPost] {
+    private var filteredPosts: [CommunityPost] {
         vm.posts.filter { post in
             let matchesSearch: Bool = {
                 let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -33,10 +41,8 @@ struct ExploreFeedView: View {
                     || (post.username?.lowercased().contains(q) ?? false)
             }()
             let matchesFilter: Bool = {
-                switch selectedPrimaryFilter {
-                case .all: return true
-                case .liked: return post.isLiked
-                }
+                (!showLikedOnly || post.isLiked)
+                    && (!showSavedOnly || socialStore.isSaved(post.id))
             }()
 
             let matchesStage: Bool = {
@@ -49,8 +55,69 @@ struct ExploreFeedView: View {
                 return VehicleClass.from(rawValue: post.vehicleClass) == selectedVehicleClassFilter
             }()
 
-            return matchesSearch && matchesFilter && matchesStage && matchesVehicleClass
+            let matchesMeet: Bool = {
+                guard let selectedMeetFilterID else { return true }
+                return post.linkedMeetId == selectedMeetFilterID
+            }()
+
+            return matchesSearch && matchesFilter && matchesStage && matchesVehicleClass && matchesMeet
         }
+    }
+
+    private var rankedPosts: [CommunityPost] {
+        switch selectedFeedMode {
+        case .forYou:
+            return filteredPosts.sorted { forYouScore(for: $0) > forYouScore(for: $1) }
+        case .trending:
+            return filteredPosts.sorted { trendingScore(for: $0) > trendingScore(for: $1) }
+        case .latest:
+            return filteredPosts.sorted { $0.createdAt > $1.createdAt }
+        }
+    }
+
+    private var highlightedPost: CommunityPost? {
+        rankedPosts.first
+    }
+
+    private var driverVehicleClasses: Set<VehicleClass> {
+        Set(userCars.compactMap(\.vehicleClass))
+    }
+
+    private var driverStages: [Int] {
+        userCars.map(\.stage)
+    }
+
+    private var currentChallenge: CommunityProgrammingChallenge {
+        CommunityProgrammingChallenge.current()
+    }
+
+    private var challengePosts: [CommunityPost] {
+        vm.posts.filter { $0.challengeID == currentChallenge.id }
+    }
+
+    private var meetLinkedPosts: [CommunityPost] {
+        vm.posts.filter { $0.linkedMeetId != nil }
+    }
+
+    private var featuredVehicleClasses: [VehicleClass] {
+        let counts = vm.posts.reduce(into: [VehicleClass: Int]()) { partial, post in
+            guard let vehicleClass = VehicleClass.from(rawValue: post.vehicleClass) else { return }
+            partial[vehicleClass, default: 0] += 1
+        }
+        return counts.sorted { lhs, rhs in
+            if lhs.value == rhs.value {
+                return lhs.key.displayName < rhs.key.displayName
+            }
+            return lhs.value > rhs.value
+        }.map(\.key)
+    }
+
+    private var highlightedMeet: Meet? {
+        if let selectedMeetFilterID {
+            return upcomingMeets.first(where: { $0.id == selectedMeetFilterID })
+        }
+        let linkedIds = Set(meetLinkedPosts.compactMap(\.linkedMeetId))
+        return upcomingMeets.first(where: { linkedIds.contains($0.id) }) ?? upcomingMeets.first
     }
 
     var body: some View {
@@ -84,9 +151,15 @@ struct ExploreFeedView: View {
             .toolbarBackground(.visible, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
-        .task { await vm.refresh() }
+        .task {
+            await vm.refresh()
+            await loadProgrammingSurfaces()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
-            Task { await vm.refresh() }
+            Task {
+                await vm.refresh()
+                await loadProgrammingSurfaces()
+            }
         }
         .sheet(isPresented: $showShareToFeed) {
             ShareToFeedSheet(userCars: userCars) { _ in }
@@ -98,60 +171,442 @@ struct ExploreFeedView: View {
     // MARK: - Post list
 
     private var postList: some View {
-        ZStack(alignment: .topLeading) {
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    Color.clear.frame(height: 54)
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                Color.clear.frame(height: 8)
 
-                    ForEach(filtered) { post in
-                        FeedPostCard(
-                            post: post,
-                            currentUserId: currentUserId,
-                            communityVM: vm,
-                            avatarURL: vm.avatarURL(for: post)
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 16)
-                        .onAppear {
-                            if post.id == filtered.last?.id {
-                                Task { await vm.loadMore() }
-                            }
+                filterChips
+                    .padding(.top, 6)
+                    .padding(.bottom, 14)
+
+                feedDiscoveryPanel
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+
+                ForEach(rankedPosts) { post in
+                    feedPostCard(post)
+                }
+
+                if rankedPosts.isEmpty && !vm.isLoading {
+                    VStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 30))
+                            .foregroundStyle(Color("EmpireMint").opacity(0.5))
+                        Text("No posts match")
+                            .font(.headline).foregroundStyle(.white)
+                        Text("Try a different filter or search term.")
+                            .font(.caption).foregroundStyle(.white.opacity(0.6))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 60)
+                }
+
+                if vm.isLoadingMore {
+                    ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
+                }
+
+                if !vm.hasMore && !rankedPosts.isEmpty {
+                    Text("You've seen it all 🏁")
+                        .font(.caption).foregroundStyle(.white.opacity(0.4))
+                        .padding(.vertical, 20)
+                }
+
+                Color.clear.frame(height: 60)
+            }
+        }
+        .refreshable {
+            await vm.refresh()
+            await loadProgrammingSurfaces()
+        }
+    }
+
+    private func feedPostCard(_ post: CommunityPost) -> some View {
+        FeedPostCard(
+            post: post,
+            currentUserId: currentUserId,
+            communityVM: vm,
+            avatarURL: vm.avatarURL(for: post),
+            socialStore: socialStore
+        )
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 16)
+        .onAppear {
+            if post.id == rankedPosts.last?.id {
+                Task { await vm.loadMore() }
+            }
+        }
+    }
+
+    private var feedDiscoveryPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Community Pulse")
+                        .font(.system(.headline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.white)
+
+                    Text(feedSummaryLine)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.62))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 6) {
+                    Image(systemName: selectedFeedMode.icon)
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(selectedFeedMode.label)
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(selectedFeedMode.accentColor)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(selectedFeedMode.accentColor.opacity(0.14)))
+                .overlay(
+                    Capsule()
+                        .stroke(selectedFeedMode.accentColor.opacity(0.4), lineWidth: 1)
+                )
+            }
+
+            HStack(spacing: 8) {
+                ForEach(ExploreFeedMode.allCases, id: \.self) { mode in
+                    FeedModeChip(
+                        mode: mode,
+                        isSelected: selectedFeedMode == mode
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            selectedFeedMode = mode
                         }
                     }
-
-                    if filtered.isEmpty && !vm.isLoading {
-                        VStack(spacing: 12) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 30))
-                                .foregroundStyle(Color("EmpireMint").opacity(0.5))
-                            Text("No posts match")
-                                .font(.headline).foregroundStyle(.white)
-                            Text("Try a different filter or search term.")
-                                .font(.caption).foregroundStyle(.white.opacity(0.6))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 60)
-                    }
-
-                    if vm.isLoadingMore {
-                        ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
-                    }
-
-                    if !vm.hasMore && !filtered.isEmpty {
-                        Text("You've seen it all 🏁")
-                            .font(.caption).foregroundStyle(.white.opacity(0.4))
-                            .padding(.vertical, 20)
-                    }
-
-                    Color.clear.frame(height: 60)
                 }
             }
-            .refreshable { await vm.refresh() }
 
-            filterChips
-                .padding(.top, 6)
-                .zIndex(5)
+            if let highlightedPost {
+                Button {
+                    if showLikedOnly {
+                        showLikedOnly = false
+                    }
+                    if selectedFeedMode != .forYou {
+                        selectedFeedMode = .forYou
+                    }
+                } label: {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(selectedFeedMode.heroTitle)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(selectedFeedMode.accentColor)
+
+                            Text(highlightedPost.carName)
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+
+                            Text(highlightReason(for: highlightedPost))
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.66))
+                                .lineLimit(1)
+                        }
+
+                        Spacer(minLength: 12)
+
+                        VStack(alignment: .trailing, spacing: 6) {
+                            metricBadge(value: highlightedPost.likesCount, symbol: "heart.fill")
+                            metricBadge(value: highlightedPost.commentsCount, symbol: "bubble.left.fill")
+                        }
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color.white.opacity(0.045))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [selectedFeedMode.accentColor.opacity(0.55), Color.white.opacity(0.08)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: selectedFeedMode.accentColor.opacity(0.16), radius: 12, x: 0, y: 8)
+    }
+
+    private var feedSummaryLine: String {
+        if vm.posts.isEmpty {
+            return "Fresh builds, tuning updates, and conversations from Empire drivers."
+        }
+
+        switch selectedFeedMode {
+        case .forYou:
+            return "Fresh builds and the cars closest to your garage."
+        case .trending:
+            return "The hottest builds and busiest comment threads first."
+        case .latest:
+            return "The newest garage drops as soon as they land."
+        }
+    }
+
+    private var programmingHighlightsRail: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                challengeSpotlightCard
+
+                if let highlightedMeet {
+                    meetLinkedSpotlight(meet: highlightedMeet)
+                }
+
+                ForEach(Array(featuredVehicleClasses.prefix(3)), id: \.self) { vehicleClass in
+                    featuredClassCard(vehicleClass)
+                }
+            }
+            .padding(.vertical, 1)
+        }
+    }
+
+    private var challengeSpotlightCard: some View {
+        HStack(alignment: .center, spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(currentChallenge.accentColor.opacity(0.16))
+                    Image(systemName: currentChallenge.icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(currentChallenge.accentColor)
+                }
+                .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(currentChallenge.badgeTitle.uppercased())
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(currentChallenge.accentColor)
+                    Text(currentChallenge.title)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(currentChallenge.composerPrompt)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.56))
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(challengePosts.count)")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("joined")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+            }
+        .frame(width: 214, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(currentChallenge.accentColor.opacity(0.09))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(currentChallenge.accentColor.opacity(0.32), lineWidth: 1)
+        )
+    }
+
+    private func featuredClassCard(_ vehicleClass: VehicleClass) -> some View {
+        let count = vm.posts.filter { VehicleClass.from(rawValue: $0.vehicleClass) == vehicleClass }.count
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                selectedVehicleClassFilter = selectedVehicleClassFilter == vehicleClass ? nil : vehicleClass
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(vehicleClass.code)
+                        .font(.caption.weight(.bold))
+                    Text(vehicleClass.displayName)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(selectedVehicleClassFilter == vehicleClass ? vehicleClass.accentColor : .white.opacity(0.82))
+
+                Text("\(count) build\(count == 1 ? "" : "s")")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.48))
+            }
+            .frame(width: 156, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(selectedVehicleClassFilter == vehicleClass ? vehicleClass.accentColor.opacity(0.14) : Color.white.opacity(0.04))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(selectedVehicleClassFilter == vehicleClass ? vehicleClass.accentColor.opacity(0.42) : Color.white.opacity(0.1), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func meetLinkedSpotlight(meet: Meet) -> some View {
+        let linkedCount = vm.posts.filter { $0.linkedMeetId == meet.id }.count
+        let isSelected = selectedMeetFilterID == meet.id
+
+        return HStack(alignment: .center, spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(Color("EmpireMint").opacity(0.14))
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color("EmpireMint"))
+                }
+                .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Meet-Linked Builds")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color("EmpireMint"))
+                    Text(meet.title)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text("\(meet.city) · \(meet.dateString)")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.62))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(linkedCount)")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(isSelected ? "filtering" : "linked")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+            }
+        .frame(width: 204, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isSelected ? Color("EmpireMint").opacity(0.08) : Color.white.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(isSelected ? Color("EmpireMint").opacity(0.28) : Color.white.opacity(0.1), lineWidth: 1)
+        )
+    }
+
+    private func metricBadge(value: Int, symbol: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol)
+            Text("\(value)")
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.white.opacity(0.85))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Color.white.opacity(0.06)))
+        .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1))
+    }
+
+    private func highlightReason(for post: CommunityPost) -> String {
+        switch selectedFeedMode {
+        case .forYou:
+            if hasAffinity(with: post) {
+                return "Closest match for your garage."
+            }
+            return "Fresh, detailed, and already getting traction."
+        case .trending:
+            return "\(post.likesCount) likes and \(post.commentsCount) comments pushing it up."
+        case .latest:
+            return "Recently shared by \(post.username ?? "an Empire driver")."
+        }
+    }
+
+    private func trendingScore(for post: CommunityPost) -> Double {
+        let hoursOld = max(Date().timeIntervalSince(post.createdAt) / 3600, 0.0)
+        let engagement = Double(post.likesCount * 3 + post.commentsCount * 5)
+        let freshness = max(0.0, 72.0 - hoursOld) * 0.7
+        let mediaBonus = Double(max(post.photoPaths.count, post.photoPath == nil ? 0 : 1)) * 2.5
+        return engagement + freshness + mediaBonus
+    }
+
+    private func forYouScore(for post: CommunityPost) -> Double {
+        trendingScore(for: post)
+            + affinityScore(for: post)
+            + captionQualityScore(for: post)
+            + (post.isLiked ? 12 : 0)
+    }
+
+    private func affinityScore(for post: CommunityPost) -> Double {
+        var score = 0.0
+
+        if let postClass = VehicleClass.from(rawValue: post.vehicleClass),
+           driverVehicleClasses.contains(postClass) {
+            score += 18
+        }
+
+        if userCars.contains(where: {
+            normalized($0.make) == normalized(post.make)
+                && normalized($0.model) == normalized(post.model)
+        }) {
+            score += 16
+        }
+
+        if let closestStageDelta = driverStages.map({ abs($0 - post.stage) }).min() {
+            score += max(0.0, 8.0 - Double(closestStageDelta * 2))
+        }
+
+        return score
+    }
+
+    private func captionQualityScore(for post: CommunityPost) -> Double {
+        let trimmed = post.caption?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty else { return 0 }
+        let wordCount = trimmed.split(whereSeparator: \.isWhitespace).count
+        return min(Double(wordCount), 18)
+    }
+
+    private func hasAffinity(with post: CommunityPost) -> Bool {
+        affinityScore(for: post) >= 18
+    }
+
+    private func normalized(_ value: String?) -> String {
+        value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+    }
+
+    @MainActor
+    private func loadProgrammingSurfaces() async {
+        upcomingMeets = (try? await meetsService.fetchUpcomingMeets()) ?? []
     }
 
     // MARK: - Filter chips
@@ -159,17 +614,27 @@ struct ExploreFeedView: View {
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 8) {
-                ForEach(ExplorePrimaryFilter.allCases, id: \.self) { filter in
-                    FilterChip(
-                        label: filter.label,
-                        icon: filter.icon,
-                        accentColor: filter.accentColor,
-                        isSelected: selectedPrimaryFilter == filter
-                    ) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            selectedPrimaryFilter = filter
-                        }
+                FilterChip(
+                    label: "Liked",
+                    icon: "heart.fill",
+                    accentColor: Color(red: 0.95, green: 0.3, blue: 0.45),
+                    isSelected: showLikedOnly
+                ) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showLikedOnly.toggle()
+                    }
+                }
+
+                FilterChip(
+                    label: "Saved",
+                    icon: "bookmark.fill",
+                    accentColor: Color("EmpireMint"),
+                    isSelected: showSavedOnly
+                ) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showSavedOnly.toggle()
                     }
                 }
 
@@ -214,10 +679,45 @@ struct ExploreFeedView: View {
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
+
+                if hasActiveUtilityFilters {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                            clearUtilityFilters()
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .bold))
+                            Text("Clear")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(.white.opacity(0.78))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(Color.white.opacity(0.07)))
+                        .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 2)
         }
+    }
+
+    private var hasActiveUtilityFilters: Bool {
+        showLikedOnly || showSavedOnly || selectedStageFilter != nil || selectedVehicleClassFilter != nil || selectedMeetFilterID != nil
+    }
+
+    private func clearUtilityFilters() {
+        showLikedOnly = false
+        showSavedOnly = false
+        selectedStageFilter = nil
+        selectedVehicleClassFilter = nil
+        selectedMeetFilterID = nil
+        expandedFilterMenu = nil
     }
 
     private var expandedStageFilterList: some View {
@@ -414,27 +914,38 @@ struct ExploreFeedView: View {
 
 // MARK: - Feed filter enum
 
-enum ExplorePrimaryFilter: CaseIterable {
-    case all, liked
+enum ExploreFeedMode: CaseIterable {
+    case forYou, trending, latest
 
     var label: String {
         switch self {
-        case .all: return "All"
-        case .liked: return "Liked"
+        case .forYou: return "For You"
+        case .trending: return "Trending"
+        case .latest: return "Latest"
         }
     }
 
     var icon: String {
         switch self {
-        case .all: return "square.grid.2x2.fill"
-        case .liked: return "heart.fill"
+        case .forYou: return "sparkles"
+        case .trending: return "chart.line.uptrend.xyaxis"
+        case .latest: return "clock.fill"
         }
     }
 
     var accentColor: Color {
         switch self {
-        case .all: return Color("EmpireMint")
-        case .liked: return Color(red: 0.95, green: 0.3,  blue: 0.45)
+        case .forYou: return Color("EmpireMint")
+        case .trending: return Color(red: 1.0, green: 0.52, blue: 0.22)
+        case .latest: return Color.cyan
+        }
+    }
+
+    var heroTitle: String {
+        switch self {
+        case .forYou: return "Best Match Right Now"
+        case .trending: return "Moving Fast"
+        case .latest: return "Fresh Off The Lift"
         }
     }
 }
@@ -555,6 +1066,35 @@ private struct ExpandableFilterChip: View {
     }
 }
 
+private struct FeedModeChip: View {
+    let mode: ExploreFeedMode
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: mode.icon)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(mode.label)
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(isSelected ? mode.accentColor : .white.opacity(0.72))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(isSelected ? mode.accentColor.opacity(0.18) : Color.white.opacity(0.05))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(isSelected ? mode.accentColor.opacity(0.75) : Color.white.opacity(0.14), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Individual post card
 
 struct FeedPostCard: View {
@@ -562,6 +1102,7 @@ struct FeedPostCard: View {
     let currentUserId: String
     @ObservedObject var communityVM: CommunityViewModel
     let avatarURL: URL?
+    @ObservedObject var socialStore: CommunitySocialStore
     var allowsProfileNavigation = true
 
     @State private var showHeartBurst = false
@@ -600,7 +1141,6 @@ struct FeedPostCard: View {
                         .stroke(LinearGradient(colors: [Color.white.opacity(0.3), Color.white.opacity(0.05)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
                 )
-                .overlay(PostShimmer().clipShape(RoundedRectangle(cornerRadius: 24)))
                 .shadow(color: .black.opacity(0.32), radius: 12, x: 0, y: 8)
 
             // Hero photo
@@ -730,7 +1270,8 @@ struct FeedPostCard: View {
                 userId: post.userId,
                 username: post.username,
                 avatarURL: avatarURL,
-                currentUserId: currentUserId
+                currentUserId: currentUserId,
+                socialStore: socialStore
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -761,7 +1302,7 @@ struct FeedPostCard: View {
     private var avatarView: some View {
         Group {
             if let url = avatarURL {
-                AsyncImage(url: url) { phase in
+                AsyncImage(url: url, transaction: Transaction(animation: nil)) { phase in
                     switch phase {
                     case .success(let img): img.resizable().scaledToFill()
                     default: placeholderPersonIcon
@@ -839,38 +1380,50 @@ struct FeedPostCard: View {
             }
             .padding(.top, 10)
 
-            HStack(spacing: 7) {
+            if post.challengeID != nil || post.linkedMeetTitle != nil {
+                postProgrammingBadges
+            }
+
+            HStack(spacing: 6) {
                 Text(stageLabel.uppercased())
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(stageAccent)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+                    .allowsTightening(true)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
                     .background(Capsule().fill(stageAccent.opacity(0.15)))
                     .overlay(Capsule().stroke(stageAccent.opacity(0.7), lineWidth: 1))
+                    .layoutPriority(2)
 
                 Text("\(post.horsepower) WHP")
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.cyan)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .allowsTightening(true)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
                     .background(Capsule().fill(Color.cyan.opacity(0.15)))
                     .overlay(Capsule().stroke(Color.cyan.opacity(0.6), lineWidth: 1))
+                    .layoutPriority(2)
 
-                Spacer()
+                Spacer(minLength: 4)
 
                 Button { Task { await communityVM.toggleLike(postId: post.id) } } label: {
                     HStack(spacing: 5) {
                         Image(systemName: post.isLiked ? "heart.fill" : "heart")
                             .foregroundStyle(post.isLiked ? Color("EmpireMint") : .white.opacity(0.85))
-                        if post.likesCount > 0 {
-                            Text("\(post.likesCount)")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.85))
-                        }
+                        Text("\(post.likesCount)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .fixedSize(horizontal: true, vertical: true)
                     }
                     .font(.system(size: 15))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
+                    .frame(minWidth: 44)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 6)
                     .background(Capsule().fill(Color.black.opacity(0.28)))
                     .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
@@ -880,15 +1433,31 @@ struct FeedPostCard: View {
                     HStack(spacing: 5) {
                         Image(systemName: "bubble.left")
                             .foregroundStyle(.white.opacity(0.85))
-                        if post.commentsCount > 0 {
-                            Text("\(post.commentsCount)")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.85))
-                        }
+                        Text("\(post.commentsCount)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .fixedSize(horizontal: true, vertical: true)
                     }
                     .font(.system(size: 15))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
+                    .frame(minWidth: 44)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.black.opacity(0.28)))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    socialStore.toggleSaved(post.id)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: socialStore.isSaved(post.id) ? "bookmark.fill" : "bookmark")
+                            .foregroundStyle(socialStore.isSaved(post.id) ? Color("EmpireMint") : .white.opacity(0.85))
+                    }
+                    .font(.system(size: 15))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
                     .background(Capsule().fill(Color.black.opacity(0.28)))
                     .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
@@ -899,7 +1468,7 @@ struct FeedPostCard: View {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 14))
                             .foregroundStyle(.white.opacity(0.85))
-                            .padding(8)
+                            .padding(7)
                             .background(Circle().fill(Color.black.opacity(0.28)))
                             .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     }
@@ -915,8 +1484,44 @@ struct FeedPostCard: View {
         }
     }
 
+    private var postProgrammingBadges: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                if let challenge = post.challengeID.flatMap(CommunityProgrammingChallenge.init(rawValue:)) {
+                    programmingBadge(
+                        icon: challenge.icon,
+                        label: challenge.title,
+                        tint: challenge.accentColor
+                    )
+                }
+
+                if let linkedMeetTitle = post.linkedMeetTitle {
+                    programmingBadge(
+                        icon: "calendar",
+                        label: linkedMeetTitle,
+                        tint: Color("EmpireMint")
+                    )
+                }
+            }
+        }
+    }
+
+    private func programmingBadge(icon: String, label: String, tint: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+            Text(label)
+                .lineLimit(1)
+        }
+        .font(.system(size: 9, weight: .bold, design: .rounded))
+        .foregroundStyle(tint)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(tint.opacity(0.14)))
+        .overlay(Capsule().stroke(tint.opacity(0.45), lineWidth: 1))
+    }
+
     private func communityPhoto(url: URL) -> some View {
-        AsyncImage(url: url) { phase in
+        AsyncImage(url: url, transaction: Transaction(animation: nil)) { phase in
             switch phase {
             case .success(let img):
                 img.resizable().scaledToFill()
@@ -981,21 +1586,27 @@ struct CommunityProfilePostsView: View {
     let username: String?
     let avatarURL: URL?
     let currentUserId: String
+    @ObservedObject var socialStore: CommunitySocialStore
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @StateObject private var vm: CommunityViewModel
-    @State private var currentHeaderCar: Car? = nil
+    @State private var garageCars: [Car] = []
+    @State private var isGarageLoading = false
+    @State private var centeredGarageEntryID: UUID? = nil
+    @State private var garageSpecsEntry: CommunityGarageEntry? = nil
+    @State private var garageModsEntry: CommunityGarageEntry? = nil
     @State private var pendingDeletePost: CommunityPost? = nil
     @State private var isDeleteMode = false
 
     private let carsService = SupabaseCarsService()
 
-    init(userId: String, username: String?, avatarURL: URL?, currentUserId: String) {
+    init(userId: String, username: String?, avatarURL: URL?, currentUserId: String, socialStore: CommunitySocialStore) {
         self.userId = userId
         self.username = username
         self.avatarURL = avatarURL
         self.currentUserId = currentUserId
+        self.socialStore = socialStore
         _vm = StateObject(wrappedValue: CommunityViewModel(userId: userId))
     }
 
@@ -1016,75 +1627,23 @@ struct CommunityProfilePostsView: View {
                     }
                 } else {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 16) {
+                        VStack(spacing: 12) {
                             profileHeader
                                 .padding(.horizontal, 16)
-                                .padding(.top, 10)
+                                .padding(.top, 4)
 
-                            if let errorMessage = vm.errorMessage, vm.posts.isEmpty {
-                                VStack(spacing: 10) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundStyle(Color("EmpireMint").opacity(0.7))
-                                    Text(errorMessage)
-                                        .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.7))
-                                        .multilineTextAlignment(.center)
-                                    Button("Retry") {
-                                        Task { await vm.refresh() }
-                                    }
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color("EmpireMint"))
-                                }
-                                .padding(20)
-                            } else if vm.posts.isEmpty {
-                                VStack(spacing: 10) {
-                                    Image(systemName: "sparkles.rectangle.stack")
-                                        .font(.system(size: 28))
-                                        .foregroundStyle(Color("EmpireMint").opacity(0.55))
-                                    Text(emptyTitle)
-                                        .font(.headline)
-                                        .foregroundStyle(.white)
-                                    Text(emptySubtitle)
-                                        .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.65))
-                                        .multilineTextAlignment(.center)
-                                }
-                                .padding(.horizontal, 28)
-                                .padding(.top, 36)
-                            } else {
-                                LazyVGrid(columns: gridColumns, spacing: 12) {
-                                    ForEach(vm.posts) { post in
-                                        CommunityProfileGridTile(
-                                            post: post,
-                                            photoURL: vm.photoURL(for: post),
-                                            showsDeleteButton: isOwnProfile && isDeleteMode,
-                                            onDelete: {
-                                                pendingDeletePost = post
-                                            }
-                                        )
-                                        .onAppear {
-                                            if post.id == vm.posts.last?.id {
-                                                Task { await vm.loadMore() }
-                                            }
-                                        }
-                                    }
-                                }
+                            garageSection
                                 .padding(.horizontal, 16)
 
-                                if vm.isLoadingMore {
-                                    ProgressView()
-                                        .tint(Color("EmpireMint"))
-                                        .padding(.vertical, 12)
-                                }
-                            }
+                            postsSection
+                                .padding(.horizontal, 16)
 
                             Color.clear.frame(height: 32)
                         }
                     }
                     .refreshable {
                         await vm.refresh()
-                        await refreshHeaderCar()
+                        await refreshGarage()
                     }
                 }
             }
@@ -1135,88 +1694,69 @@ struct CommunityProfilePostsView: View {
         .preferredColorScheme(.dark)
         .task {
             await vm.refresh()
-            await refreshHeaderCar()
+            await refreshGarage()
+        }
+        .onChange(of: vm.posts.map(\.id)) { _, _ in
+            Task { await refreshGarage() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
             Task {
                 await vm.refresh()
-                await refreshHeaderCar()
+                await refreshGarage()
                 if vm.posts.isEmpty {
                     isDeleteMode = false
                 }
             }
         }
+        .sheet(item: $garageSpecsEntry) { entry in
+            SpecsListView(specs: entry.car.specs)
+                .preferredColorScheme(.dark)
+        }
+        .sheet(item: $garageModsEntry) { entry in
+            ModsListView(mods: entry.car.mods)
+                .preferredColorScheme(.dark)
+        }
     }
 
     private var profileHeader: some View {
-        HStack(spacing: 12) {
-            avatar
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 10) {
+                avatar
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(displayName)
-                    .font(.system(.headline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.88)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(displayName)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
 
-                HStack(spacing: 6) {
                     Text("@\(displayHandle)")
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.45))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.5))
                         .lineLimit(1)
                         .minimumScaleFactor(0.84)
 
-                    Circle()
-                        .fill(Color("EmpireMint").opacity(0.6))
-                        .frame(width: 4, height: 4)
-
-                    Text("\(vm.totalPostsCount) post\(vm.totalPostsCount == 1 ? "" : "s")")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-            }
-            .layoutPriority(1)
-
-            Spacer(minLength: 10)
-
-            VStack(alignment: .trailing, spacing: 6) {
-                profileMetric(value: "\(vm.totalPostsCount)", label: "Posts")
-                if let headerStats = currentHeaderStats {
-                    HStack(spacing: 5) {
-                        if let classCode = headerStats.classCode,
-                           let classTint = headerStats.classTint {
-                            Text(classCode)
-                                .font(.system(size: 11, weight: .black, design: .rounded))
-                                .foregroundStyle(classTint)
-                                .shadow(color: classTint.opacity(0.9), radius: 8, x: 0, y: 0)
-                                .shadow(color: classTint.opacity(0.45), radius: 16, x: 0, y: 0)
-                        }
-
-                        Text("\(headerStats.horsepower) WHP")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                            .foregroundStyle(Color.cyan.opacity(0.95))
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 5)
-                            .background(Capsule().fill(Color.cyan.opacity(0.16)))
-                            .overlay(Capsule().stroke(Color.cyan.opacity(0.45), lineWidth: 1))
-
-                        Text(headerStats.stageLabel)
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.82)
-                            .foregroundStyle(headerStats.tint.opacity(0.95))
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 5)
-                            .background(Capsule().fill(headerStats.tint.opacity(0.16)))
-                            .overlay(Capsule().stroke(headerStats.tint.opacity(0.45), lineWidth: 1))
+                    HStack(spacing: 6) {
+                        reputationBadge
                     }
                 }
+                .layoutPriority(1)
+
+                Spacer(minLength: 6)
+
+                if !isOwnProfile {
+                    followButton
+                }
+            }
+
+            HStack(spacing: 6) {
+                profileMetric(value: "\(vm.totalPostsCount)", label: "Posts")
+                profileMetric(value: "\(garageEntries.count)", label: "Garage")
+                profileMetric(value: "\(socialStore.followerCount(for: userId))", label: "Followers")
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(
@@ -1240,7 +1780,7 @@ struct CommunityProfilePostsView: View {
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.2), radius: 16, y: 8)
+        .shadow(color: Color.black.opacity(0.16), radius: 12, y: 6)
     }
 
     private var communityAvatarPlaceholder: some View {
@@ -1267,9 +1807,181 @@ struct CommunityProfilePostsView: View {
                 communityAvatarPlaceholder
             }
         }
-        .frame(width: 48, height: 48)
+        .frame(width: 40, height: 40)
         .clipShape(Circle())
         .overlay(Circle().stroke(Color.white.opacity(0.16), lineWidth: 1))
+        .shadow(color: Color("EmpireMint").opacity(0.14), radius: 7, y: 3)
+    }
+
+    private var garageSection: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            simpleSectionHeader(title: "Garage", count: garageEntries.count)
+
+            if isGarageLoading && garageEntries.isEmpty {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .tint(Color("EmpireMint"))
+                    Text("Loading garage…")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
+            } else if garageEntries.isEmpty {
+                emptyGarageCard
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(garageEntries) { entry in
+                            CommunityGarageCard(
+                                entry: entry,
+                                isCentered: centeredGarageEntryID == entry.id,
+                                onMods: { if entry.hasFullDetails { garageModsEntry = entry } },
+                                onSpecs: { if entry.hasFullDetails { garageSpecsEntry = entry } }
+                            )
+                            .frame(width: 194)
+                            .scrollTransition(axis: .horizontal) { content, phase in
+                                content
+                                    .scaleEffect(phase.isIdentity ? 1.0 : 0.955)
+                                    .rotation3DEffect(.degrees(phase.value * -7), axis: (x: 0, y: 1, z: 0), perspective: 0.75)
+                                    .opacity(phase.isIdentity ? 1.0 : 0.88)
+                            }
+                            .id(entry.id)
+                        }
+                    }
+                    .scrollTargetLayout()
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 2)
+                }
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $centeredGarageEntryID)
+                .contentMargins(.horizontal, 10, for: .scrollContent)
+                .safeAreaPadding(.horizontal, 2)
+            }
+        }
+        .onAppear {
+            if centeredGarageEntryID == nil {
+                centeredGarageEntryID = garageEntries.first?.id
+            }
+        }
+        .onChange(of: garageEntries.map(\.id)) { _, ids in
+            guard !ids.isEmpty else {
+                centeredGarageEntryID = nil
+                return
+            }
+            if let centeredGarageEntryID, ids.contains(centeredGarageEntryID) {
+                return
+            }
+            self.centeredGarageEntryID = ids.first
+        }
+    }
+
+    private var postsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            simpleSectionHeader(title: "Posts", count: vm.totalPostsCount)
+
+            if let errorMessage = vm.errorMessage, vm.posts.isEmpty {
+                compactProfileMessageCard(
+                    icon: "exclamationmark.triangle.fill",
+                    title: "Couldn't load posts",
+                    subtitle: errorMessage
+                ) {
+                    Button("Retry") {
+                        Task { await vm.refresh() }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color("EmpireMint"))
+                }
+            } else if vm.posts.isEmpty {
+                compactProfileMessageCard(
+                    icon: "sparkles.rectangle.stack",
+                    title: emptyTitle,
+                    subtitle: emptySubtitle
+                )
+            } else {
+                LazyVGrid(columns: gridColumns, spacing: 9) {
+                    ForEach(vm.posts) { post in
+                        CommunityProfileGridTile(
+                            post: post,
+                            photoURL: vm.photoURL(for: post),
+                            showsDeleteButton: isOwnProfile && isDeleteMode,
+                            onDelete: {
+                                pendingDeletePost = post
+                            }
+                        )
+                        .onAppear {
+                            if post.id == vm.posts.last?.id {
+                                Task { await vm.loadMore() }
+                            }
+                        }
+                    }
+                }
+
+                if vm.isLoadingMore {
+                    ProgressView()
+                        .tint(Color("EmpireMint"))
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+
+    private var emptyGarageCard: some View {
+        Text("No garage builds yet")
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.white.opacity(0.55))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private var garageEntries: [CommunityGarageEntry] {
+        if !garageCars.isEmpty {
+            return garageCars.map { CommunityGarageEntry(car: $0, photoURL: nil, hasFullDetails: true) }
+        }
+
+        var seenKeys = Set<String>()
+        var entries: [CommunityGarageEntry] = []
+
+        for post in vm.posts {
+            let key = post.carId?.uuidString ?? "\(post.userId)-\(post.carName.lowercased())-\((post.make ?? "").lowercased())-\((post.model ?? "").lowercased())"
+            guard seenKeys.insert(key).inserted else { continue }
+
+            let synthesized = Car(
+                id: post.carId ?? post.id,
+                name: post.carName,
+                description: [post.make, post.model].compactMap { $0 }.joined(separator: " "),
+                make: post.make,
+                model: post.model,
+                imageName: "car0",
+                photoFileName: nil,
+                horsepower: post.horsepower,
+                stage: post.stage,
+                specs: [],
+                mods: [],
+                isJailbreak: post.isJailbreak,
+                vehicleClass: VehicleClass.from(rawValue: post.vehicleClass)
+            )
+
+            entries.append(
+                CommunityGarageEntry(
+                    car: synthesized,
+                    photoURL: vm.photoURL(for: post),
+                    hasFullDetails: false
+                )
+            )
+        }
+
+        return entries
     }
 
     private var gridColumns: [GridItem] {
@@ -1309,74 +2021,144 @@ struct CommunityProfilePostsView: View {
     }
 
     private func profileMetric(value: String, label: String) -> some View {
-        VStack(alignment: .trailing, spacing: 1) {
+        VStack(alignment: .center, spacing: 2) {
             Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
             Text(label.uppercased())
-                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .font(.system(size: 8, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.4))
         }
+        .frame(minWidth: 48)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(Color.white.opacity(0.05)))
+        .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1))
     }
 
-    private func stageTintForHeader(_ post: CommunityPost) -> Color {
-        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
-    }
-
-    private func latestStageLabel(for post: CommunityPost) -> String {
-        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak).uppercased()
-    }
-
-    private var currentHeaderStats: (horsepower: Int, stageLabel: String, tint: Color, classCode: String?, classTint: Color?)? {
-        let latestClass = VehicleClass.from(rawValue: vm.posts.first?.vehicleClass)
-
-        if let currentHeaderCar {
-            return (
-                horsepower: currentHeaderCar.horsepower,
-                stageLabel: StageSystem.displayLabel(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak).uppercased(),
-                tint: StageSystem.accentColor(for: currentHeaderCar.stage, isJailbreak: currentHeaderCar.isJailbreak),
-                classCode: currentHeaderCar.vehicleClass?.code ?? latestClass?.code,
-                classTint: currentHeaderCar.vehicleClass?.accentColor ?? latestClass?.accentColor
-            )
+    private var followButton: some View {
+        Button {
+            socialStore.toggleFollow(userId)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: socialStore.isFollowing(userId) ? "checkmark.circle.fill" : "person.badge.plus")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(socialStore.isFollowing(userId) ? "Following" : "Follow")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: true)
+            }
+            .foregroundStyle(socialStore.isFollowing(userId) ? Color("EmpireMint") : .white.opacity(0.85))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(socialStore.isFollowing(userId) ? Color("EmpireMint").opacity(0.16) : Color.white.opacity(0.05)))
+            .overlay(Capsule().stroke(socialStore.isFollowing(userId) ? Color("EmpireMint").opacity(0.55) : Color.white.opacity(0.12), lineWidth: 1))
         }
+        .buttonStyle(.plain)
+    }
 
-        guard let latest = vm.posts.first else { return nil }
-        return (
-            horsepower: latest.horsepower,
-            stageLabel: latestStageLabel(for: latest),
-            tint: stageTintForHeader(latest),
-            classCode: latestClass?.code,
-            classTint: latestClass?.accentColor
+    private var reputationBadge: some View {
+        let reputation = socialStore.reputation(
+            for: userId,
+            username: username,
+            posts: vm.posts,
+            garageCount: garageEntries.count
+        )
+        return HStack(spacing: 6) {
+            Image(systemName: reputation.symbol)
+                .font(.system(size: 9, weight: .bold))
+            Text(reputation.title)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+        }
+        .foregroundStyle(reputation.tint)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(reputation.tint.opacity(0.14)))
+        .overlay(Capsule().stroke(reputation.tint.opacity(0.36), lineWidth: 1))
+    }
+
+    private func simpleSectionHeader(title: String, count: Int) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            Spacer(minLength: 10)
+            Text("\(count)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(Color("EmpireMint"))
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(Color("EmpireMint").opacity(0.14)))
+                .overlay(Capsule().stroke(Color("EmpireMint").opacity(0.35), lineWidth: 1))
+        }
+    }
+
+    private func compactProfileMessageCard<Accessory: View>(
+        icon: String,
+        title: String,
+        subtitle: String,
+        @ViewBuilder accessory: () -> Accessory
+    ) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundStyle(Color("EmpireMint").opacity(0.55))
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.62))
+                .multilineTextAlignment(.center)
+            accessory()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 24)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
 
+    private func compactProfileMessageCard(
+        icon: String,
+        title: String,
+        subtitle: String
+    ) -> some View {
+        compactProfileMessageCard(icon: icon, title: title, subtitle: subtitle) {
+            EmptyView()
+        }
+    }
+
     @MainActor
-    private func refreshHeaderCar() async {
+    private func refreshGarage() async {
+        isGarageLoading = true
+
         if userId == currentUserId {
             let localCars = LocalStore.shared.fetchCars(context: modelContext, userKey: userId)
-            if let resolved = resolveHeaderCar(from: localCars) {
-                currentHeaderCar = resolved
+            garageCars = localCars
+            if !localCars.isEmpty {
+                isGarageLoading = false
                 return
             }
         }
 
         do {
             let remoteCars = try await carsService.fetchCars(for: userId)
-            currentHeaderCar = resolveHeaderCar(from: remoteCars)
+            garageCars = remoteCars
         } catch {
             if userId != currentUserId {
-                currentHeaderCar = nil
+                garageCars = []
             }
         }
-    }
 
-    private func resolveHeaderCar(from cars: [Car]) -> Car? {
-        guard !cars.isEmpty else { return nil }
-        if let latestCarId = vm.posts.first?.carId,
-           let matched = cars.first(where: { $0.id == latestCarId }) {
-            return matched
-        }
-        return cars.first
+        isGarageLoading = false
     }
 }
 
@@ -1408,7 +2190,7 @@ private struct CommunityProfileGridTile: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 210)
+            .frame(height: 184)
             .clipped()
             .overlay(
                 LinearGradient(
@@ -1418,34 +2200,41 @@ private struct CommunityProfileGridTile: View {
                 )
             )
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .center, spacing: 5) {
                     Text(profileStageLabel)
                         .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .allowsTightening(true)
                         .foregroundStyle(stageColor)
-                        .padding(.horizontal, 7)
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 4)
                         .background(Capsule().fill(stageColor.opacity(0.15)))
                         .overlay(Capsule().stroke(stageColor.opacity(0.5), lineWidth: 1))
+                        .layoutPriority(2)
 
                     Text("\(post.horsepower) WHP")
                         .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .allowsTightening(true)
                         .foregroundStyle(Color.cyan)
-                        .padding(.horizontal, 7)
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 4)
                         .background(Capsule().fill(Color.cyan.opacity(0.15)))
                         .overlay(Capsule().stroke(Color.cyan.opacity(0.5), lineWidth: 1))
+                        .layoutPriority(1)
 
-                    Spacer()
+                    Spacer(minLength: 6)
 
-                    if post.likesCount > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "heart.fill")
-                            Text("\(post.likesCount)")
-                        }
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color("EmpireMint"))
+                    HStack(spacing: 3) {
+                        Image(systemName: "heart.fill")
+                        Text("\(post.likesCount)")
                     }
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color("EmpireMint"))
+                    .fixedSize(horizontal: true, vertical: true)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -1461,11 +2250,11 @@ private struct CommunityProfileGridTile: View {
                     }
                 }
             }
-            .padding(10)
+            .padding(9)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(
                     LinearGradient(
                         colors: [stageColor.opacity(0.5), Color.white.opacity(0.08)],
@@ -1491,7 +2280,7 @@ private struct CommunityProfileGridTile: View {
                 .padding(10)
             }
         }
-        .shadow(color: Color.black.opacity(0.3), radius: 12, y: 8)
+        .shadow(color: Color.black.opacity(0.28), radius: 10, y: 7)
     }
 
     private var tileFallback: some View {
@@ -1522,10 +2311,217 @@ private struct CommunityProfileGridTile: View {
     }
 }
 
+private struct CommunityGarageEntry: Identifiable {
+    let car: Car
+    let photoURL: URL?
+    let hasFullDetails: Bool
+
+    var id: UUID { car.id }
+}
+
+private struct CommunityGarageCard: View {
+    let entry: CommunityGarageEntry
+    let isCentered: Bool
+    var onMods: () -> Void
+    var onSpecs: () -> Void
+
+    private var car: Car { entry.car }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .topTrailing) {
+                garageImage
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 118)
+                    .clipped()
+                    .overlay(
+                        LinearGradient(
+                            colors: [.clear, .black.opacity(0.18), .black.opacity(0.74)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(car.name)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    if let makeModelLine {
+                        Text(makeModelLine)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.68))
+                            .lineLimit(1)
+                    }
+                }
+
+                HStack(spacing: 6) {
+                    if let vehicleClass = car.vehicleClass {
+                        garageChip(label: vehicleClass.code, tint: vehicleClass.accentColor)
+                    }
+                    garageChip(
+                        label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak).uppercased(),
+                        tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
+                    )
+                    garageChip(label: "\(car.horsepower) WHP", tint: .cyan)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(height: 1)
+                .padding(.horizontal, 12)
+
+            HStack(spacing: 0) {
+                garageMenuButton(icon: "wrench.and.screwdriver", label: "Mods", tint: entry.hasFullDetails ? .white.opacity(0.78) : .white.opacity(0.28), isDisabled: !entry.hasFullDetails, action: onMods)
+                garageDivider
+                garageMenuButton(icon: "dial.low", label: "Specs", tint: entry.hasFullDetails ? .white.opacity(0.78) : .white.opacity(0.28), isDisabled: !entry.hasFullDetails, action: onSpecs)
+            }
+            .padding(.vertical, 6)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(isCentered ? 0.07 : 0.045),
+                            Color.white.opacity(0.018),
+                            Color.black.opacity(isCentered ? 0.08 : 0.12)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.16), Color.white.opacity(0.05), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                )
+                .overlay(
+                    RadialGradient(
+                        colors: [Color("EmpireMint").opacity(isCentered ? 0.18 : 0.08), .clear],
+                        center: .bottomLeading,
+                        startRadius: 10,
+                        endRadius: 180
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak).opacity(isCentered ? 0.62 : 0.42), Color.white.opacity(isCentered ? 0.14 : 0.08)],
+                        startPoint: .bottomLeading,
+                        endPoint: .topTrailing
+                    ),
+                    lineWidth: isCentered ? 1.4 : 1.1
+                )
+        )
+        .shadow(color: Color("EmpireMint").opacity(isCentered ? 0.2 : 0.08), radius: isCentered ? 18 : 12, y: isCentered ? 10 : 7)
+        .shadow(color: .black.opacity(isCentered ? 0.34 : 0.24), radius: isCentered ? 16 : 10, y: isCentered ? 10 : 6)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var garageImage: some View {
+        if let photoURL = entry.photoURL {
+            AsyncImage(url: photoURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                case .empty:
+                    ZStack { Color.white.opacity(0.04); ProgressView().tint(Color("EmpireMint")) }
+                default:
+                    fallbackGarageImage
+                }
+            }
+        } else if let fileName = car.photoFileName,
+                  let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+                  let data = try? Data(contentsOf: dir.appendingPathComponent(fileName)),
+                  let ui = UIImage(data: data) {
+            Image(uiImage: ui)
+                .resizable()
+                .scaledToFill()
+        } else {
+            fallbackGarageImage
+        }
+    }
+
+    private var fallbackGarageImage: some View {
+        Image(car.imageName)
+            .resizable()
+            .scaledToFill()
+    }
+
+    private var makeModelLine: String? {
+        let parts = [car.make, car.model].compactMap { value -> String? in
+            guard let value else { return nil }
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
+    private func garageChip(label: String, tint: Color) -> some View {
+        Text(label)
+            .font(.system(size: 8, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(tint.opacity(0.15)))
+            .overlay(Capsule().stroke(tint.opacity(0.52), lineWidth: 1))
+    }
+
+    private var garageDivider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.08))
+            .frame(width: 1, height: 34)
+    }
+
+    private func garageMenuButton(
+        icon: String,
+        label: String,
+        tint: Color,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+            }
+            .foregroundStyle(tint)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+    }
+}
+
 private struct ExpandedCommunityPostOverlay: View {
     let post: CommunityPost
     let currentUserId: String
     @ObservedObject var communityVM: CommunityViewModel
+    @ObservedObject var socialStore: CommunitySocialStore
     let onClose: () -> Void
 
     var body: some View {
@@ -1548,6 +2544,7 @@ private struct ExpandedCommunityPostOverlay: View {
                     post: post,
                     currentUserId: currentUserId,
                     communityVM: communityVM,
+                    socialStore: socialStore,
                     photoURL: communityVM.photoURL(for: post),
                     avatarURL: communityVM.avatarURL(for: post),
                     allowsProfileNavigation: false
@@ -1574,6 +2571,7 @@ private struct ExpandedCommunityPostCard: View {
     let post: CommunityPost
     let currentUserId: String
     @ObservedObject var communityVM: CommunityViewModel
+    @ObservedObject var socialStore: CommunitySocialStore
     let photoURL: URL?
     let avatarURL: URL?
     var allowsProfileNavigation = false
@@ -1666,7 +2664,7 @@ private struct ExpandedCommunityPostCard: View {
                 HStack(spacing: 10) {
                     expandedActionButton(
                         icon: post.isLiked ? "heart.fill" : "heart",
-                        title: post.likesCount > 0 ? "\(post.likesCount)" : "Like",
+                        title: "\(post.likesCount)",
                         tint: post.isLiked ? Color("EmpireMint") : .white
                     ) {
                         Task { await communityVM.toggleLike(postId: post.id) }
@@ -1674,10 +2672,18 @@ private struct ExpandedCommunityPostCard: View {
 
                     expandedActionButton(
                         icon: "bubble.left",
-                        title: post.commentsCount > 0 ? "\(post.commentsCount)" : "Comment",
+                        title: "\(post.commentsCount)",
                         tint: .white
                     ) {
                         showComments = true
+                    }
+
+                    expandedActionButton(
+                        icon: socialStore.isSaved(post.id) ? "bookmark.fill" : "bookmark",
+                        title: socialStore.isSaved(post.id) ? "Saved" : "Save",
+                        tint: socialStore.isSaved(post.id) ? Color("EmpireMint") : .white
+                    ) {
+                        socialStore.toggleSaved(post.id)
                     }
 
                     if let shareURL = URL(string: "https://empireontario.shop/cars/\(post.id.uuidString)") {
@@ -1806,26 +2812,93 @@ private struct ExpandedCommunityPostCard: View {
     }
 }
 
-// MARK: - Post card shimmer
+@MainActor
+final class CommunitySocialStore: ObservableObject {
+    @Published private(set) var followedUserIDs: Set<String> = []
+    @Published private(set) var savedPostIDs: Set<UUID> = []
 
-private struct PostShimmer: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.05), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading, endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.8)
-        .offset(x: -120 + phase * 240)
-        .onAppear { withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) { phase = 1 } }
-        .onDisappear { phase = 0 }
-        .opacity(0.55)
-        .allowsHitTesting(false)
+    private var currentUserKey: String {
+        UserDefaults.standard.string(forKey: "currentUserId")?.lowercased() ?? "guest"
     }
+
+    private var followedUsersKey: String { "community_followed_users_\(currentUserKey)" }
+    private var savedPostsKey: String { "community_saved_posts_\(currentUserKey)" }
+
+    init() {
+        reload()
+    }
+
+    func reload() {
+        followedUserIDs = Set(
+            (UserDefaults.standard.stringArray(forKey: followedUsersKey) ?? [])
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+        )
+        savedPostIDs = Set(
+            (UserDefaults.standard.stringArray(forKey: savedPostsKey) ?? [])
+                .compactMap(UUID.init(uuidString:))
+        )
+    }
+
+    func isFollowing(_ userId: String) -> Bool {
+        followedUserIDs.contains(normalized(userId))
+    }
+
+    func toggleFollow(_ userId: String) {
+        let key = normalized(userId)
+        guard !key.isEmpty else { return }
+        if followedUserIDs.contains(key) {
+            followedUserIDs.remove(key)
+        } else {
+            followedUserIDs.insert(key)
+        }
+        UserDefaults.standard.set(Array(followedUserIDs).sorted(), forKey: followedUsersKey)
+    }
+
+    func followerCount(for userId: String) -> Int {
+        isFollowing(userId) ? 1 : 0
+    }
+
+    func isSaved(_ postId: UUID) -> Bool {
+        savedPostIDs.contains(postId)
+    }
+
+    func toggleSaved(_ postId: UUID) {
+        if savedPostIDs.contains(postId) {
+            savedPostIDs.remove(postId)
+        } else {
+            savedPostIDs.insert(postId)
+        }
+        UserDefaults.standard.set(savedPostIDs.map(\.uuidString).sorted(), forKey: savedPostsKey)
+    }
+
+    func reputation(for userId: String, username: String?, posts: [CommunityPost], garageCount: Int) -> CommunityReputation {
+        let followerBoost = followerCount(for: userId) * 10
+        let likes = posts.reduce(0) { $0 + $1.likesCount }
+        let comments = posts.reduce(0) { $0 + $1.commentsCount }
+        let score = (posts.count * 16) + (garageCount * 14) + likes + (comments * 2) + followerBoost
+
+        switch score {
+        case 90...:
+            return CommunityReputation(title: "Empire Icon", symbol: "sparkles", tint: Color("EmpireMint"))
+        case 55...:
+            return CommunityReputation(title: "Respected Build", symbol: "bolt.fill", tint: .cyan)
+        case 25...:
+            return CommunityReputation(title: "On The Rise", symbol: "arrow.up.right.circle.fill", tint: Color(red: 0.96, green: 0.58, blue: 0.22))
+        default:
+            return CommunityReputation(title: posts.isEmpty && garageCount == 0 ? "New Driver" : "Fresh Build", symbol: "circle.hexagongrid.fill", tint: Color.white.opacity(0.8))
+        }
+    }
+
+    private func normalized(_ userId: String) -> String {
+        userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+}
+
+struct CommunityReputation {
+    let title: String
+    let symbol: String
+    let tint: Color
 }
 
 private func stageTint(for stage: Int) -> Color {

@@ -170,6 +170,83 @@ struct StageAssessment {
     let hasTune: Bool
 }
 
+enum CommunityProgrammingChallenge: String, CaseIterable, Identifiable {
+    case dynoDiary = "dyno_diary"
+    case meetReady = "meet_ready"
+    case underdogClass = "underdog_class"
+    case shopStory = "shop_story"
+
+    var id: String { rawValue }
+
+    static func current(date: Date = Date()) -> Self {
+        let weekOfYear = Calendar.current.component(.weekOfYear, from: date)
+        let all = Self.allCases
+        return all[abs(weekOfYear) % all.count]
+    }
+
+    var title: String {
+        switch self {
+        case .dynoDiary: return "Dyno Diary"
+        case .meetReady: return "Meet-Ready Week"
+        case .underdogClass: return "Underdog Class Spotlight"
+        case .shopStory: return "Shop Story"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .dynoDiary:
+            return "Show what changed, what it made, or what you learned chasing more power."
+        case .meetReady:
+            return "Drop the setup you would bring out this weekend and why it is dialed in."
+        case .underdogClass:
+            return "Highlight the builds people overlook and give your class some shine."
+        case .shopStory:
+            return "Take people behind the build with the moment, problem, or choice that shaped it."
+        }
+    }
+
+    var composerPrompt: String {
+        switch self {
+        case .dynoDiary:
+            return "What changed on this setup, and what did the car give back?"
+        case .meetReady:
+            return "What makes this build your next meet-ready setup?"
+        case .underdogClass:
+            return "What makes this class or platform worth paying attention to?"
+        case .shopStory:
+            return "What part of this build story would other drivers appreciate most?"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .dynoDiary: return "chart.xyaxis.line"
+        case .meetReady: return "calendar.badge.clock"
+        case .underdogClass: return "bolt.shield"
+        case .shopStory: return "sparkles"
+        }
+    }
+
+    var accentColor: Color {
+        switch self {
+        case .dynoDiary: return .cyan
+        case .meetReady: return Color("EmpireMint")
+        case .underdogClass: return Color(red: 0.98, green: 0.58, blue: 0.18)
+        case .shopStory: return Color(red: 0.88, green: 0.34, blue: 0.9)
+        }
+    }
+
+    var badgeTitle: String {
+        switch self {
+        case .dynoDiary: return "Weekly Challenge"
+        case .meetReady: return "Weekend Prompt"
+        case .underdogClass: return "Class Challenge"
+        case .shopStory: return "Builder Prompt"
+        }
+    }
+}
+
 enum VehicleClass: String, CaseIterable, Identifiable, Codable {
     case a_FWD_Tuner = "A - FWD Tuner"
     case performance4Cyl = "B - Performance 4-Cylinder"

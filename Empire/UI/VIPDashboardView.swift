@@ -18,7 +18,7 @@ struct VIPDashboardView: View {
                 .padding(20)
             }
         }
-        .navigationTitle("VIP Dashboard")
+        .navigationTitle("Connect+")
         .toolbarBackground(.hidden, for: .navigationBar)
     }
 
@@ -28,7 +28,7 @@ struct VIPDashboardView: View {
                 .font(.system(size: 36))
                 .foregroundStyle(.yellow)
             VStack(alignment: .leading, spacing: 4) {
-                Text("Empire VIP")
+                Text("Connect+")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
                 Text(store.isVIP ? "Active Member" : "Not Active")
@@ -46,10 +46,10 @@ struct VIPDashboardView: View {
                 .font(.headline)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                perkCard(title: "Meet Access", subtitle: "Early RSVPs & entry", icon: "calendar.badge.plus")
-                perkCard(title: "VIP Threads", subtitle: "Member-only posts", icon: "text.bubble.fill")
-                perkCard(title: "Crew Finder", subtitle: "Join local groups", icon: "person.3.fill")
-                perkCard(title: "Spotlight", subtitle: "Get featured", icon: "camera.fill")
+                perkCard(title: "Store Discount", subtitle: "Savings on Empire merch", icon: "bag.fill")
+                perkCard(title: "Early Registration", subtitle: "Eligible shows first", icon: "calendar.badge.clock")
+                perkCard(title: "Sneak Peeks", subtitle: "Announcements and previews", icon: "megaphone.fill")
+                perkCard(title: "Bonus Rewards", subtitle: "Drops, raffles, and extras", icon: "gift.fill")
             }
         }
     }
@@ -91,9 +91,9 @@ struct VIPDashboardView: View {
                 .foregroundStyle(.white)
                 .font(.headline)
             HStack(spacing: 12) {
-                actionButton(title: "RSVP Meet", icon: "calendar.badge.plus")
-                actionButton(title: "Post to VIP", icon: "square.and.pencil")
-                actionButton(title: "Find Crews", icon: "person.3.fill")
+                actionButton(title: "View Perks", icon: "sparkles")
+                actionButton(title: "Store", icon: "bag.fill")
+                actionButton(title: "Updates", icon: "megaphone.fill")
             }
         }
     }
@@ -128,7 +128,7 @@ struct VIPDashboardView: View {
                 .font(.headline)
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Empire VIP")
+                    Text("Connect+")
                         .font(.title3.bold())
                         .foregroundStyle(.white)
                     Text("Status: \(store.isVIP ? "Active" : "Inactive")")

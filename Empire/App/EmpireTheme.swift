@@ -2,7 +2,7 @@ import SwiftUI
 
 struct EmpireTheme {
     // Core mint colors
-    static let mintCore = Color(red: 0.10, green: 0.80, blue: 0.70)
+    static let mintCore = Color("EmpireMint")
     static let mintTeal = Color(red: 0.05, green: 0.60, blue: 0.70)
     static let mintDeep = Color(red: 0.00, green: 0.35, blue: 0.55)
 
@@ -142,8 +142,16 @@ extension View {
 }
 
 private struct _ShimmerModifier: ViewModifier {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let speed: Double
     @State private var phase: CGFloat = -1
+    @State private var isAnimating = false
+
+    private var animationsEnabled: Bool {
+        scenePhase == .active && !reduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
     func body(content: Content) -> some View {
         content
             .mask(
@@ -153,41 +161,489 @@ private struct _ShimmerModifier: ViewModifier {
                     )
                     .offset(x: phase * 200)
             )
-            .onAppear {
-                withAnimation(.linear(duration: 1.5 / max(speed, 0.1)).repeatForever(autoreverses: false)) {
-                    phase = 1.2
-                }
-            }
-            .onDisappear {
-                phase = -1
-            }
+            .onAppear { updateAnimationState() }
+            .onChange(of: animationsEnabled) { _, _ in updateAnimationState() }
+            .onDisappear { stopAnimation() }
+    }
+
+    private func updateAnimationState() {
+        animationsEnabled ? startAnimation() : stopAnimation()
+    }
+
+    private func startAnimation() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        phase = -1
+        withAnimation(.linear(duration: 1.5 / max(speed, 0.1)).repeatForever(autoreverses: false)) {
+            phase = 1.2
+        }
+    }
+
+    private func stopAnimation() {
+        guard isAnimating || phase != -1 else { return }
+        isAnimating = false
+        phase = -1
     }
 }
 
 #if os(iOS)
 import CoreMotion
 private struct _ParallaxMotion: ViewModifier {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let amount: CGFloat
     @State private var x: CGFloat = 0
     @State private var y: CGFloat = 0
     private let motion = CMMotionManager()
+
+    private var animationsEnabled: Bool {
+        scenePhase == .active && !reduceMotion && !ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
     func body(content: Content) -> some View {
         content
             .offset(x: x, y: y)
-            .onAppear {
-                guard motion.isDeviceMotionAvailable else { return }
-                motion.deviceMotionUpdateInterval = 1.0 / 30.0
-                motion.startDeviceMotionUpdates(to: .main) { data, _ in
-                    guard let data = data else { return }
-                    let roll = data.attitude.roll
-                    let pitch = data.attitude.pitch
-                    x = CGFloat(roll) * amount
-                    y = CGFloat(pitch) * amount
-                }
-            }
-            .onDisappear {
-                motion.stopDeviceMotionUpdates()
-            }
+            .onAppear { updateMotionState() }
+            .onChange(of: animationsEnabled) { _, _ in updateMotionState() }
+            .onDisappear { stopMotionUpdates() }
+    }
+
+    private func updateMotionState() {
+        guard animationsEnabled, motion.isDeviceMotionAvailable else {
+            stopMotionUpdates()
+            return
+        }
+
+        motion.deviceMotionUpdateInterval = 1.0 / 30.0
+        guard motion.isDeviceMotionActive == false else { return }
+        motion.startDeviceMotionUpdates(to: .main) { data, _ in
+            guard let data = data else { return }
+            let roll = data.attitude.roll
+            let pitch = data.attitude.pitch
+            x = CGFloat(roll) * amount
+            y = CGFloat(pitch) * amount
+        }
+    }
+
+    private func stopMotionUpdates() {
+        motion.stopDeviceMotionUpdates()
+        x = 0
+        y = 0
     }
 }
 #endif
+
+enum AuthPalette {
+    static let background = Color(red: 0.02, green: 0.03, blue: 0.04)
+    static let elevatedSurface = Color.white.opacity(0.12)
+    static let border = EmpireTheme.mintCore.opacity(0.34)
+    static let borderStrong = EmpireTheme.mintCore.opacity(0.6)
+    static let textPrimary = Color.white
+    static let textSecondary = Color.white.opacity(0.7)
+    static let textMuted = Color.white.opacity(0.52)
+    static let destructive = Color(red: 1.0, green: 0.43, blue: 0.43)
+    static let success = Color(red: 0.52, green: 0.94, blue: 0.76)
+}
+
+struct AuthBackdrop: View {
+    var body: some View {
+        ZStack {
+            AuthPalette.background
+                .ignoresSafeArea()
+
+            RadialGradient(
+                colors: [
+                    Color("EmpireMint").opacity(0.24),
+                    Color("EmpireMint").opacity(0.08),
+                    .clear
+                ],
+                center: .topTrailing,
+                startRadius: 30,
+                endRadius: 380
+            )
+            .blur(radius: 28)
+            .offset(x: 110, y: -170)
+
+            RadialGradient(
+                colors: [
+                    Color("EmpireMint").opacity(0.16),
+                    .clear
+                ],
+                center: .bottomLeading,
+                startRadius: 20,
+                endRadius: 320
+            )
+            .blur(radius: 30)
+            .offset(x: -110, y: 210)
+
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.04),
+                    Color.clear,
+                    Color.black.opacity(0.28)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .blendMode(.screen)
+            .ignoresSafeArea()
+        }
+    }
+}
+
+struct AuthScreen<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack {
+            AuthBackdrop()
+            content
+                .padding(.horizontal, 18)
+                .padding(.vertical, 18)
+                .frame(maxWidth: 470)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+struct AuthPanel<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.045),
+                                    Color.white.opacity(0.015)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.16),
+                            Color.white.opacity(0.04)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.2
+                )
+        )
+        .shadow(color: Color("EmpireMint").opacity(0.18), radius: 16, y: 8)
+    }
+}
+
+struct AuthHeader: View {
+    let title: String
+    let subtitle: String
+    let logoSize: CGFloat
+
+    init(title: String, subtitle: String, logoSize: CGFloat = 96) {
+        self.title = title
+        self.subtitle = subtitle
+        self.logoSize = logoSize
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            EmpireLogoView(size: logoSize, style: .tinted(EmpireTheme.mintCore), shimmer: true, parallaxAmount: 0)
+                .shadow(color: Color("EmpireMint").opacity(0.18), radius: 18, x: 0, y: 8)
+
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(AuthPalette.textPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text(subtitle)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(AuthPalette.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.92)
+            }
+        }
+    }
+}
+
+struct AuthField: View {
+    let title: String
+    let icon: String
+    @Binding var text: String
+    var contentType: UITextContentType?
+    var keyboardType: UIKeyboardType = .default
+    var autocapitalization: TextInputAutocapitalization = .never
+    var isSecure = false
+    var revealSecureText = false
+    var onToggleSecure: (() -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(AuthPalette.textMuted)
+                .textCase(.uppercase)
+
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(EmpireTheme.mintCore.opacity(0.92))
+                    .frame(width: 18)
+
+                Group {
+                    if isSecure && !revealSecureText {
+                        SecureField(title, text: $text)
+                    } else {
+                        TextField(title, text: $text)
+                    }
+                }
+                .textContentType(contentType)
+                .keyboardType(keyboardType)
+                .textInputAutocapitalization(autocapitalization)
+                .autocorrectionDisabled()
+                .foregroundStyle(AuthPalette.textPrimary)
+                .tint(EmpireTheme.mintCore)
+
+                if let onToggleSecure {
+                    Button(action: onToggleSecure) {
+                        Image(systemName: revealSecureText ? "eye.slash.fill" : "eye.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(AuthPalette.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.white.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.08),
+                                        Color.white.opacity(0.02)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.25), Color.white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+        }
+    }
+}
+
+struct AuthPrimaryButton: View {
+    let title: String
+    var isLoading = false
+    var isDisabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if isLoading {
+                    ProgressView()
+                        .tint(.black)
+                }
+                Text(title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color("EmpireMint").opacity(0.96),
+                                Color("EmpireMint").opacity(0.82)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .foregroundStyle(Color.black.opacity(0.92))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+            )
+            .shadow(color: Color("EmpireMint").opacity(0.22), radius: 14, y: 6)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.48 : 1)
+    }
+}
+
+struct AuthSocialButton<Leading: View>: View {
+    let title: String
+    var foreground: Color = .white
+    let leading: Leading
+    let action: () -> Void
+
+    init(
+        title: String,
+        foreground: Color = .white,
+        @ViewBuilder leading: () -> Leading,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.foreground = foreground
+        self.leading = leading()
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Spacer(minLength: 0)
+
+                leading
+                    .frame(width: 24, height: 24)
+
+                Text(title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(foreground)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.92)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.white.opacity(0.04))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.25),
+                                Color.white.opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct AuthDivider: View {
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Capsule()
+                .fill(Color.white.opacity(0.08))
+                .frame(height: 1)
+
+            Text(label)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(AuthPalette.textMuted)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+
+            Capsule()
+                .fill(Color.white.opacity(0.08))
+                .frame(height: 1)
+        }
+    }
+}
+
+struct AuthMessage: View {
+    let text: String
+    let tone: Tone
+
+    enum Tone {
+        case error
+        case success
+
+        var color: Color {
+            switch self {
+            case .error:
+                return AuthPalette.destructive
+            case .success:
+                return AuthPalette.success
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .error:
+                return "exclamationmark.triangle.fill"
+            case .success:
+                return "checkmark.circle.fill"
+            }
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: tone.icon)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(tone.color)
+                .padding(.top, 2)
+
+            Text(text)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.9))
+                .multilineTextAlignment(.leading)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(tone.color.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(tone.color.opacity(0.32), lineWidth: 1)
+        )
+    }
+}

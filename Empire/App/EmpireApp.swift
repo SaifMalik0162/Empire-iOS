@@ -1,9 +1,12 @@
 import SwiftUI
 import Combine
 import SwiftData
+import UIKit
+import GoogleSignIn
 
 @main
 struct EmpireApp: App {
+    private let modelContainer: ModelContainer
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var cart = Cart()
     @StateObject private var vehiclesVM = UserVehiclesViewModel()
@@ -13,6 +16,11 @@ struct EmpireApp: App {
 
     init() {
         AppTelemetry.shared.configure()
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+            clientID: SupabaseConfig.googleClientID,
+            serverClientID: SupabaseConfig.googleServerClientID
+        )
+        self.modelContainer = Self.makeModelContainer()
     }
     
     var body: some Scene {
@@ -36,8 +44,18 @@ struct EmpireApp: App {
                     .environmentObject(authViewModel)
                     .preferredColorScheme(.dark)
             }
+            .sheet(isPresented: Binding(get: { authViewModel.isPresentingPasswordRecovery }, set: { newValue in
+                if !newValue {
+                    authViewModel.dismissPasswordRecovery()
+                }
+            })) {
+                PasswordRecoveryView()
+                    .environmentObject(authViewModel)
+                    .preferredColorScheme(.dark)
+            }
             .id(authViewModel.isAuthenticated ? "auth" : "loggedOut")
             .onAppear {
+                Self.normalizeLegacyCarPhotosIfNeeded()
                 dismissObserver = NotificationCenter.default.publisher(for: .empireRequestDismiss)
                     .receive(on: RunLoop.main)
                     .sink { _ in
@@ -48,10 +66,54 @@ struct EmpireApp: App {
                 dismissObserver?.cancel()
                 dismissObserver = nil
             }
+            .onOpenURL { url in
+                if GIDSignIn.sharedInstance.handle(url) {
+                    return
+                }
+                Task {
+                    await authViewModel.handleIncomingURL(url)
+                }
+            }
         }
-        .modelContainer(for: [CarEntity.self, SpecItemEntity.self, ModItemEntity.self, MerchItemEntity.self])
+        .modelContainer(modelContainer)
     }
     
+}
+
+private extension EmpireApp {
+    static func makeModelContainer() -> ModelContainer {
+        let schema = Schema([
+            CarEntity.self,
+            SpecItemEntity.self,
+            ModItemEntity.self,
+            MerchItemEntity.self
+        ])
+
+        do {
+            let appSupportURL = try FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+            let storeDirectory = appSupportURL.appendingPathComponent("Empire", isDirectory: true)
+            try FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
+            let storeURL = storeDirectory.appendingPathComponent("default.store")
+            let configuration = ModelConfiguration(schema: schema, url: storeURL)
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            fatalError("Failed to create SwiftData model container: \(error)")
+        }
+    }
+
+    static func normalizeLegacyCarPhotosIfNeeded() {
+        let defaultsKey = "normalized_legacy_car_photos_v1"
+        guard UserDefaults.standard.bool(forKey: defaultsKey) == false else { return }
+        // Legacy photo normalization used to rewrite every local car photo as JPEG
+        // on launch. That showed up in profiling as avoidable JPEG encode work, so
+        // we mark the migration complete without touching existing files.
+        UserDefaults.standard.set(true, forKey: defaultsKey)
+    }
 }
 
 fileprivate struct ContextBridge: View {

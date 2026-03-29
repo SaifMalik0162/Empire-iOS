@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import SwiftData
+import Combine
 
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
@@ -9,10 +10,15 @@ struct HomeView: View {
     // MARK: - Meets Data
     @State private var meets: [Meet] = []
     @State private var showSettings: Bool = false
+    @State private var showCommunityInbox: Bool = false
     @State private var isLoadingMeets = false
     @State private var meetsError: String? = nil
     @State private var featuredUserCarPhotoData: Data? = nil
     @State private var featuredMerch: [MerchItem] = []
+    @State private var isRefreshingFeaturedMerch = false
+    @State private var lastFeaturedMerchRefreshAt: Date? = nil
+    @State private var lastMeetsRefreshAt: Date? = nil
+    @StateObject private var communityInboxVM = CommunityInboxViewModel()
 
     // MARK: - Data Sources
     private let communityCars: [Car] = [
@@ -39,7 +45,11 @@ struct HomeView: View {
                 GeometryReader { geo in
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 20) {
-                            HomeHeader(showSettings: $showSettings)
+                            HomeHeader(
+                                showSettings: $showSettings,
+                                showCommunityInbox: $showCommunityInbox,
+                                communityUnreadCount: communityInboxVM.unreadCount
+                            )
                                 .padding(.horizontal, 16)
                                 .padding(.top, 8)
 
@@ -198,7 +208,6 @@ struct HomeView: View {
                                             .opacity(0.22)
                                             .blur(radius: 8)
                                             .rotationEffect(.degrees(16))
-                                            .modifier(HomeCompactShine())
                                         }
 
                                         ForEach(communityCars.indices, id: \.self) { idx in
@@ -243,7 +252,6 @@ struct HomeView: View {
                                                 .opacity(0.22)
                                                 .blur(radius: 8)
                                                 .rotationEffect(.degrees(16))
-                                                .modifier(HomeCompactShine())
                                             }
                                         }
                                         Spacer(minLength: 0)
@@ -293,7 +301,6 @@ struct HomeView: View {
                                                             .blendMode(.screen)
                                                     )
                                                     .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, y: 3)
-                                                    .overlay(HomeShimmerOverlay().clipShape(RoundedRectangle(cornerRadius: 18)))
 
                                                 // Full-bleed merch image
                                                 Image(item.imageName)
@@ -359,18 +366,27 @@ struct HomeView: View {
                 SettingsView()
                     .preferredColorScheme(.dark)
             }
+            .sheet(isPresented: $showCommunityInbox) {
+                CommunityInboxView(viewModel: communityInboxVM)
+                    .preferredColorScheme(.dark)
+            }
             .onAppear {
                 reloadFeaturedUserCarPhoto()
                 loadFeaturedMerch()
+                Task { await communityInboxVM.refresh() }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     reloadFeaturedUserCarPhoto()
                     loadFeaturedMerch()
+                    Task { await communityInboxVM.refresh() }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
                 reloadFeaturedUserCarPhoto()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
+                Task { await communityInboxVM.refresh() }
             }
         }
     }
@@ -402,6 +418,11 @@ struct HomeView: View {
 
     private func loadHomeMeets() {
         if isLoadingMeets { return }
+        if let lastMeetsRefreshAt,
+           Date().timeIntervalSince(lastMeetsRefreshAt) < 120,
+           !meets.isEmpty {
+            return
+        }
         isLoadingMeets = true
         meetsError = nil
 
@@ -413,6 +434,7 @@ struct HomeView: View {
                     self.meets = items
                     self.isLoadingMeets = false
                     self.meetsError = nil
+                    self.lastMeetsRefreshAt = Date()
                 }
             } catch {
                 await MainActor.run {
@@ -433,7 +455,24 @@ struct HomeView: View {
             featuredMerch = Array(MerchCatalog.featured.prefix(3))
         }
 
+        if isRefreshingFeaturedMerch {
+            return
+        }
+
+        if let lastFeaturedMerchRefreshAt,
+           Date().timeIntervalSince(lastFeaturedMerchRefreshAt) < 30 {
+            return
+        }
+
+        isRefreshingFeaturedMerch = true
+        lastFeaturedMerchRefreshAt = Date()
+
         Task {
+            defer {
+                Task { @MainActor in
+                    isRefreshingFeaturedMerch = false
+                }
+            }
             do {
                 let fresh = try await SupabaseMerchService().fetchMerch()
                 guard !fresh.isEmpty else { return }
@@ -444,6 +483,346 @@ struct HomeView: View {
             } catch {
                 AppTelemetry.shared.record(error: error, context: "home.featured_merch")
             }
+        }
+    }
+
+}
+
+@MainActor
+final class CommunityInboxViewModel: ObservableObject {
+    @Published var items: [CommunityInboxItem] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String? = nil
+
+    private let service = SupabaseCommunityService()
+    private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "" }
+    private var lastSeenKey: String {
+        "community_inbox_last_seen_\(currentUserId.lowercased())"
+    }
+
+    var unreadCount: Int {
+        guard let lastSeenAt else { return items.count }
+        return items.filter { $0.createdAt > lastSeenAt }.count
+    }
+
+    var lastSeenAt: Date? {
+        UserDefaults.standard.object(forKey: lastSeenKey) as? Date
+    }
+
+    func refresh() async {
+        guard !isLoading else { return }
+        let userId = currentUserId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !userId.isEmpty else {
+            items = []
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            items = try await service.fetchInboxItems(currentUserId: userId)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func markAllSeen() {
+        UserDefaults.standard.set(Date(), forKey: lastSeenKey)
+        objectWillChange.send()
+    }
+
+    func postPhotoURL(for item: CommunityInboxItem) -> URL? {
+        guard let path = item.postPhotoPath else { return nil }
+        return service.publicURL(for: path)
+    }
+
+    func avatarURL(for item: CommunityInboxItem) -> URL? {
+        guard let path = item.actorAvatarPath else { return nil }
+        return service.avatarPublicURL(for: path)
+    }
+}
+
+private struct CommunityInboxView: View {
+    @ObservedObject var viewModel: CommunityInboxViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedFilter: CommunityInboxItemKind? = nil
+
+    private var filteredItems: [CommunityInboxItem] {
+        guard let selectedFilter else { return viewModel.items }
+        return viewModel.items.filter { $0.kind == selectedFilter }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                LinearGradient(colors: [Color.black, Color.black.opacity(0.95)], startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+                RadialGradient(colors: [Color("EmpireMint").opacity(0.14), .clear], center: .top, startRadius: 20, endRadius: 300)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 14) {
+                    filterBar
+                        .padding(.top, 6)
+
+                    if viewModel.isLoading && viewModel.items.isEmpty {
+                        Spacer()
+                        ProgressView().tint(Color("EmpireMint"))
+                        Spacer()
+                    } else if filteredItems.isEmpty {
+                        emptyState
+                    } else {
+                        ScrollView(showsIndicators: false) {
+                            LazyVStack(spacing: 12) {
+                                ForEach(filteredItems) { item in
+                                    CommunityInboxCard(
+                                        item: item,
+                                        avatarURL: viewModel.avatarURL(for: item),
+                                        postPhotoURL: viewModel.postPhotoURL(for: item)
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 20)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Inbox")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .task {
+            await viewModel.refresh()
+            viewModel.markAllSeen()
+        }
+        .onDisappear {
+            viewModel.markAllSeen()
+        }
+    }
+
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                inboxFilterPill(title: "All", count: viewModel.items.count, isSelected: selectedFilter == nil) {
+                    selectedFilter = nil
+                }
+                ForEach(CommunityInboxItemKind.allCases, id: \.rawValue) { kind in
+                    inboxFilterPill(
+                        title: kind.title,
+                        count: viewModel.items.filter { $0.kind == kind }.count,
+                        isSelected: selectedFilter == kind
+                    ) {
+                        selectedFilter = kind
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func inboxFilterPill(title: String, count: Int, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                Text("\(count)")
+                    .font(.caption2.weight(.bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(isSelected ? Color.black.opacity(0.18) : Color.white.opacity(0.06)))
+            }
+            .foregroundStyle(isSelected ? Color("EmpireMint") : .white.opacity(0.74))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(isSelected ? Color("EmpireMint").opacity(0.16) : Color.white.opacity(0.05)))
+            .overlay(Capsule().stroke(isSelected ? Color("EmpireMint").opacity(0.65) : Color.white.opacity(0.1), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            Image(systemName: "bell.badge")
+                .font(.system(size: 34))
+                .foregroundStyle(Color("EmpireMint").opacity(0.5))
+            Text("No community activity yet")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text("Likes, comments, and thread replies will show up here.")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Spacer()
+        }
+    }
+}
+
+private struct CommunityInboxCard: View {
+    let item: CommunityInboxItem
+    let avatarURL: URL?
+    let postPhotoURL: URL?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            avatar
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(titleLine)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                        Text(item.createdAt.relativeFormatted)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+
+                    Spacer(minLength: 8)
+                    kindBadge
+                }
+
+                if let preview = item.previewText?.trimmingCharacters(in: .whitespacesAndNewlines), !preview.isEmpty {
+                    Text(preview)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .lineLimit(2)
+                }
+            }
+
+            thumbnail
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.14), Color("EmpireMint").opacity(0.12)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
+    }
+
+    private var titleLine: String {
+        let actor = item.actorUsername?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ? item.actorUsername!
+            : "A driver"
+        switch item.kind {
+        case .like:
+            return "\(actor) liked your \(item.postCarName) post"
+        case .comment:
+            return "\(actor) commented on your \(item.postCarName) post"
+        case .reply:
+            return "\(actor) replied in a thread you joined"
+        }
+    }
+
+    private var kindBadge: some View {
+        Text(item.kind.title.uppercased())
+            .font(.system(size: 8, weight: .bold, design: .rounded))
+            .foregroundStyle(item.kind.tint)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(item.kind.tint.opacity(0.16)))
+            .overlay(Capsule().stroke(item.kind.tint.opacity(0.5), lineWidth: 1))
+    }
+
+    private var avatar: some View {
+        Group {
+            if let avatarURL {
+                AsyncImage(url: avatarURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        avatarFallback
+                    }
+                }
+            } else {
+                avatarFallback
+            }
+        }
+        .frame(width: 44, height: 44)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+    }
+
+    private var avatarFallback: some View {
+        Circle()
+            .fill(Color.white.opacity(0.08))
+            .overlay(
+                Image(systemName: item.kind.symbol)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(item.kind.tint)
+            )
+    }
+
+    private var thumbnail: some View {
+        Group {
+            if let postPhotoURL {
+                AsyncImage(url: postPhotoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        thumbnailFallback
+                    }
+                }
+            } else {
+                thumbnailFallback
+            }
+        }
+        .frame(width: 56, height: 56)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
+    }
+
+    private var thumbnailFallback: some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(Color.white.opacity(0.06))
+            .overlay(Image(systemName: "car.fill").foregroundStyle(Color("EmpireMint").opacity(0.5)))
+    }
+}
+
+private extension CommunityInboxItemKind {
+    var title: String {
+        switch self {
+        case .like: return "Likes"
+        case .comment: return "Comments"
+        case .reply: return "Replies"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .like: return Color("EmpireMint")
+        case .comment: return .cyan
+        case .reply: return Color(red: 0.72, green: 0.48, blue: 0.95)
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .like: return "heart.fill"
+        case .comment: return "bubble.left.fill"
+        case .reply: return "arrowshape.turn.up.left.fill"
         }
     }
 }
@@ -477,7 +856,6 @@ struct GlassCard<Content: View>: View {
                         lineWidth: 1
                     )
                     .blendMode(.screen)
-                HomeShimmerOverlay().clipShape(RoundedRectangle(cornerRadius: 24))
             }
         )
         .cornerRadius(24)
@@ -488,6 +866,8 @@ struct GlassCard<Content: View>: View {
 // MARK: - Home Header
 private struct HomeHeader: View {
     @Binding var showSettings: Bool
+    @Binding var showCommunityInbox: Bool
+    let communityUnreadCount: Int
     @State private var query: String = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -497,11 +877,29 @@ private struct HomeHeader: View {
                     .foregroundStyle(.white)
                 Spacer()
                 HStack(spacing: 10) {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: 32, height: 32)
-                        .overlay(Image(systemName: "bell").foregroundStyle(.white))
-                        .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                    Button {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        showCommunityInbox = true
+                    } label: {
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .frame(width: 32, height: 32)
+                            .overlay(Image(systemName: "bell").foregroundStyle(.white))
+                            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                            .overlay(alignment: .topTrailing) {
+                                if communityUnreadCount > 0 {
+                                    Text("\(min(communityUnreadCount, 9))")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(.black)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 2)
+                                        .background(Capsule().fill(Color("EmpireMint")))
+                                        .offset(x: 4, y: -4)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
                     Button {
                         let gen = UIImpactFeedbackGenerator(style: .light)
                         gen.impactOccurred()
@@ -517,43 +915,5 @@ private struct HomeHeader: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Shimmer Helpers
-private struct HomeShimmerOverlay: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.25), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.6)
-        .offset(x: -120 + phase * 240)
-        .onAppear { withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 } }
-        .onDisappear { phase = 0 }
-        .blendMode(.screen)
-        .opacity(0.5)
-        .allowsHitTesting(false)
-    }
-}
-
-private struct HomeCompactShine: ViewModifier {
-    @State private var phase: CGFloat = -1
-    func body(content: Content) -> some View {
-        content
-            .opacity(0.5)
-            .offset(x: phase * 160, y: phase * 80)
-            .onAppear {
-                phase = -1
-                withAnimation(.linear(duration: 5).repeatForever(autoreverses: false)) { phase = 1.2 }
-            }
-            .onDisappear { phase = -1 }
-            .allowsHitTesting(false)
     }
 }

@@ -14,6 +14,7 @@ final class UserVehiclesViewModel: ObservableObject {
 
     private var userKey: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "default" }
     private var vehiclesKey: String { "saved_user_vehicles_\(userKey)" }
+    private var garageOrderKey: String { "saved_user_vehicle_order_\(userKey)" }
     
     private let logger = Logger(subsystem: "com.empire.app", category: "vehicles-sync")
 
@@ -25,6 +26,31 @@ final class UserVehiclesViewModel: ObservableObject {
                 UserDefaults.standard.set(data, forKey: vehiclesKey)
             }
         }
+        persistGarageOrder()
+    }
+
+    private func persistGarageOrder() {
+        let orderedIDs = vehicles.map { $0.id.uuidString.lowercased() }
+        UserDefaults.standard.set(orderedIDs, forKey: garageOrderKey)
+    }
+
+    private func applyPersistedGarageOrder(to cars: [Car]) -> [Car] {
+        let storedIDs = UserDefaults.standard.stringArray(forKey: garageOrderKey) ?? []
+        guard !storedIDs.isEmpty else { return cars }
+
+        let rank = Dictionary(uniqueKeysWithValues: storedIDs.enumerated().map { ($1, $0) })
+        let sorted = cars.enumerated().sorted { lhs, rhs in
+            let leftRank = rank[lhs.element.id.uuidString.lowercased()] ?? (storedIDs.count + lhs.offset)
+            let rightRank = rank[rhs.element.id.uuidString.lowercased()] ?? (storedIDs.count + rhs.offset)
+            if leftRank != rightRank { return leftRank < rightRank }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+
+        let normalizedIDs = sorted.map { $0.id.uuidString.lowercased() }
+        if normalizedIDs != storedIDs {
+            UserDefaults.standard.set(normalizedIDs, forKey: garageOrderKey)
+        }
+        return sorted
     }
 
     private func syncCarInBackground(_ car: Car) {
@@ -54,12 +80,12 @@ final class UserVehiclesViewModel: ObservableObject {
         if let context = modelContext {
             // Ensure migration occurs only once per session via setContext; fetch from SwiftData
             let fetched = LocalStore.shared.fetchCars(context: context, userKey: userKey)
-            vehicles = fetched
+            vehicles = applyPersistedGarageOrder(to: fetched)
             return
         }
         if let data = UserDefaults.standard.data(forKey: vehiclesKey),
            let decoded = try? JSONDecoder().decode([Car].self, from: data) {
-            vehicles = decoded
+            vehicles = applyPersistedGarageOrder(to: decoded)
         }
     }
 

@@ -29,6 +29,7 @@ struct ProfileView: View {
     @StateObject private var communityVM = CommunityViewModel(
         userId: UserDefaults.standard.string(forKey: "currentUserId")
     )
+    @StateObject private var communitySocialStore = CommunitySocialStore()
     
     private var computedStats: [(String, Int)] {
         [("Meets", profileStatsVM.meetsCount), ("Cars", vehiclesVM.vehicles.count), ("Merch", profileStatsVM.merchCount)]
@@ -76,13 +77,6 @@ struct ProfileView: View {
         return "\(communityVM.totalPostsCount) community post\(communityVM.totalPostsCount == 1 ? "" : "s")"
     }
     
-    private func performLogoutNow() {
-        print("[ProfileView] 🔘 Logout button tapped")
-        print("[ProfileView] Before logout: isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
-        authViewModel.logout()
-        print("[ProfileView] After logout call returned: isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
-    }
-    
     private func iconName(for title: String) -> String {
         switch title {
         case "VIP Perk": return "crown.fill"
@@ -106,9 +100,6 @@ struct ProfileView: View {
                 .ignoresSafeArea()
             
             ScrollView(showsIndicators: false) {
-                Color.clear.frame(width: 0, height: 0).onAppear {
-                    print("[ProfileView] body recomputed")
-                }
                 VStack(spacing: 22) {
                     
                     // MARK: - Profile Header
@@ -126,7 +117,6 @@ struct ProfileView: View {
                                     )
                                     .blendMode(.screen)
                             )
-                            .overlay(ProfileShimmer().clipShape(RoundedRectangle(cornerRadius: 28)).opacity(0.4))
                             .shadow(color: Color("EmpireMint").opacity(0.2), radius: 12, y: 6)
 
                         VStack(spacing: 10) {
@@ -233,13 +223,9 @@ struct ProfileView: View {
                         }
                         .padding(18)
                         .onAppear {
-                            print("[ProfileView] onAppear")
-                            print("[ProfileView] has AuthVM instanceID: \(authViewModel.instanceID)")
-                            print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
                             if let urlString = authViewModel.avatarPublicURLString(from: authViewModel.currentUser?.avatarPath) {
                                 avatarURL = URL(string: urlString)
                             }
-                            vehiclesVM.setContext(modelContext)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -268,7 +254,6 @@ struct ProfileView: View {
                                             )
                                     )
                                     .shadow(color: Color("EmpireMint").opacity(0.2), radius: 10, y: 6)
-                                    .overlay(ProfileShimmer().clipShape(RoundedRectangle(cornerRadius: 22)))
 
                                 HStack(spacing: 6) {
                                     Image(systemName: iconName(for: card))
@@ -304,10 +289,9 @@ struct ProfileView: View {
                         Button { showHelpSupport = true } label: { GlassOptionRow(icon: "questionmark.circle.fill", title: "Help & Support") }
                             .buttonStyle(.plain)
                         Button {
-                            print("[ProfileView] Haptic + about to call performLogoutNow()")
                             let gen = UIImpactFeedbackGenerator(style: .medium)
                             gen.impactOccurred()
-                            performLogoutNow()
+                            authViewModel.logout()
                         }
                         label: {
                             GlassOptionRow(icon: "arrow.right.square.fill", title: "Log Out", destructive: true)
@@ -322,18 +306,17 @@ struct ProfileView: View {
                     .padding(.horizontal, 16)
                 }
                 .onChange(of: authViewModel.isAuthenticated) { oldValue, newValue in
-                    print("[ProfileView] onChange isAuthenticated: old=\(oldValue) -> new=\(newValue)")
                     if !newValue {
                         profileStatsVM.reset()
                     }
                 }
-                .onAppear {
-                    print("[ProfileView] onAppear")
-                    print("[ProfileView] has AuthVM instanceID: \(authViewModel.instanceID)")
-                    print("[ProfileView] initial isAuthenticated=\(authViewModel.isAuthenticated), isLoading=\(authViewModel.isLoading)")
-                    vehiclesVM.setContext(modelContext)
-                }
                 .task(id: currentUserId) {
+                    vehiclesVM.setContext(modelContext)
+                    if let urlString = authViewModel.avatarPublicURLString(from: authViewModel.currentUser?.avatarPath) {
+                        avatarURL = URL(string: urlString)
+                    }
+                    await vehiclesVM.loadVehicles()
+                    await communityVM.refresh()
                     await profileStatsVM.load(for: currentUserId)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
@@ -392,15 +375,10 @@ struct ProfileView: View {
                         userId: currentUserId,
                         username: authViewModel.currentUser?.username,
                         avatarURL: avatarURL,
-                        currentUserId: currentUserId
+                        currentUserId: currentUserId,
+                        socialStore: communitySocialStore
                     )
                     .preferredColorScheme(.dark)
-                }
-                .onAppear {
-                    Task {
-                        await vehiclesVM.loadVehicles()
-                        await communityVM.refresh()
-                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
                     Task { await communityVM.refresh() }
@@ -465,28 +443,6 @@ struct ProfileView: View {
             )
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct ProfileShimmer: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.25), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.6)
-        .offset(x: -120 + phase * 240)
-        .onAppear { withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 } }
-        .onDisappear { phase = 0 }
-        .blendMode(.screen)
-        .opacity(0.5)
-        .allowsHitTesting(false)
     }
 }
 

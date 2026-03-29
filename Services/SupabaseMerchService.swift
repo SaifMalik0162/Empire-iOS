@@ -12,15 +12,18 @@ struct SBMerchRow: Codable, Equatable, Identifiable {
 
 final class SupabaseMerchService {
     private var supabaseClient: SupabaseClient { SupabaseClientProvider.shared }
+    private static let cache = MerchFetchCache()
 
     func fetchMerch() async throws -> [MerchItem] {
-        let rows: [SBMerchRow] = try await AppTelemetry.shared.measure(operation: "merch.fetch") {
-            try await supabaseClient
-                .from("merch_items")
-                .select()
-                .order("updated_at", ascending: false)
-                .execute()
-                .value
+        let rows = try await Self.cache.rows {
+            try await AppTelemetry.shared.measure(operation: "merch.fetch") {
+                try await self.supabaseClient
+                    .from("merch_items")
+                    .select()
+                    .order("updated_at", ascending: false)
+                    .execute()
+                    .value
+            }
         }
         AppTelemetry.shared.track(event: "merch.fetch.success", metadata: ["count": String(rows.count)])
         return Self.mapRowsToMerchItems(rows)
@@ -46,6 +49,37 @@ final class SupabaseMerchService {
                 imageName: r.image_name.trimmingCharacters(in: .whitespacesAndNewlines),
                 category: cat
             )
+        }
+    }
+}
+
+actor MerchFetchCache {
+    private var cachedRows: [SBMerchRow] = []
+    private var lastFetchAt: Date?
+    private var inFlight: Task<[SBMerchRow], Error>?
+    private let ttl: TimeInterval = 120
+
+    func rows(loader: @escaping () async throws -> [SBMerchRow]) async throws -> [SBMerchRow] {
+        if let lastFetchAt, !cachedRows.isEmpty, Date().timeIntervalSince(lastFetchAt) < ttl {
+            return cachedRows
+        }
+
+        if let inFlight {
+            return try await inFlight.value
+        }
+
+        let task = Task { try await loader() }
+        inFlight = task
+
+        do {
+            let rows = try await task.value
+            cachedRows = rows
+            lastFetchAt = Date()
+            inFlight = nil
+            return rows
+        } catch {
+            inFlight = nil
+            throw error
         }
     }
 }

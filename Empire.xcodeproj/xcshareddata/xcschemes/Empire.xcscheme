@@ -74,18 +74,6 @@
             ReferencedContainer = "container:Empire.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <EnvironmentVariables>
-         <EnvironmentVariable
-            key = "SUPABASE_ANON_KEY"
-            value = "sb_publishable_Bd_9Istn0C4ep16Qg2M1RA_FCHJW4Bf"
-            isEnabled = "YES">
-         </EnvironmentVariable>
-         <EnvironmentVariable
-            key = "SUPABASE_URL"
-            value = "https://matwihdeczmkdvsbuxvv.supabase.co"
-            isEnabled = "YES">
-         </EnvironmentVariable>
-      </EnvironmentVariables>
       <StoreKitConfigurationFileReference
          identifier = "../../VIP.storekit">
       </StoreKitConfigurationFileReference>

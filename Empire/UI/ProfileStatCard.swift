@@ -30,30 +30,8 @@ struct ProfileStatCard: View {
                         lineWidth: 1.3
                     )
                     .blendMode(.screen)
-                StatShimmer().clipShape(RoundedRectangle(cornerRadius: 22))
             }
         )
         .shadow(color: Color("EmpireMint").opacity(0.25), radius: 10, y: 6)
-    }
-}
-
-private struct StatShimmer: View {
-    @State private var phase: CGFloat = 0
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(stops: [
-                .init(color: .clear, location: 0.0),
-                .init(color: .white.opacity(0.25), location: 0.45),
-                .init(color: .clear, location: 0.9)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .scaleEffect(x: 1.6)
-        .offset(x: -120 + phase * 240)
-        .onAppear { withAnimation(.linear(duration: 3.5).repeatForever(autoreverses: false)) { phase = 1 } }
-        .blendMode(.screen)
-        .opacity(0.5)
-        .allowsHitTesting(false)
     }
 }

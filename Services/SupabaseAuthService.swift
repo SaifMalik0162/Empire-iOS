@@ -2,6 +2,45 @@ import Foundation
 import Supabase
 import OSLog
 import UIKit
+import GoogleSignIn
+
+enum AuthUserFacingError: LocalizedError {
+    case weakPassword
+    case emailAlreadyRegistered
+    case emailConfirmationRequired
+    case invalidCredentials
+    case signupDisabled
+    case emailNotConfirmed
+    case rateLimited
+    case invalidEmail
+    case samePassword
+    case generic(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .weakPassword:
+            return "Use a stronger password with at least 8 characters and a mix of letters, numbers, or symbols."
+        case .emailAlreadyRegistered:
+            return "That email is already registered. Log in instead, or use Sign in with Apple."
+        case .emailConfirmationRequired:
+            return "Check your Gmail inbox and confirm your email before logging in."
+        case .invalidCredentials:
+            return "Incorrect email or password."
+        case .signupDisabled:
+            return "Email sign-up is currently unavailable."
+        case .emailNotConfirmed:
+            return "Check your inbox and confirm your email before logging in."
+        case .rateLimited:
+            return "Too many attempts right now. Please wait a bit and try again."
+        case .invalidEmail:
+            return "Enter a valid email address."
+        case .samePassword:
+            return "Choose a new password that is different from your current password."
+        case .generic(let message):
+            return message
+        }
+    }
+}
 
 enum AuthProfileError: LocalizedError {
     case usernameCooldown(remaining: TimeInterval)
@@ -48,15 +87,20 @@ final class SupabaseAuthService {
     // MARK: - Sign Up / Register
     func register(email: String, password: String, username: String) async throws -> BackendUser {
         let normalizedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        let response = try await client.auth.signUp(
-            email: email,
-            password: password,
-            data: [
-                "username": .string(normalizedUsername),
-                "display_name": .string(normalizedUsername),
-                "full_name": .string(normalizedUsername)
-            ]
-        )
+        let response: AuthResponse
+        do {
+            response = try await client.auth.signUp(
+                email: email,
+                password: password,
+                data: [
+                    "username": .string(normalizedUsername),
+                    "display_name": .string(normalizedUsername),
+                    "full_name": .string(normalizedUsername)
+                ]
+            )
+        } catch {
+            throw mapAuthError(error)
+        }
         let user = response.user
         do {
             _ = try await client
@@ -70,14 +114,42 @@ final class SupabaseAuthService {
             logger.warning("Profile upsert failed for user \(user.id.uuidString, privacy: .public): \(String(describing: error), privacy: .public)")
         }
 
+        guard response.session != nil else {
+            throw AuthUserFacingError.emailConfirmationRequired
+        }
+
         return try await backendUser(for: user, fallbackEmail: email, fallbackUsername: normalizedUsername)
     }
 
     // MARK: - Login
     func login(email: String, password: String) async throws -> BackendUser {
-        let response = try await client.auth.signIn(email: email, password: password)
+        let response: Session
+        do {
+            response = try await client.auth.signIn(email: email, password: password)
+        } catch {
+            throw mapAuthError(error)
+        }
         let user = response.user
         return try await backendUser(for: user, fallbackEmail: email)
+    }
+
+    func loginWithGoogle(idToken: String, accessToken: String?, nonce: String?) async throws -> BackendUser {
+        let session: Session
+        do {
+            session = try await client.auth.signInWithIdToken(
+                credentials: OpenIDConnectCredentials(
+                    provider: .google,
+                    idToken: idToken,
+                    accessToken: accessToken,
+                    nonce: nonce
+                )
+            )
+        } catch {
+            throw mapAuthError(error)
+        }
+
+        let user = session.user
+        return try await backendUser(for: user, fallbackEmail: user.email ?? "")
     }
 
     func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws -> BackendUser {
@@ -123,14 +195,35 @@ final class SupabaseAuthService {
     }
 
     func sendPasswordReset(email: String) async throws {
-        try await client.auth.resetPasswordForEmail(
-            email,
-            redirectTo: SupabaseConfig.passwordResetRedirectURL
-        )
+        do {
+            try await client.auth.resetPasswordForEmail(
+                email,
+                redirectTo: SupabaseConfig.passwordResetRedirectURL
+            )
+        } catch {
+            throw mapAuthError(error)
+        }
+    }
+
+    func beginPasswordRecovery(from url: URL) async throws -> Bool {
+        guard Self.isPasswordRecoveryURL(url) else { return false }
+        _ = try await client.auth.session(from: url)
+        return true
+    }
+
+    func completePasswordReset(newPassword: String) async throws {
+        do {
+            _ = try await client.auth.update(
+                user: UserAttributes(password: newPassword)
+            )
+        } catch {
+            throw mapAuthError(error)
+        }
     }
 
     // MARK: - Logout
     func logout() async throws {
+        GIDSignIn.sharedInstance.signOut()
         try await client.auth.signOut()
     }
 
@@ -300,5 +393,65 @@ final class SupabaseAuthService {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX"
         return formatter.date(from: value)
+    }
+
+    private func mapAuthError(_ error: Error) -> Error {
+        guard let authError = error as? AuthError else {
+            let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+            return AuthUserFacingError.generic(message.isEmpty ? "Something went wrong. Please try again." : message)
+        }
+
+        switch authError {
+        case .weakPassword(_, _):
+            return AuthUserFacingError.weakPassword
+        case .api(let message, let errorCode, _, _):
+            switch errorCode {
+            case .emailExists, .userAlreadyExists, .conflict:
+                return AuthUserFacingError.emailAlreadyRegistered
+            case .weakPassword:
+                return AuthUserFacingError.weakPassword
+            case .signupDisabled:
+                return AuthUserFacingError.signupDisabled
+            case .invalidCredentials:
+                return AuthUserFacingError.invalidCredentials
+            case .emailNotConfirmed:
+                return AuthUserFacingError.emailNotConfirmed
+            case .overRequestRateLimit, .overEmailSendRateLimit:
+                return AuthUserFacingError.rateLimited
+            case .samePassword:
+                return AuthUserFacingError.samePassword
+            case .validationFailed:
+                return AuthUserFacingError.invalidEmail
+            default:
+                let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+                return AuthUserFacingError.generic(trimmed.isEmpty ? "Something went wrong. Please try again." : trimmed)
+            }
+        default:
+            let trimmed = authError.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+            return AuthUserFacingError.generic(trimmed.isEmpty ? "Something went wrong. Please try again." : trimmed)
+        }
+    }
+
+    private static func isPasswordRecoveryURL(_ url: URL) -> Bool {
+        let params = authCallbackParams(from: url)
+        return params["type"] == "recovery"
+    }
+
+    private static func authCallbackParams(from url: URL) -> [String: String] {
+        var result: [String: String] = [:]
+
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            for item in components.queryItems ?? [] {
+                result[item.name] = item.value
+            }
+        }
+
+        if let fragment = URLComponents(string: "empire://callback?\(url.fragment ?? "")") {
+            for item in fragment.queryItems ?? [] {
+                result[item.name] = item.value
+            }
+        }
+
+        return result
     }
 }

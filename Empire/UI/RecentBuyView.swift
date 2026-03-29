@@ -3,9 +3,7 @@ import SwiftUI
 struct RecentBuyView: View {
     @Environment(\.dismiss) private var dismiss
 
-    // Input model from Merch
     var item: MerchItem
-    // Optional order metadata (placeholder until backend is wired)
     var variant: String? = nil
     var orderDate: String? = nil
     var status: String? = nil
@@ -17,103 +15,14 @@ struct RecentBuyView: View {
             RadialGradient(colors: [Color("EmpireMint").opacity(0.18), .clear], center: .top, startRadius: 20, endRadius: 320)
                 .ignoresSafeArea()
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 22) {
-                    // Header card
-                    ZStack {
-                        glassCard(cornerRadius: 28)
-                        VStack(spacing: 14) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "bag.fill")
-                                    .foregroundStyle(Color("EmpireMint"))
-                                    .font(.system(size: 20, weight: .bold))
-                                Text("Recent Buy")
-                                    .font(.title3.weight(.bold))
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text(status ?? "Completed")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Capsule().fill(.ultraThinMaterial))
-                                    .overlay(Capsule().stroke(gradientStroke, lineWidth: 1))
-                            }
-
-                            HStack(alignment: .center, spacing: 16) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(.ultraThinMaterial)
-                                        .frame(width: 96, height: 96)
-                                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gradientStroke, lineWidth: 1))
-                                    Image(item.imageName)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 96, height: 96)
-                                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                                }
-
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(item.name)
-                                        .font(.headline.bold())
-                                        .foregroundStyle(.white)
-                                    if let variant {
-                                        Text(variant)
-                                            .font(.caption)
-                                            .foregroundStyle(.white.opacity(0.7))
-                                    }
-                                    if let orderDate {
-                                        HStack(spacing: 8) {
-                                            Image(systemName: "calendar").foregroundStyle(Color("EmpireMint"))
-                                            Text(orderDate)
-                                                .font(.caption)
-                                                .foregroundStyle(.white.opacity(0.75))
-                                        }
-                                    }
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "dollarsign").foregroundStyle(Color("EmpireMint"))
-                                        Text(item.price)
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.white)
-                                    }
-                                }
-                                Spacer()
-                            }
-                        }
-                        .padding(18)
-                    }
-                    .padding(.horizontal, 16)
-
-                    // Recent items list (optional)
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Recent Items")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-
-                        let metalBanner = (MerchCatalog.bestSellers.first { $0.name == "Metal Banner" }) ?? MerchItem(name: "Metal Banner", price: "$25", imageName: "metal_banner", category: .banners)
-                        let sampleItems: [MerchItem] = [
-                            item,
-                            metalBanner
-                        ]
-                        ForEach(Array(sampleItems.enumerated()), id: \.offset) { idx, merch in
-                            itemRow(name: merch.name, subtitle: merch.category.rawValue, price: merch.price, imageName: merch.imageName)
-                        }
-                    }
-                    .padding(16)
-                    .background(glassCard(cornerRadius: 22))
-                    .padding(.horizontal, 16)
-
-                    Text("Orders and item details are in progress. This view will update as we process your order.")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.6))
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 8)
-                }
-                .padding(.top, 16)
-                .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: 60)
-                }
+            VStack(spacing: 24) {
+                header
+                perks
+                Spacer(minLength: 0)
+                cta
+                legal
             }
+            .padding(24)
         }
         .navigationTitle("Recent Buy")
         .navigationBarTitleDisplayMode(.inline)
@@ -126,59 +35,90 @@ struct RecentBuyView: View {
         .preferredColorScheme(.dark)
     }
 
-    // MARK: - Subviews & helpers
+    private var header: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "bag.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(Color("EmpireMint"))
+                .shadow(color: Color("EmpireMint").opacity(0.5), radius: 12, x: 0, y: 6)
 
-    private var gradientStroke: LinearGradient {
-        LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-
-    private func glassCard(cornerRadius: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(.ultraThinMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(gradientStroke, lineWidth: 1)
-                    .blendMode(.screen)
-            )
-            .shadow(color: Color("EmpireMint").opacity(0.2), radius: 12, y: 6)
-    }
-
-    private func itemRow(name: String, subtitle: String, price: String, imageName: String) -> some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.ultraThinMaterial)
-                .frame(width: 44, height: 44)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(gradientStroke, lineWidth: 1))
-                .overlay(
-                    Image(imageName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 44, height: 44)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                )
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .foregroundStyle(.white)
-                    .font(.subheadline.weight(.semibold))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            Spacer()
-            Text(price)
-                .font(.subheadline.weight(.bold))
+            Text("Recent Buy")
+                .font(.largeTitle.bold())
                 .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Capsule().fill(Color.white.opacity(0.06)))
-                .overlay(Capsule().stroke(gradientStroke, lineWidth: 1))
+
+            Text("Merch order history will arrive once the Empire store is fully integrated.")
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.7))
+
+            Text("Order history is planned after the beta.")
+                .font(.headline)
+                .foregroundStyle(Color("EmpireMint"))
+                .padding(.top, 2)
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(gradientStroke, lineWidth: 1))
+        .padding(.top, 20)
+    }
+
+    private var perks: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            placeholderRow(icon: "shippingbox.fill", title: "Order Timeline", subtitle: "Track purchases and shipping updates.")
+            placeholderRow(icon: "bag.badge.questionmark", title: "Item Details", subtitle: "Review variants, sizes, and order info.")
+            placeholderRow(icon: "arrow.uturn.backward.circle.fill", title: "Returns & Support", subtitle: "Access help for future merch orders.")
+        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(LinearGradient(colors: [.white.opacity(0.25), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        )
+    }
+
+    private func placeholderRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(Color("EmpireMint").opacity(0.15))
+                Image(systemName: icon)
+                    .foregroundStyle(Color("EmpireMint"))
+            }
+            .frame(width: 36, height: 36)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .foregroundStyle(.white)
+                    .font(.headline)
+                Text(subtitle)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .font(.subheadline)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+        }
+    }
+
+    private var cta: some View {
+        Button(action: {}) {
+            Text("Coming Soon")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color("EmpireMint"), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .foregroundStyle(.black)
+                .shadow(color: Color("EmpireMint").opacity(0.25), radius: 12, x: 0, y: 8)
+        }
+        .disabled(true)
+        .opacity(0.7)
+    }
+
+    private var legal: some View {
+        Text("Features and availability may vary by release.")
+            .font(.footnote)
+            .foregroundStyle(.white.opacity(0.6))
+            .multilineTextAlignment(.center)
     }
 }
 
 #Preview {
-    RecentBuyView(item: MerchItem(name: "Empire Hoodie", price: "$78.00", imageName: "hoodiePlaceholder", category: .apparel), variant: "Black / L", orderDate: "Jan 12, 2026", status: "Shipped")
+    NavigationStack {
+        RecentBuyView(item: MerchItem(name: "Empire Hoodie", price: "$78.00", imageName: "hoodiePlaceholder", category: .apparel))
+    }
 }

@@ -338,12 +338,6 @@ private struct MeetCard: View {
                             lineWidth: 1
                         )
                 )
-                .overlay(
-                    ShimmerMask()
-                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                        .opacity(0.4)
-                        .blendMode(.screen)
-                )
         )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
@@ -592,30 +586,6 @@ struct QRScanFlow: View {
                                 .foregroundStyle(.white.opacity(0.45))
                         }
 
-                        // Demo QR pill — remove before App Store submission
-                        if let meet {
-                            Button {
-                                let gen = UIImpactFeedbackGenerator(style: .medium)
-                                gen.impactOccurred()
-                                onCode(meet.id.uuidString)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "ant.fill")
-                                        .font(.system(size: 13, weight: .semibold))
-                                    Text("Demo QR")
-                                        .font(.system(size: 14, weight: .semibold))
-                                }
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.orange)
-                                        .shadow(color: Color.orange.opacity(0.5), radius: 10, y: 4)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
                     }
                     .padding(.horizontal, 28)
                     .padding(.vertical, 20)
@@ -868,33 +838,6 @@ struct CheckInSuccessView: View {
 }
 
 // MARK: - Effects / Utils
-
-private struct ShimmerMask: View {
-    @State private var phase: CGFloat = 0
-
-    var body: some View {
-        GeometryReader { geo in
-            LinearGradient(
-                gradient: Gradient(stops: [
-                    .init(color: .clear, location: 0.0),
-                    .init(color: Color.white.opacity(0.3), location: 0.45),
-                    .init(color: .clear, location: 0.9)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(width: geo.size.width)
-            .offset(x: -geo.size.width + phase * (geo.size.width * 2))
-            .onAppear {
-                withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: false)) {
-                    phase = 1
-                }
-            }
-            .onDisappear { phase = 0 }
-        }
-        .allowsHitTesting(false)
-    }
-}
 
 private struct ParallaxEffect: ViewModifier {
     let y: CGFloat
