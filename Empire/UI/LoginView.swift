@@ -13,8 +13,7 @@ struct LoginView: View {
 
     @State private var isLoading = false
     @State private var errorMessage: String?
-
-    private let appleSignInController = AppleSignInController()
+    @State private var appleSignInController = AppleSignInController()
 
     @EnvironmentObject var authViewModel: AuthViewModel
 
@@ -216,9 +215,15 @@ struct LoginView: View {
     }
 
     private func beginAppleSignIn() {
+        guard !isLoading else { return }
+        isLoading = true
         errorMessage = nil
         appleNonce = randomNonceString()
-        appleSignInController.startSignIn(hashedNonce: sha256(appleNonce))
+        guard appleSignInController.startSignIn(hashedNonce: sha256(appleNonce)) else {
+            errorMessage = "Apple sign-in is unavailable right now. Please try again."
+            isLoading = false
+            return
+        }
     }
 
     private var activePresentationRoot: UIViewController? {
@@ -236,11 +241,14 @@ struct LoginView: View {
             let nsError = error as NSError
             if nsError.domain == ASAuthorizationError.errorDomain,
                nsError.code == ASAuthorizationError.canceled.rawValue {
+                isLoading = false
                 return
             }
+            isLoading = false
             errorMessage = error.localizedDescription
         case .success(let authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                isLoading = false
                 errorMessage = "Failed to read Apple credential."
                 return
             }
@@ -248,6 +256,7 @@ struct LoginView: View {
             guard let tokenData = credential.identityToken,
                   let idToken = String(data: tokenData, encoding: .utf8),
                   !appleNonce.isEmpty else {
+                isLoading = false
                 errorMessage = "Failed to process Apple identity token."
                 return
             }
@@ -320,8 +329,15 @@ struct LoginView: View {
 
 private final class AppleSignInController: NSObject {
     var completion: ((Result<ASAuthorization, Error>) -> Void)?
+    private weak var presentationWindow: UIWindow?
 
-    func startSignIn(hashedNonce: String) {
+    func startSignIn(hashedNonce: String) -> Bool {
+        guard let presentationWindow = Self.activePresentationWindow() else {
+            return false
+        }
+
+        self.presentationWindow = presentationWindow
+
         let request = ASAuthorizationAppleIDProvider().createRequest()
         request.requestedScopes = [.fullName, .email]
         request.nonce = hashedNonce
@@ -330,23 +346,30 @@ private final class AppleSignInController: NSObject {
         controller.delegate = self
         controller.presentationContextProvider = self
         controller.performRequests()
+        return true
+    }
+
+    private static func activePresentationWindow() -> UIWindow? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
     }
 }
 
 extension AppleSignInController: ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        if let window = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow) {
+        if let window = presentationWindow ?? Self.activePresentationWindow() {
             return window
         }
 
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+        if let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first {
             return UIWindow(windowScene: windowScene)
         }
 
-        fatalError("No active window scene available for Apple sign-in presentation.")
+        preconditionFailure("Apple sign-in requires an active window scene.")
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {

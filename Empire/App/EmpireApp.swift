@@ -39,7 +39,11 @@ struct EmpireApp: App {
                     }
             }
             .preferredColorScheme(.dark)
-            .fullScreenCover(isPresented: Binding(get: { !authViewModel.isAuthenticated && !authViewModel.isLoading }, set: { _ in })) {
+            .fullScreenCover(isPresented: Binding(get: {
+                !authViewModel.isAuthenticated &&
+                !authViewModel.isLoading &&
+                !authViewModel.isPresentingPasswordRecovery
+            }, set: { _ in })) {
                 LoginView()
                     .environmentObject(authViewModel)
                     .preferredColorScheme(.dark)
