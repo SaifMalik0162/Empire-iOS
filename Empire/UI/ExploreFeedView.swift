@@ -21,6 +21,7 @@ struct ExploreFeedView: View {
     @State private var selectedStageFilter: ExploreStageFilter? = nil
     @State private var selectedVehicleClassFilter: VehicleClass? = nil
     @State private var expandedFilterMenu: ExpandedExploreFilterMenu? = nil
+    @State private var filterMenuFrames: [ExpandedExploreFilterMenu: CGRect] = [:]
     @State private var showShareToFeed: Bool = false
     @State private var upcomingMeets: [Meet] = []
     @State private var selectedMeetFilterID: UUID? = nil
@@ -177,11 +178,13 @@ struct ExploreFeedView: View {
 
                 filterChips
                     .padding(.top, 6)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 10)
+                    .zIndex(3)
 
                 feedDiscoveryPanel
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
+                    .zIndex(1)
 
                 ForEach(rankedPosts) { post in
                     feedPostCard(post)
@@ -612,99 +615,108 @@ struct ExploreFeedView: View {
     // MARK: - Filter chips
 
     private var filterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 8) {
-                FilterChip(
-                    label: "Liked",
-                    icon: "heart.fill",
-                    accentColor: Color(red: 0.95, green: 0.3, blue: 0.45),
-                    isSelected: showLikedOnly
-                ) {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showLikedOnly.toggle()
-                    }
-                }
+        GeometryReader { proxy in
+            ZStack(alignment: .topLeading) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .center, spacing: 8) {
+                        FilterChip(
+                            label: "Liked",
+                            icon: "heart.fill",
+                            accentColor: Color(red: 0.95, green: 0.3, blue: 0.45),
+                            isSelected: showLikedOnly
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showLikedOnly.toggle()
+                            }
+                        }
 
-                FilterChip(
-                    label: "Saved",
-                    icon: "bookmark.fill",
-                    accentColor: Color("EmpireMint"),
-                    isSelected: showSavedOnly
-                ) {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showSavedOnly.toggle()
-                    }
-                }
+                        FilterChip(
+                            label: "Saved",
+                            icon: "bookmark.fill",
+                            accentColor: Color("EmpireMint"),
+                            isSelected: showSavedOnly
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showSavedOnly.toggle()
+                            }
+                        }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    ExpandableFilterChip(
-                        label: selectedStageFilter?.label ?? "Stage Levels",
-                        icon: "slider.horizontal.3",
-                        accentColor: selectedStageFilter?.accentColor ?? Color("EmpireMint"),
-                        isSelected: selectedStageFilter != nil || expandedFilterMenu == .stageLevels,
-                        isExpanded: expandedFilterMenu == .stageLevels
-                    ) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                            expandedFilterMenu = expandedFilterMenu == .stageLevels ? nil : .stageLevels
+                        ExpandableFilterChip(
+                            label: selectedStageFilter?.label ?? "Stage Levels",
+                            icon: "slider.horizontal.3",
+                            accentColor: selectedStageFilter?.accentColor ?? Color("EmpireMint"),
+                            isSelected: selectedStageFilter != nil || expandedFilterMenu == .stageLevels,
+                            isExpanded: expandedFilterMenu == .stageLevels
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                expandedFilterMenu = expandedFilterMenu == .stageLevels ? nil : .stageLevels
+                            }
+                        }
+                        .background(filterMenuFrameReader(for: .stageLevels))
+
+                        ExpandableFilterChip(
+                            label: selectedVehicleClassFilter.map { "Class \($0.code)" } ?? "Vehicle Class",
+                            icon: "car.fill",
+                            accentColor: selectedVehicleClassFilter?.accentColor ?? Color("EmpireMint"),
+                            isSelected: selectedVehicleClassFilter != nil || expandedFilterMenu == .vehicleClass,
+                            isExpanded: expandedFilterMenu == .vehicleClass
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                expandedFilterMenu = expandedFilterMenu == .vehicleClass ? nil : .vehicleClass
+                            }
+                        }
+                        .background(filterMenuFrameReader(for: .vehicleClass))
+
+                        if hasActiveUtilityFilters {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                    clearUtilityFilters()
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                    Text("Clear")
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .foregroundStyle(.white.opacity(0.78))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(Color.white.opacity(0.07)))
+                                .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-
-                    if expandedFilterMenu == .stageLevels {
-                        expandedStageFilterList
-                            .frame(width: 148, alignment: .leading)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 2)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    ExpandableFilterChip(
-                        label: selectedVehicleClassFilter.map { "Class \($0.code)" } ?? "Vehicle Class",
-                        icon: "car.fill",
-                        accentColor: selectedVehicleClassFilter?.accentColor ?? Color("EmpireMint"),
-                        isSelected: selectedVehicleClassFilter != nil || expandedFilterMenu == .vehicleClass,
-                        isExpanded: expandedFilterMenu == .vehicleClass
-                    ) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                            expandedFilterMenu = expandedFilterMenu == .vehicleClass ? nil : .vehicleClass
-                        }
-                    }
-
-                    if expandedFilterMenu == .vehicleClass {
-                        expandedVehicleClassFilterList
-                            .frame(width: 136, alignment: .leading)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-                }
-
-                if hasActiveUtilityFilters {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                            clearUtilityFilters()
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 10, weight: .bold))
-                            Text("Clear")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .foregroundStyle(.white.opacity(0.78))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Capsule().fill(Color.white.opacity(0.07)))
-                        .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
+                if let expandedFilterMenu,
+                   let frame = filterMenuFrames[expandedFilterMenu] {
+                    expandedMenuView(for: expandedFilterMenu)
+                        .frame(width: menuWidth(for: expandedFilterMenu), alignment: .leading)
+                        .offset(
+                            x: clampedMenuX(
+                                for: frame,
+                                menu: expandedFilterMenu,
+                                containerWidth: proxy.size.width
+                            ),
+                            y: frame.maxY + 8
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading)))
+                        .zIndex(5)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 2)
+            .coordinateSpace(name: "ExploreFilterChips")
+            .onPreferenceChange(ExploreFilterMenuFramePreferenceKey.self) { filterMenuFrames = $0 }
         }
+        .frame(height: 42)
     }
 
     private var hasActiveUtilityFilters: Bool {
@@ -741,7 +753,12 @@ struct ExploreFeedView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.black.opacity(0.52), Color.black.opacity(0.34)],
+                        colors: [
+                            Color("EmpireMint").opacity(0.14),
+                            Color.white.opacity(0.05),
+                            Color.black.opacity(0.34),
+                            Color.black.opacity(0.22)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -753,14 +770,15 @@ struct ExploreFeedView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        colors: [Color.white.opacity(0.28), Color("EmpireMint").opacity(0.18), Color.white.opacity(0.08)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.28), radius: 12, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.16), radius: 12, x: 0, y: 8)
+        .shadow(color: Color("EmpireMint").opacity(0.08), radius: 10, x: 0, y: 4)
     }
 
     private var expandedVehicleClassFilterList: some View {
@@ -784,7 +802,12 @@ struct ExploreFeedView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.black.opacity(0.52), Color.black.opacity(0.34)],
+                        colors: [
+                            Color("EmpireMint").opacity(0.14),
+                            Color.white.opacity(0.05),
+                            Color.black.opacity(0.34),
+                            Color.black.opacity(0.22)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -796,14 +819,15 @@ struct ExploreFeedView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        colors: [Color.white.opacity(0.28), Color("EmpireMint").opacity(0.18), Color.white.opacity(0.08)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.28), radius: 12, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.16), radius: 12, x: 0, y: 8)
+        .shadow(color: Color("EmpireMint").opacity(0.08), radius: 10, x: 0, y: 4)
     }
 
     private func expandedFilterRow(label: String, accentColor: Color, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -829,14 +853,49 @@ struct ExploreFeedView: View {
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? accentColor.opacity(0.15) : Color.white.opacity(0.03))
+                    .fill(isSelected ? accentColor.opacity(0.16) : Color.white.opacity(0.055))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? accentColor.opacity(0.52) : Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(isSelected ? accentColor.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
+    }
+
+    private func expandedMenuView(for menu: ExpandedExploreFilterMenu) -> some View {
+        Group {
+            switch menu {
+            case .stageLevels:
+                expandedStageFilterList
+            case .vehicleClass:
+                expandedVehicleClassFilterList
+            }
+        }
+    }
+
+    private func menuWidth(for menu: ExpandedExploreFilterMenu) -> CGFloat {
+        switch menu {
+        case .stageLevels:
+            return 148
+        case .vehicleClass:
+            return 136
+        }
+    }
+
+    private func clampedMenuX(for frame: CGRect, menu: ExpandedExploreFilterMenu, containerWidth: CGFloat) -> CGFloat {
+        let desiredX = frame.minX
+        let maxX = max(16, containerWidth - menuWidth(for: menu) - 16)
+        return min(max(desiredX, 16), maxX)
+    }
+
+    private func filterMenuFrameReader(for menu: ExpandedExploreFilterMenu) -> some View {
+        GeometryReader { proxy in
+            Color.clear.preference(
+                key: ExploreFilterMenuFramePreferenceKey.self,
+                value: [menu: proxy.frame(in: .named("ExploreFilterChips"))]
+            )
+        }
     }
 
     // MARK: - Empty / error states
@@ -996,6 +1055,14 @@ enum ExploreStageFilter: CaseIterable {
 private enum ExpandedExploreFilterMenu {
     case stageLevels
     case vehicleClass
+}
+
+private struct ExploreFilterMenuFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [ExpandedExploreFilterMenu: CGRect] = [:]
+
+    static func reduce(value: inout [ExpandedExploreFilterMenu: CGRect], nextValue: () -> [ExpandedExploreFilterMenu: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
 }
 
 // MARK: - Filter chip
