@@ -4,32 +4,25 @@ enum SupabaseConfig {
     static let appURLScheme = "empireconnect"
     static let oauthRedirectURL = URL(string: "empireconnect://auth/callback")!
     static let passwordResetRedirectURL = URL(string: "empireconnect://auth/reset-password")!
-    private static let fallbackGoogleClientID = "404305150-p4m9htb664lb1439rd4oioru7qvg6b62.apps.googleusercontent.com"
-    private static let fallbackGoogleServerClientID = "404305150-j93e29ijdfvnnk134v2ih0bk1frcsf58.apps.googleusercontent.com"
-    private static let fallbackGoogleReversedClientIDScheme = "com.googleusercontent.apps.404305150-p4m9htb664lb1439rd4oioru7qvg6b62"
 
-    static let googleClientID = configValue(
+    static let googleClientID = requiredConfigValue(
         debugEnvironmentKey: "GOOGLE_IOS_CLIENT_ID",
-        infoPlistKey: "GIDClientID",
-        fallback: fallbackGoogleClientID
+        infoPlistKey: "GIDClientID"
     )
 
-    static let googleServerClientID = configValue(
+    static let googleServerClientID = requiredConfigValue(
         debugEnvironmentKey: "GOOGLE_WEB_CLIENT_ID",
-        infoPlistKey: "GIDServerClientID",
-        fallback: fallbackGoogleServerClientID
+        infoPlistKey: "GIDServerClientID"
     )
 
-    static let googleReversedClientIDScheme = configValue(
+    static let googleReversedClientIDScheme = requiredConfigValue(
         debugEnvironmentKey: "GOOGLE_REVERSED_CLIENT_ID_SCHEME",
-        infoPlistKey: nil,
-        fallback: fallbackGoogleReversedClientIDScheme
+        infoPlistKey: nil
     )
 
-    private static func configValue(
+    private static func requiredConfigValue(
         debugEnvironmentKey: String,
-        infoPlistKey: String?,
-        fallback: String
+        infoPlistKey: String?
     ) -> String {
         #if DEBUG
         if let environmentValue = ProcessInfo.processInfo.environment[debugEnvironmentKey],
@@ -44,7 +37,7 @@ enum SupabaseConfig {
             return sanitizedInfoPlistValue
         }
 
-        return fallback
+        preconditionFailure("Missing required Google auth config for \(debugEnvironmentKey). Verify AppConfig.xcconfig and Info.plist URL scheme substitution.")
     }
 
     private static func sanitizedConfigValue(_ value: String) -> String? {
