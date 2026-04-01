@@ -153,8 +153,15 @@ struct ExploreFeedView: View {
         }
         .preferredColorScheme(.dark)
         .task {
+            await socialStore.refreshFromBackend()
             await vm.refresh()
             await loadProgrammingSurfaces()
+        }
+        .onAppear {
+            Task { await socialStore.refreshFromBackend() }
+        }
+        .onChange(of: currentUserId) { _, _ in
+            Task { await socialStore.refreshFromBackend() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
             Task {
@@ -1766,6 +1773,7 @@ struct CommunityProfilePostsView: View {
         }
         .preferredColorScheme(.dark)
         .task {
+            await socialStore.refreshFromBackend()
             await vm.refresh()
             await refreshGarage()
         }
@@ -2111,8 +2119,8 @@ struct CommunityProfilePostsView: View {
 
     private var followButton: some View {
         Button {
-            socialStore.toggleFollow(userId)
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            Task { await socialStore.toggleFollow(userId) }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: socialStore.isFollowing(userId) ? "checkmark.circle.fill" : "person.badge.plus")
@@ -2890,6 +2898,8 @@ final class CommunitySocialStore: ObservableObject {
     @Published private(set) var followedUserIDs: Set<String> = []
     @Published private(set) var savedPostIDs: Set<UUID> = []
 
+    private let communityService = SupabaseCommunityService()
+
     private var currentUserKey: String {
         UserDefaults.standard.string(forKey: "currentUserId")?.lowercased() ?? "guest"
     }
@@ -2917,15 +2927,46 @@ final class CommunitySocialStore: ObservableObject {
         followedUserIDs.contains(normalized(userId))
     }
 
-    func toggleFollow(_ userId: String) {
+    func refreshFromBackend() async {
+        reload()
+        guard currentUserKey != "guest" else { return }
+        do {
+            let remoteIDs = try await communityService.fetchFollowedUserIDs(currentUserId: currentUserKey)
+            followedUserIDs = remoteIDs
+            UserDefaults.standard.set(Array(remoteIDs).sorted(), forKey: followedUsersKey)
+        } catch {
+            // Keep cached local state when backend fetch fails.
+        }
+    }
+
+    func toggleFollow(_ userId: String) async {
         let key = normalized(userId)
         guard !key.isEmpty else { return }
-        if followedUserIDs.contains(key) {
+
+        let wasFollowing = followedUserIDs.contains(key)
+        if wasFollowing {
             followedUserIDs.remove(key)
         } else {
             followedUserIDs.insert(key)
         }
         UserDefaults.standard.set(Array(followedUserIDs).sorted(), forKey: followedUsersKey)
+
+        guard currentUserKey != "guest" else { return }
+
+        do {
+            if wasFollowing {
+                try await communityService.unfollowUser(currentUserId: currentUserKey, targetUserId: key)
+            } else {
+                try await communityService.followUser(currentUserId: currentUserKey, targetUserId: key)
+            }
+        } catch {
+            if wasFollowing {
+                followedUserIDs.insert(key)
+            } else {
+                followedUserIDs.remove(key)
+            }
+            UserDefaults.standard.set(Array(followedUserIDs).sorted(), forKey: followedUsersKey)
+        }
     }
 
     func followerCount(for userId: String) -> Int {

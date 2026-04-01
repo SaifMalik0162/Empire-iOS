@@ -112,6 +112,21 @@ private struct SBLikeRow: Codable {
     let user_id: String
 }
 
+private struct SBFollowRow: Codable {
+    let follower_id: String
+    let followed_id: String
+}
+
+private struct SBFollowInsertUUID: Encodable {
+    let follower_id: UUID
+    let followed_id: UUID
+}
+
+private struct SBFollowInsertString: Encodable {
+    let follower_id: String
+    let followed_id: String
+}
+
 private struct SBLikeActivityRow: Codable {
     let post_id: String
     let user_id: String
@@ -548,6 +563,79 @@ final class SupabaseCommunityService {
                 .delete()
                 .eq("post_id", value: postId.uuidString)
                 .eq("user_id", value: authenticatedUserId)
+                .execute()
+        }
+    }
+
+    // MARK: - Follow / Unfollow
+
+    func fetchFollowedUserIDs(currentUserId: String) async throws -> Set<String> {
+        let rows: [SBFollowRow]
+        if let userUUID = UUID(uuidString: currentUserId) {
+            rows = try await client
+                .from("user_follows")
+                .select("follower_id, followed_id")
+                .eq("follower_id", value: userUUID)
+                .execute()
+                .value
+        } else {
+            rows = try await client
+                .from("user_follows")
+                .select("follower_id, followed_id")
+                .eq("follower_id", value: currentUserId)
+                .execute()
+                .value
+        }
+
+        return Set(
+            rows.map(\.followed_id)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+        )
+    }
+
+    func followUser(currentUserId: String, targetUserId: String) async throws {
+        let authenticatedUserId = try await requireAuthenticatedUserId()
+        let normalizedCurrent = authenticatedUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedTarget = targetUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedTarget.isEmpty, normalizedTarget != normalizedCurrent else { return }
+
+        if let currentUUID = UUID(uuidString: normalizedCurrent),
+           let targetUUID = UUID(uuidString: normalizedTarget) {
+            let row = SBFollowInsertUUID(follower_id: currentUUID, followed_id: targetUUID)
+            _ = try await client
+                .from("user_follows")
+                .upsert(row, onConflict: "follower_id, followed_id")
+                .execute()
+        } else {
+            let row = SBFollowInsertString(follower_id: normalizedCurrent, followed_id: normalizedTarget)
+            _ = try await client
+                .from("user_follows")
+                .upsert(row, onConflict: "follower_id, followed_id")
+                .execute()
+        }
+    }
+
+    func unfollowUser(currentUserId: String, targetUserId: String) async throws {
+        let authenticatedUserId = try await requireAuthenticatedUserId()
+        let normalizedCurrent = authenticatedUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedTarget = targetUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedTarget.isEmpty else { return }
+
+        if let currentUUID = UUID(uuidString: normalizedCurrent),
+           let targetUUID = UUID(uuidString: normalizedTarget) {
+            _ = try await client
+                .from("user_follows")
+                .delete()
+                .eq("follower_id", value: currentUUID)
+                .eq("followed_id", value: targetUUID)
+                .execute()
+        } else {
+            _ = try await client
+                .from("user_follows")
+                .delete()
+                .eq("follower_id", value: normalizedCurrent)
+                .eq("followed_id", value: normalizedTarget)
                 .execute()
         }
     }
