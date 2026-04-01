@@ -66,8 +66,9 @@ struct Car: Identifiable, Codable {
     var mods: [ModItem] = []
     var isJailbreak: Bool = false
     var vehicleClass: VehicleClass? = nil
+    var buildCategory: BuildCategory? = nil
 
-    init(id: UUID = UUID(), name: String, description: String, make: String? = nil, model: String? = nil, imageName: String, photoFileName: String? = nil, horsepower: Int, stage: Int, specs: [SpecItem] = [], mods: [ModItem] = [], isJailbreak: Bool = false, vehicleClass: VehicleClass? = nil) {
+    init(id: UUID = UUID(), name: String, description: String, make: String? = nil, model: String? = nil, imageName: String, photoFileName: String? = nil, horsepower: Int, stage: Int, specs: [SpecItem] = [], mods: [ModItem] = [], isJailbreak: Bool = false, vehicleClass: VehicleClass? = nil, buildCategory: BuildCategory? = nil) {
         self.id = id
         self.name = name
         self.description = description
@@ -81,6 +82,7 @@ struct Car: Identifiable, Codable {
         self.mods = mods
         self.isJailbreak = isJailbreak
         self.vehicleClass = vehicleClass
+        self.buildCategory = buildCategory
     }
 }
 
@@ -506,6 +508,66 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(rawValue)
+    }
+}
+
+enum BuildCategory: String, CaseIterable, Identifiable, Codable {
+    case performance
+    case staticBuild = "static"
+    case bagged
+    case vip
+    case trackDrag = "track_drag"
+    case offRoadRally = "off_road_rally"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .performance: return "Performance"
+        case .staticBuild: return "Static"
+        case .bagged: return "Bagged"
+        case .vip: return "VIP Build"
+        case .trackDrag: return "Track / Drag"
+        case .offRoadRally: return "Off-Road / Rally"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .performance: return "Power-first street or track setup."
+        case .staticBuild: return "Lowered on fixed-height suspension."
+        case .bagged: return "Air suspension stance-focused setup."
+        case .vip: return "Luxury-focused VIP-inspired build."
+        case .trackDrag: return "Built around circuit or strip use."
+        case .offRoadRally: return "Made for rough roads, trails, or rally."
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .performance: return "engine.combustion.fill"
+        case .staticBuild: return "arrow.down.circle.fill"
+        case .bagged: return "arrow.up.and.down.circle.fill"
+        case .vip: return "crown.fill"
+        case .trackDrag: return "road.lanes"
+        case .offRoadRally: return "mountain.2.fill"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .performance: return Color(red: 0.98, green: 0.52, blue: 0.22)
+        case .staticBuild: return Color(red: 0.56, green: 0.79, blue: 1.0)
+        case .bagged: return Color(red: 0.43, green: 0.93, blue: 0.83)
+        case .vip: return Color(red: 0.95, green: 0.80, blue: 0.28)
+        case .trackDrag: return Color(red: 0.98, green: 0.35, blue: 0.42)
+        case .offRoadRally: return Color(red: 0.73, green: 0.57, blue: 0.39)
+        }
+    }
+
+    static func from(rawValue: String?) -> BuildCategory? {
+        guard let rawValue else { return nil }
+        return BuildCategory(rawValue: rawValue)
     }
 }
 

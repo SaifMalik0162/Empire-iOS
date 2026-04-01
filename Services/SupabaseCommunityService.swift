@@ -21,6 +21,7 @@ struct CommunityPost: Identifiable, Equatable {
     let stage: Int
     let isJailbreak: Bool
     let vehicleClass: String?
+    let buildCategory: String?
     var likesCount: Int
     var commentsCount: Int
     let createdAt: Date
@@ -87,6 +88,7 @@ private struct SBCommunityPostRow: Codable {
     let stage: Int
     let is_jailbreak: Bool
     let vehicle_class: String?
+    let build_category: String?
     let likes_count: Int
     let comments_count: Int?
     let created_at: String
@@ -105,6 +107,7 @@ private struct SBInsertPost: Encodable {
     let stage: Int
     let is_jailbreak: Bool
     let vehicle_class: String?
+    let build_category: String?
 }
 
 private struct SBLikeRow: Codable {
@@ -216,7 +219,6 @@ final class SupabaseCommunityService {
                let encoded = linkedMeetTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
                 parts.append("meetTitle=\(encoded)")
             }
-
             guard !parts.isEmpty else {
                 return trimmedCaption?.nilIfEmpty
             }
@@ -411,6 +413,7 @@ final class SupabaseCommunityService {
                 stage: row.stage,
                 isJailbreak: row.is_jailbreak,
                 vehicleClass: row.vehicle_class,
+                buildCategory: row.build_category,
                 likesCount: row.likes_count,
                 commentsCount: commentsByPostId[row.id] ?? row.comments_count ?? 0,
                 createdAt: date,
@@ -491,7 +494,8 @@ final class SupabaseCommunityService {
             horsepower: car.horsepower,
             stage: car.stage,
             is_jailbreak: car.isJailbreak,
-            vehicle_class: car.vehicleClass?.rawValue
+            vehicle_class: car.vehicleClass?.rawValue,
+            build_category: car.buildCategory?.rawValue
         )
 
         let rows: [SBCommunityPostRow] = try await client
@@ -523,6 +527,7 @@ final class SupabaseCommunityService {
             stage: row.stage,
             isJailbreak: row.is_jailbreak,
             vehicleClass: row.vehicle_class,
+            buildCategory: row.build_category,
             likesCount: 0,
             commentsCount: 0,
             createdAt: date

@@ -92,6 +92,7 @@
 		70C0A6892F457D1D003F8425 /* VIPWelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6872F457D1D003F8425 /* VIPWelcomeView.swift */; };
 		70C0A68E2F457D2C003F8425 /* VIPDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */; };
 		70C0A6912F457D5D003F8425 /* VIPExperienceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68F2F457D5D003F8425 /* VIPExperienceView.swift */; };
+		70C7B1012FA9000100ABCD01 /* BuildCategoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C7B1002FA9000100ABCD01 /* BuildCategoryViews.swift */; };
 		70DF416E2F196E930034C5FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416B2F196E930034C5FB /* SettingsView.swift */; };
 		70DF41712F1972590034C5FB /* ManageAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DF416F2F1972590034C5FB /* ManageAccountView.swift */; };
 		70E699D82F1496ED001304D6 /* VehicleEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E699D52F1496ED001304D6 /* VehicleEditorView.swift */; };
@@ -211,6 +212,7 @@
 		70C60A722F0DAA7C003AE110 /* Empire.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Empire.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A812F0DAA7E003AE110 /* EmpireTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		70C60A8B2F0DAA7E003AE110 /* EmpireUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EmpireUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		70C7B1002FA9000100ABCD01 /* BuildCategoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildCategoryViews.swift; sourceTree = "<group>"; };
 		70DF416B2F196E930034C5FB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		70DF416F2F1972590034C5FB /* ManageAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageAccountView.swift; sourceTree = "<group>"; };
 		70E28F662F15C9980025AAAC /* README.md */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = README.md; sourceTree = "<group>"; };
@@ -349,6 +351,7 @@
 				70A016F12F0DF49000A084C2 /* EmpireTabView.swift */,
 				70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */,
 				70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */,
+				70C7B1002FA9000100ABCD01 /* BuildCategoryViews.swift */,
 				70A016F42F0DF49000A084C2 /* HomeView.swift */,
 				70A016F62F0DF49000A084C2 /* LiquidGlassTabBar.swift */,
 				70A016F72F0DF49000A084C2 /* MeetsView.swift */,
@@ -643,6 +646,7 @@
 				70A2E4082F10ABDA004B950D /* EmpireLogoView.swift in Sources */,
 				70A017272F0DF49000A084C2 /* EmpireTabView.swift in Sources */,
 				70A017282F0DF49000A084C2 /* GlassOptionRow.swift in Sources */,
+				70C7B1012FA9000100ABCD01 /* BuildCategoryViews.swift in Sources */,
 				703F05DC2F63912500D4EF47 /* SupabaseClientProvider.swift in Sources */,
 				70C0A6892F457D1D003F8425 /* VIPWelcomeView.swift in Sources */,
 				704251B32F134C5C00322849 /* UserVehiclesViewModel.swift in Sources */,
@@ -834,7 +838,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 144;
+				CURRENT_PROJECT_VERSION = 145;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -877,7 +881,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 144;
+				CURRENT_PROJECT_VERSION = 145;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

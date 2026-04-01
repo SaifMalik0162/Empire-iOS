@@ -1443,6 +1443,9 @@ struct FeedPostCard: View {
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
+                    if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                        BuildCategoryBadge(category: buildCategory, size: 18, materialOpacity: 0.14, strokeOpacity: 0.5)
+                    }
                     if let vehicleClass = VehicleClass.from(rawValue: post.vehicleClass) {
                         Text(vehicleClass.code)
                             .font(.caption2.weight(.semibold))
@@ -2050,7 +2053,8 @@ struct CommunityProfilePostsView: View {
                 specs: [],
                 mods: [],
                 isJailbreak: post.isJailbreak,
-                vehicleClass: VehicleClass.from(rawValue: post.vehicleClass)
+                vehicleClass: VehicleClass.from(rawValue: post.vehicleClass),
+                buildCategory: BuildCategory.from(rawValue: post.buildCategory)
             )
 
             entries.append(
@@ -2250,118 +2254,135 @@ private struct CommunityProfileGridTile: View {
     var onDelete: (() -> Void)? = nil
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Group {
-                if let photoURL {
-                    AsyncImage(url: photoURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        case .empty:
-                            ZStack {
-                                Color.white.opacity(0.04)
-                                ProgressView().tint(Color("EmpireMint"))
+        GeometryReader { proxy in
+            ZStack(alignment: .bottomLeading) {
+                Group {
+                    if let photoURL {
+                        AsyncImage(url: photoURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFill()
+                            case .empty:
+                                ZStack {
+                                    Color.white.opacity(0.04)
+                                    ProgressView().tint(Color("EmpireMint"))
+                                }
+                            default:
+                                tileFallback
                             }
-                        default:
-                            tileFallback
                         }
                     }
-                } else {
-                    tileFallback
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 184)
-            .clipped()
-            .overlay(
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.16), .black.opacity(0.8)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(alignment: .center, spacing: 5) {
-                    Text(profileStageLabel)
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                        .allowsTightening(true)
-                        .foregroundStyle(stageColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(stageColor.opacity(0.15)))
-                        .overlay(Capsule().stroke(stageColor.opacity(0.5), lineWidth: 1))
-                        .layoutPriority(2)
-
-                    Text("\(post.horsepower) WHP")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                        .allowsTightening(true)
-                        .foregroundStyle(Color.cyan)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.cyan.opacity(0.15)))
-                        .overlay(Capsule().stroke(Color.cyan.opacity(0.5), lineWidth: 1))
-                        .layoutPriority(1)
-
-                    Spacer(minLength: 6)
-
-                    HStack(spacing: 3) {
-                        Image(systemName: "heart.fill")
-                        Text("\(post.likesCount)")
-                    }
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color("EmpireMint"))
-                    .fixedSize(horizontal: true, vertical: true)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(post.carName)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                    if let makeModel {
-                        Text(makeModel)
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.68))
-                            .lineLimit(1)
+                    else {
+                        tileFallback
                     }
                 }
-            }
-            .padding(9)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .clipped()
+                .overlay(
                     LinearGradient(
-                        colors: [stageColor.opacity(0.5), Color.white.opacity(0.08)],
-                        startPoint: .bottomLeading,
-                        endPoint: .topTrailing
-                    ),
-                    lineWidth: 1.2
+                        colors: [.clear, .black.opacity(0.16), .black.opacity(0.8)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                 )
-        )
-        .overlay(alignment: .topTrailing) {
-            if showsDeleteButton {
-                Button(role: .destructive) {
-                    onDelete?()
-                } label: {
-                    Image(systemName: "trash.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(8)
-                        .background(Circle().fill(Color.red.opacity(0.9)))
-                        .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
+                .overlay(alignment: .topTrailing) {
+                    if !showsDeleteButton {
+                        VStack(alignment: .trailing, spacing: 6) {
+                            if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                                BuildCategoryBadge(category: buildCategory, size: 18, materialOpacity: 0.14, strokeOpacity: 0.45)
+                            }
+
+                            HStack(spacing: 3) {
+                                Image(systemName: "heart.fill")
+                                Text("\(post.likesCount)")
+                            }
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color("EmpireMint"))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color.black.opacity(0.24)))
+                            .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 1))
+                        }
+                        .padding(.top, 8)
+                        .padding(.trailing, 8)
+                    }
                 }
-                .buttonStyle(.plain)
-                .padding(10)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .center, spacing: 5) {
+                        Text(profileStageLabel)
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                            .allowsTightening(true)
+                            .foregroundStyle(stageColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(stageColor.opacity(0.15)))
+                            .overlay(Capsule().stroke(stageColor.opacity(0.5), lineWidth: 1))
+                            .layoutPriority(2)
+
+                        Text("\(post.horsepower) WHP")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                            .allowsTightening(true)
+                            .foregroundStyle(Color.cyan)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color.cyan.opacity(0.15)))
+                            .overlay(Capsule().stroke(Color.cyan.opacity(0.5), lineWidth: 1))
+                            .layoutPriority(1)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(post.carName)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        if let makeModel {
+                            Text(makeModel)
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.68))
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .padding(9)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottomLeading)
             }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottomLeading)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [stageColor.opacity(0.5), Color.white.opacity(0.08)],
+                            startPoint: .bottomLeading,
+                            endPoint: .topTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
+            )
+            .overlay(alignment: .topTrailing) {
+                if showsDeleteButton {
+                    Button(role: .destructive) {
+                        onDelete?()
+                    } label: {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(Circle().fill(Color.red.opacity(0.9)))
+                            .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(10)
+                }
+            }
+            .shadow(color: Color.black.opacity(0.28), radius: 10, y: 7)
         }
-        .shadow(color: Color.black.opacity(0.28), radius: 10, y: 7)
+        .frame(height: 184)
     }
 
     private var tileFallback: some View {
@@ -2427,10 +2448,16 @@ private struct CommunityGarageCard: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(car.name)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(car.name)
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+
+                        if let buildCategory = car.buildCategory {
+                            BuildCategoryBadge(category: buildCategory, size: 16, materialOpacity: 0.14, strokeOpacity: 0.5)
+                        }
+                    }
 
                     if let makeModelLine {
                         Text(makeModelLine)
@@ -2721,10 +2748,16 @@ private struct ExpandedCommunityPostCard: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(post.carName)
-                        .font(.system(size: 32, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(post.carName)
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+
+                        if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                            BuildCategoryBadge(category: buildCategory, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
+                        }
+                    }
 
                     if let makeModelLine {
                         Text(makeModelLine)
