@@ -17,6 +17,7 @@ struct SBCarRow: Codable, Equatable {
     let stage: Int
     let is_jailbreak: Bool
     let vehicle_class: String?
+    let build_category: String?
 }
 
 struct SBSpecRow: Codable, Equatable {
@@ -115,7 +116,8 @@ final class SupabaseCarsService {
                 specs: specs,
                 mods: mods,
                 isJailbreak: row.is_jailbreak,
-                vehicleClass: VehicleClass.from(rawValue: row.vehicle_class)
+                vehicleClass: VehicleClass.from(rawValue: row.vehicle_class),
+                buildCategory: BuildCategory.from(rawValue: row.build_category)
             )
             cars.append(car)
         }
@@ -151,7 +153,8 @@ final class SupabaseCarsService {
             horsepower: car.horsepower,
             stage: car.stage,
             is_jailbreak: car.isJailbreak,
-            vehicle_class: car.vehicleClass?.rawValue
+            vehicle_class: car.vehicleClass?.rawValue,
+            build_category: car.buildCategory?.rawValue
         )
         _ = try await client.from("cars").upsert(carRow, onConflict: "id").execute()
 

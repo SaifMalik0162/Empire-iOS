@@ -21,6 +21,7 @@ struct CommunityPost: Identifiable, Equatable {
     let stage: Int
     let isJailbreak: Bool
     let vehicleClass: String?
+    let buildCategory: String?
     var likesCount: Int
     var commentsCount: Int
     let createdAt: Date
@@ -87,6 +88,7 @@ private struct SBCommunityPostRow: Codable {
     let stage: Int
     let is_jailbreak: Bool
     let vehicle_class: String?
+    let build_category: String?
     let likes_count: Int
     let comments_count: Int?
     let created_at: String
@@ -105,11 +107,27 @@ private struct SBInsertPost: Encodable {
     let stage: Int
     let is_jailbreak: Bool
     let vehicle_class: String?
+    let build_category: String?
 }
 
 private struct SBLikeRow: Codable {
     let post_id: String
     let user_id: String
+}
+
+private struct SBFollowRow: Codable {
+    let follower_id: String
+    let followed_id: String
+}
+
+private struct SBFollowInsertUUID: Encodable {
+    let follower_id: UUID
+    let followed_id: UUID
+}
+
+private struct SBFollowInsertString: Encodable {
+    let follower_id: String
+    let followed_id: String
 }
 
 private struct SBLikeActivityRow: Codable {
@@ -201,7 +219,6 @@ final class SupabaseCommunityService {
                let encoded = linkedMeetTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
                 parts.append("meetTitle=\(encoded)")
             }
-
             guard !parts.isEmpty else {
                 return trimmedCaption?.nilIfEmpty
             }
@@ -396,6 +413,7 @@ final class SupabaseCommunityService {
                 stage: row.stage,
                 isJailbreak: row.is_jailbreak,
                 vehicleClass: row.vehicle_class,
+                buildCategory: row.build_category,
                 likesCount: row.likes_count,
                 commentsCount: commentsByPostId[row.id] ?? row.comments_count ?? 0,
                 createdAt: date,
@@ -476,7 +494,8 @@ final class SupabaseCommunityService {
             horsepower: car.horsepower,
             stage: car.stage,
             is_jailbreak: car.isJailbreak,
-            vehicle_class: car.vehicleClass?.rawValue
+            vehicle_class: car.vehicleClass?.rawValue,
+            build_category: car.buildCategory?.rawValue
         )
 
         let rows: [SBCommunityPostRow] = try await client
@@ -508,6 +527,7 @@ final class SupabaseCommunityService {
             stage: row.stage,
             isJailbreak: row.is_jailbreak,
             vehicleClass: row.vehicle_class,
+            buildCategory: row.build_category,
             likesCount: 0,
             commentsCount: 0,
             createdAt: date
@@ -548,6 +568,100 @@ final class SupabaseCommunityService {
                 .delete()
                 .eq("post_id", value: postId.uuidString)
                 .eq("user_id", value: authenticatedUserId)
+                .execute()
+        }
+    }
+
+    // MARK: - Follow / Unfollow
+
+    func fetchFollowedUserIDs(currentUserId: String) async throws -> Set<String> {
+        let rows: [SBFollowRow]
+        if let userUUID = UUID(uuidString: currentUserId) {
+            rows = try await client
+                .from("user_follows")
+                .select("follower_id, followed_id")
+                .eq("follower_id", value: userUUID)
+                .execute()
+                .value
+        } else {
+            rows = try await client
+                .from("user_follows")
+                .select("follower_id, followed_id")
+                .eq("follower_id", value: currentUserId)
+                .execute()
+                .value
+        }
+
+        return Set(
+            rows.map(\.followed_id)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+        )
+    }
+
+    func fetchFollowerCount(userId: String) async throws -> Int {
+        let normalizedUserId = userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedUserId.isEmpty else { return 0 }
+
+        let baseQuery = client
+            .from("user_follows")
+            .select("follower_id", head: true, count: .exact)
+
+        let response = if let userUUID = UUID(uuidString: normalizedUserId) {
+            try await baseQuery
+                .eq("followed_id", value: userUUID)
+                .execute()
+        } else {
+            try await baseQuery
+                .eq("followed_id", value: normalizedUserId)
+                .execute()
+        }
+
+        return response.count ?? 0
+    }
+
+    func followUser(currentUserId: String, targetUserId: String) async throws {
+        let authenticatedUserId = try await requireAuthenticatedUserId()
+        let normalizedCurrent = authenticatedUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedTarget = targetUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedTarget.isEmpty, normalizedTarget != normalizedCurrent else { return }
+
+        if let currentUUID = UUID(uuidString: normalizedCurrent),
+           let targetUUID = UUID(uuidString: normalizedTarget) {
+            let row = SBFollowInsertUUID(follower_id: currentUUID, followed_id: targetUUID)
+            _ = try await client
+                .from("user_follows")
+                .upsert(row, onConflict: "follower_id, followed_id")
+                .execute()
+        } else {
+            let row = SBFollowInsertString(follower_id: normalizedCurrent, followed_id: normalizedTarget)
+            _ = try await client
+                .from("user_follows")
+                .upsert(row, onConflict: "follower_id, followed_id")
+                .execute()
+        }
+    }
+
+    func unfollowUser(currentUserId: String, targetUserId: String) async throws {
+        let authenticatedUserId = try await requireAuthenticatedUserId()
+        let normalizedCurrent = authenticatedUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedTarget = targetUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedTarget.isEmpty else { return }
+
+        if let currentUUID = UUID(uuidString: normalizedCurrent),
+           let targetUUID = UUID(uuidString: normalizedTarget) {
+            _ = try await client
+                .from("user_follows")
+                .delete()
+                .eq("follower_id", value: currentUUID)
+                .eq("followed_id", value: targetUUID)
+                .execute()
+        } else {
+            _ = try await client
+                .from("user_follows")
+                .delete()
+                .eq("follower_id", value: normalizedCurrent)
+                .eq("followed_id", value: normalizedTarget)
                 .execute()
         }
     }

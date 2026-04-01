@@ -75,6 +75,27 @@ final class AuthViewModelTests: XCTestCase {
         XCTAssertEqual(cars.fetchCalls, 1)
     }
 
+    func testAppleLogin_setsAuthenticatedStateAndPassesNonce() async throws {
+        let auth = MockAuthService()
+        auth.appleLoginResult = BackendUser(id: "apple-user", username: "appleuser", email: "user@icloud.com", avatarPath: nil)
+        let cars = MockCarsService()
+
+        let vm = await MainActor.run {
+            AuthViewModel(authService: auth, carsService: cars, autoCheckStatus: false)
+        }
+
+        try await vm.loginWithApple(idToken: "apple-id-token", nonce: "apple-nonce", suggestedUsername: "Saif")
+
+        let state = await MainActor.run { (vm.isAuthenticated, vm.currentUser) }
+        XCTAssertTrue(state.0)
+        XCTAssertEqual(state.1?.id, "apple-user")
+        XCTAssertEqual(auth.appleLoginCalls.count, 1)
+        XCTAssertEqual(auth.appleLoginCalls.first?.idToken, "apple-id-token")
+        XCTAssertEqual(auth.appleLoginCalls.first?.nonce, "apple-nonce")
+        XCTAssertEqual(auth.appleLoginCalls.first?.suggestedUsername, "Saif")
+        XCTAssertEqual(cars.fetchCalls, 1)
+    }
+
     func testSendPasswordReset_passesTrimmedEmailThroughCaller() async throws {
         let auth = MockAuthService()
         let vm = await MainActor.run {
@@ -94,6 +115,20 @@ final class AuthViewModelTests: XCTestCase {
         }
 
         await vm.handleIncomingURL(URL(string: "empireconnect://auth/reset-password#access_token=test")!)
+
+        let isPresenting = await MainActor.run { vm.isPresentingPasswordRecovery }
+        XCTAssertTrue(isPresenting)
+        XCTAssertEqual(auth.beginPasswordRecoveryURLs.count, 1)
+    }
+
+    func testHandleIncomingURL_presentsPasswordRecoveryForResetPathCallback() async {
+        let auth = MockAuthService()
+        auth.beginPasswordRecoveryResult = true
+        let vm = await MainActor.run {
+            AuthViewModel(authService: auth, carsService: MockCarsService(), autoCheckStatus: false)
+        }
+
+        await vm.handleIncomingURL(URL(string: "empireconnect://auth/reset-password?code=test-code")!)
 
         let isPresenting = await MainActor.run { vm.isPresentingPasswordRecovery }
         XCTAssertTrue(isPresenting)
@@ -138,20 +173,22 @@ final class AuthViewModelTests: XCTestCase {
         XCTAssertFalse(isPresenting)
     }
 
-    func testRegister_rejectsNonGmailEmail() async {
+    func testRegister_acceptsNonGmailEmail() async throws {
         let auth = MockAuthService()
+        auth.registerResult = BackendUser(id: "registered-non-gmail", username: "saif", email: "user@example.com", avatarPath: nil)
+        let cars = MockCarsService()
         let vm = await MainActor.run {
-            AuthViewModel(authService: auth, carsService: MockCarsService(), autoCheckStatus: false)
+            AuthViewModel(authService: auth, carsService: cars, autoCheckStatus: false)
         }
 
-        do {
-            try await vm.register(email: "user@example.com", password: "hunter22", username: "saif")
-            XCTFail("Expected gmail-only signup policy to reject non-gmail email")
-        } catch let error as AuthSignupError {
-            XCTAssertEqual(error.errorDescription, "Use a Gmail address to sign up, or continue with Sign in with Apple.")
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
+        try await vm.register(email: "user@example.com", password: "hunter22", username: "saif")
+
+        let state = await MainActor.run { (vm.isAuthenticated, vm.currentUser) }
+        XCTAssertTrue(state.0)
+        XCTAssertEqual(state.1?.email, "user@example.com")
+        XCTAssertEqual(auth.registerCalls.count, 1)
+        XCTAssertEqual(auth.registerCalls.first?.email, "user@example.com")
+        XCTAssertEqual(cars.fetchCalls, 1)
     }
 
     func testRegister_normalizesGmailAndAuthenticatesUser() async throws {
@@ -193,12 +230,14 @@ private final class MockAuthService: AuthServiceProviding {
     var currentUserValue: BackendUser?
     var loginResult = BackendUser(id: "login", username: "user", email: "u@example.com", avatarPath: nil)
     var googleLoginResult = BackendUser(id: "google", username: "googleuser", email: "u@gmail.com", avatarPath: nil)
+    var appleLoginResult = BackendUser(id: "apple", username: "appleuser", email: "u@icloud.com", avatarPath: nil)
     var registerResult = BackendUser(id: "register", username: "user", email: "u@gmail.com", avatarPath: nil)
     var updatedUsernameResult: BackendUser = .init(id: "id", username: "user", email: "u@example.com", avatarPath: nil)
     var beginPasswordRecoveryResult = true
 
     var loginCalls: [(email: String, password: String)] = []
     var googleLoginCalls: [(idToken: String, accessToken: String?, nonce: String?)] = []
+    var appleLoginCalls: [(idToken: String, nonce: String, suggestedUsername: String?)] = []
     var beginPasswordRecoveryURLs: [URL] = []
     var completedPasswordResets: [String] = []
     var passwordResetEmails: [String] = []
@@ -218,7 +257,8 @@ private final class MockAuthService: AuthServiceProviding {
     }
 
     func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws -> BackendUser {
-        updatedUsernameResult
+        appleLoginCalls.append((idToken, nonce, suggestedUsername))
+        return appleLoginResult
     }
 
     func beginPasswordRecovery(from url: URL) async throws -> Bool {

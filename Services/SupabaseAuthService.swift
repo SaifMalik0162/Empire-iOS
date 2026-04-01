@@ -153,13 +153,18 @@ final class SupabaseAuthService {
     }
 
     func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws -> BackendUser {
-        let response = try await client.auth.signInWithIdToken(
-            credentials: OpenIDConnectCredentials(
-                provider: .apple,
-                idToken: idToken,
-                nonce: nonce
+        let response: Session
+        do {
+            response = try await client.auth.signInWithIdToken(
+                credentials: OpenIDConnectCredentials(
+                    provider: .apple,
+                    idToken: idToken,
+                    nonce: nonce
+                )
             )
-        )
+        } catch {
+            throw mapAuthError(error)
+        }
         let user = response.user
 
         if let suggestedUsername, !suggestedUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -433,6 +438,12 @@ final class SupabaseAuthService {
     }
 
     private static func isPasswordRecoveryURL(_ url: URL) -> Bool {
+        if url.scheme == SupabaseConfig.appURLScheme,
+           url.host == "auth",
+           url.path == "/reset-password" {
+            return true
+        }
+
         let params = authCallbackParams(from: url)
         return params["type"] == "recovery"
     }

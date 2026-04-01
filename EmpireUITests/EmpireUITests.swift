@@ -22,13 +22,27 @@ final class EmpireUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testLaunchShowsLoginScreen() throws {
         let app = XCUIApplication()
         applySecurityConfig(to: app)
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        XCTAssertTrue(app.staticTexts["Welcome back to Empire"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Continue with Apple"].exists)
+        XCTAssertTrue(app.buttons["Continue with Google"].exists)
+    }
+
+    @MainActor
+    func testForgotPasswordFlowOpensResetSheet() throws {
+        let app = XCUIApplication()
+        applySecurityConfig(to: app)
+        app.launch()
+
+        XCTAssertTrue(app.buttons["Forgot password?"].waitForExistence(timeout: 5))
+        app.buttons["Forgot password?"].tap()
+
+        XCTAssertTrue(app.staticTexts["Reset your password"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Send Reset Link"].exists)
     }
 
     @MainActor

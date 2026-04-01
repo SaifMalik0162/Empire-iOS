@@ -18,13 +18,16 @@ struct SignUpView: View {
         AuthViewModel.normalizedSignupEmail(email)
     }
 
-    private var isAllowedSignupEmail: Bool {
-        AuthViewModel.isAllowedSignupEmail(email)
+    private var hasValidEmail: Bool {
+        let trimmed = normalizedEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.split(separator: "@", omittingEmptySubsequences: false)
+        guard parts.count == 2 else { return false }
+        return !parts[0].isEmpty && !parts[1].isEmpty
     }
 
     private var isFormValid: Bool {
         !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        isAllowedSignupEmail &&
+        hasValidEmail &&
         password.count >= 6 &&
         password == confirmPassword
     }
@@ -87,8 +90,8 @@ struct SignUpView: View {
 
                         if showValidation && email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             AuthMessage(text: "Please enter your email address.", tone: .error)
-                        } else if showValidation && !isAllowedSignupEmail {
-                            AuthMessage(text: "Use a Gmail address to sign up, or continue with Apple or Google.", tone: .error)
+                        } else if showValidation && !hasValidEmail {
+                            AuthMessage(text: "Please enter a valid email address.", tone: .error)
                         } else if showValidation && password.count < 6 {
                             AuthMessage(text: "Password must be at least 6 characters.", tone: .error)
                         } else if showValidation && confirmPassword != password {
@@ -154,8 +157,8 @@ struct SignUpView: View {
     }
 
     private func performRegister() {
-        guard isAllowedSignupEmail else {
-            errorMessage = "Use a Gmail address to sign up, or continue with Apple or Google."
+        guard hasValidEmail else {
+            errorMessage = "Please enter a valid email address."
             return
         }
 
@@ -169,11 +172,6 @@ struct SignUpView: View {
                 await MainActor.run {
                     isCreating = false
                     dismiss()
-                }
-            } catch let error as AuthSignupError {
-                await MainActor.run {
-                    isCreating = false
-                    errorMessage = error.errorDescription
                 }
             } catch let error as AuthUserFacingError {
                 await MainActor.run {

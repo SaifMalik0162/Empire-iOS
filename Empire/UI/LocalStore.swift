@@ -18,6 +18,7 @@ final class CarEntity {
     var stage: Int
     var isJailbreak: Bool
     var vehicleClassRaw: String?
+    var buildCategoryRaw: String?
     var userKey: String
 
     @Relationship(deleteRule: .cascade) var specs: [SpecItemEntity]
@@ -35,6 +36,7 @@ final class CarEntity {
          stage: Int,
          isJailbreak: Bool = false,
          vehicleClassRaw: String? = nil,
+         buildCategoryRaw: String? = nil,
          userKey: String,
          specs: [SpecItemEntity] = [],
          mods: [ModItemEntity] = []) {
@@ -50,6 +52,7 @@ final class CarEntity {
         self.stage = stage
         self.isJailbreak = isJailbreak
         self.vehicleClassRaw = vehicleClassRaw
+        self.buildCategoryRaw = buildCategoryRaw
         self.userKey = userKey
         self.specs = specs
         self.mods = mods
@@ -128,6 +131,7 @@ extension CarEntity {
         let specsDomain = Self.orderedSpecs(specs.map { SpecItem(id: $0.id, key: $0.key, value: $0.value) })
         let modsDomain: [ModItem] = mods.map { ModItem(id: $0.id, title: $0.title, notes: $0.notes, isMajor: $0.isMajor) }
         let vehicleClass: VehicleClass? = VehicleClass.from(rawValue: vehicleClassRaw)
+        let buildCategory: BuildCategory? = BuildCategory.from(rawValue: buildCategoryRaw)
         return Car(
             id: id,
             name: name,
@@ -141,7 +145,8 @@ extension CarEntity {
             specs: specsDomain,
             mods: modsDomain,
             isJailbreak: isJailbreak,
-            vehicleClass: vehicleClass
+            vehicleClass: vehicleClass,
+            buildCategory: buildCategory
         )
     }
 
@@ -161,6 +166,7 @@ extension CarEntity {
             stage: car.stage,
             isJailbreak: car.isJailbreak,
             vehicleClassRaw: car.vehicleClass?.rawValue,
+            buildCategoryRaw: car.buildCategory?.rawValue,
             userKey: userKey,
             specs: specEntities,
             mods: modEntities
@@ -178,6 +184,7 @@ extension CarEntity {
         self.stage = car.stage
         self.isJailbreak = car.isJailbreak
         self.vehicleClassRaw = car.vehicleClass?.rawValue
+        self.buildCategoryRaw = car.buildCategory?.rawValue
         self.userKey = userKey
         if let sortOrder {
             self.sortOrder = sortOrder

@@ -4,17 +4,6 @@ import Combine
 import Supabase
 import SwiftData
 
-enum AuthSignupError: LocalizedError {
-    case unsupportedEmailDomain
-
-    var errorDescription: String? {
-        switch self {
-        case .unsupportedEmailDomain:
-            return "Use a Gmail address to sign up, or continue with Sign in with Apple."
-        }
-    }
-}
-
 protocol AuthServiceProviding {
     func hasValidSession() async throws -> Bool
     func currentUser() async throws -> BackendUser?
@@ -44,6 +33,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
     @Published var isLoading = true
     @Published var shouldPromptAddVehicle: Bool = false
     @Published var isPresentingPasswordRecovery = false
+    @Published var isPresentingOnboarding = false
     let instanceID = UUID()
     
     private let supabaseAuth: AuthServiceProviding
@@ -51,22 +41,14 @@ extension SupabaseCarsService: CarsServiceProviding {}
     
     private var modelContext: ModelContext? = nil
     private var syncCarsTask: Task<Void, Never>? = nil
+    private var authStateObserverTask: Task<Void, Never>? = nil
     private var lastCarsSyncAt: Date? = nil
     
     private let userDefaultsUserKey = "currentUser"
+    private let onboardingVersion = "v1"
 
     static func normalizedSignupEmail(_ email: String) -> String {
         email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
-    static func isAllowedSignupEmail(_ email: String) -> Bool {
-        let normalizedEmail = normalizedSignupEmail(email)
-        let parts = normalizedEmail.split(separator: "@", omittingEmptySubsequences: false)
-        guard parts.count == 2 else { return false }
-        let localPart = String(parts[0])
-        let domain = String(parts[1])
-        guard !localPart.isEmpty else { return false }
-        return domain == "gmail.com"
     }
 
     private func persistCurrentUser(_ user: BackendUser?) {
@@ -83,6 +65,32 @@ extension SupabaseCarsService: CarsServiceProviding {}
         guard let data = UserDefaults.standard.data(forKey: userDefaultsUserKey) else { return nil }
         return try? JSONDecoder().decode(BackendUser.self, from: data)
     }
+
+    private func onboardingKey(for userId: String) -> String {
+        "has_seen_onboarding_\(onboardingVersion)_\(userId.lowercased())"
+    }
+
+    private func updateAuthenticatedState(with user: BackendUser) {
+        currentUser = user
+        isAuthenticated = true
+        UserDefaults.standard.set(user.id, forKey: "currentUserId")
+        persistCurrentUser(user)
+        evaluateOnboardingPresentation(for: user.id)
+    }
+
+    private func clearAuthenticatedState() {
+        currentUser = nil
+        isAuthenticated = false
+        shouldPromptAddVehicle = false
+        isPresentingOnboarding = false
+        persistCurrentUser(nil)
+        UserDefaults.standard.removeObject(forKey: "currentUserId")
+    }
+
+    private func evaluateOnboardingPresentation(for userId: String) {
+        let hasSeen = UserDefaults.standard.bool(forKey: onboardingKey(for: userId))
+        isPresentingOnboarding = !hasSeen
+    }
     
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
@@ -98,6 +106,9 @@ extension SupabaseCarsService: CarsServiceProviding {}
     ) {
         self.supabaseAuth = authService ?? SupabaseAuthService()
         self.carsService = carsService ?? SupabaseCarsService()
+        if authService == nil {
+            observeAuthStateChanges()
+        }
         print("[AuthVM] init: instanceID=\(instanceID)")
         if autoCheckStatus {
             Task {
@@ -114,24 +125,15 @@ extension SupabaseCarsService: CarsServiceProviding {}
 
         do {
             if try await supabaseAuth.hasValidSession(), let backendUser = try await supabaseAuth.currentUser() {
-                isAuthenticated = true
-                self.currentUser = backendUser
-                UserDefaults.standard.set(backendUser.id, forKey: "currentUserId")
-                self.persistCurrentUser(backendUser)
+                updateAuthenticatedState(with: backendUser)
                 await self.syncCarsFromBackend(userId: backendUser.id, force: false)
                 AppTelemetry.shared.track(event: "auth.check_status.authenticated", metadata: ["userId": backendUser.id])
             } else {
-                isAuthenticated = false
-                self.currentUser = nil
-                self.persistCurrentUser(nil)
-                UserDefaults.standard.removeObject(forKey: "currentUserId")
+                clearAuthenticatedState()
                 AppTelemetry.shared.track(event: "auth.check_status.unauthenticated")
             }
         } catch {
-            isAuthenticated = false
-            self.currentUser = nil
-            self.persistCurrentUser(nil)
-            UserDefaults.standard.removeObject(forKey: "currentUserId")
+            clearAuthenticatedState()
             AppTelemetry.shared.record(error: error, context: "auth.check_status")
         }
 
@@ -144,12 +146,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             try await supabaseAuth.login(email: email, password: password)
         }
         
-        await MainActor.run {
-            self.currentUser = user
-            self.isAuthenticated = true
-            UserDefaults.standard.set(user.id, forKey: "currentUserId")
-            self.persistCurrentUser(user)
-        }
+        await MainActor.run { self.updateAuthenticatedState(with: user) }
         
         await self.syncCarsFromBackend(userId: user.id, force: true)
         
@@ -164,12 +161,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             try await supabaseAuth.loginWithGoogle(idToken: idToken, accessToken: accessToken, nonce: nonce)
         }
 
-        await MainActor.run {
-            self.currentUser = user
-            self.isAuthenticated = true
-            UserDefaults.standard.set(user.id, forKey: "currentUserId")
-            self.persistCurrentUser(user)
-        }
+        await MainActor.run { self.updateAuthenticatedState(with: user) }
 
         await self.syncCarsFromBackend(userId: user.id, force: true)
 
@@ -184,12 +176,7 @@ extension SupabaseCarsService: CarsServiceProviding {}
             try await supabaseAuth.loginWithApple(idToken: idToken, nonce: nonce, suggestedUsername: suggestedUsername)
         }
 
-        await MainActor.run {
-            self.currentUser = user
-            self.isAuthenticated = true
-            UserDefaults.standard.set(user.id, forKey: "currentUserId")
-            self.persistCurrentUser(user)
-        }
+        await MainActor.run { self.updateAuthenticatedState(with: user) }
 
         await self.syncCarsFromBackend(userId: user.id, force: true)
 
@@ -219,6 +206,20 @@ extension SupabaseCarsService: CarsServiceProviding {}
         }
     }
 
+    private func observeAuthStateChanges() {
+        authStateObserverTask?.cancel()
+        authStateObserverTask = Task { [weak self] in
+            for await (event, _) in SupabaseClientProvider.client.auth.authStateChanges {
+                guard let self else { return }
+                if event == .passwordRecovery {
+                    await MainActor.run {
+                        self.isPresentingPasswordRecovery = true
+                    }
+                }
+            }
+        }
+    }
+
     func completePasswordReset(_ newPassword: String) async throws {
         try await AppTelemetry.shared.measure(operation: "auth.password_reset.complete") {
             try await supabaseAuth.completePasswordReset(newPassword: newPassword)
@@ -232,20 +233,11 @@ extension SupabaseCarsService: CarsServiceProviding {}
     
     func register(email: String, password: String, username: String) async throws {
         let normalizedEmail = Self.normalizedSignupEmail(email)
-        guard Self.isAllowedSignupEmail(normalizedEmail) else {
-            throw AuthSignupError.unsupportedEmailDomain
-        }
-
         let user = try await AppTelemetry.shared.measure(operation: "auth.register") {
             try await supabaseAuth.register(email: normalizedEmail, password: password, username: username)
         }
         
-        await MainActor.run {
-            self.currentUser = user
-            self.isAuthenticated = true
-            UserDefaults.standard.set(user.id, forKey: "currentUserId")
-            self.persistCurrentUser(user)
-        }
+        await MainActor.run { self.updateAuthenticatedState(with: user) }
         
         await self.syncCarsFromBackend(userId: user.id, force: true)
         AppTelemetry.shared.track(event: "auth.register.success", metadata: ["userId": user.id])
@@ -260,12 +252,8 @@ extension SupabaseCarsService: CarsServiceProviding {}
         AppTelemetry.shared.track(event: "auth.logout")
         
         print("[AuthVM] logout: clearing in-memory state")
-        self.currentUser = nil
-        self.isAuthenticated = false
-        self.shouldPromptAddVehicle = false
         self.isLoading = false
-        self.persistCurrentUser(nil)
-        UserDefaults.standard.removeObject(forKey: "currentUserId")
+        clearAuthenticatedState()
         print("[AuthVM] logout: posting empireRequestDismiss notification")
         NotificationCenter.default.post(name: .empireRequestDismiss, object: nil)
         print("[AuthVM] logout: invoking checkAuthStatus()")
@@ -320,6 +308,19 @@ extension SupabaseCarsService: CarsServiceProviding {}
     func refreshCarsFromBackendIfAuthenticated() async {
         guard let userId = currentUser?.id, isAuthenticated else { return }
         await syncCarsFromBackend(userId: userId, force: true)
+    }
+
+    func completeOnboarding() {
+        guard let userId = currentUser?.id else {
+            isPresentingOnboarding = false
+            return
+        }
+        UserDefaults.standard.set(true, forKey: onboardingKey(for: userId))
+        isPresentingOnboarding = false
+    }
+
+    func replayOnboarding() {
+        isPresentingOnboarding = true
     }
 
     private func scheduleCarsSync(userId: String, force: Bool) {

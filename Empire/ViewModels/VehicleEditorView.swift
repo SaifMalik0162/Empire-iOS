@@ -67,6 +67,7 @@ struct VehicleEditorView: View {
     private enum Step {
         case details
         case vehicleClass
+        case buildCategory
         case modsSpecs
         case stage
     }
@@ -82,6 +83,7 @@ struct VehicleEditorView: View {
     @State private var tempSpecs: [SpecItem]
     @State private var tempMods: [ModItem]
     @State private var tempVehicleClass: VehicleClass?
+    @State private var tempBuildCategory: BuildCategory?
 
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var tempPhotoData: Data? = nil
@@ -133,6 +135,7 @@ struct VehicleEditorView: View {
         _selectedModIDs = State(initialValue: Set(customMods.map { $0.id }))
 
         _tempVehicleClass = State(initialValue: baseCar.vehicleClass)
+        _tempBuildCategory = State(initialValue: baseCar.buildCategory)
 
         // Load photo data from disk using photoFileName if available.
         if let photoFileName = baseCar.photoFileName, let loadedData = ImageStore.load(photoFileName) {
@@ -174,6 +177,8 @@ struct VehicleEditorView: View {
                                 stepOneView
                             case .vehicleClass:
                                 classStepView
+                            case .buildCategory:
+                                categoryStepView
                             case .modsSpecs:
                                 stepTwoView
                             case .stage:
@@ -323,6 +328,53 @@ struct VehicleEditorView: View {
                                             ensureQuarterMileSpecMatchesClass()
                                         }
                                     }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var categoryStepView: some View {
+        VStack(spacing: 24) {
+            EditorGlassCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Build Category")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color("EmpireMint"))
+
+                    Text("Add the badge that best fits the stance or purpose of the build. Leave it blank if you do not want a category emblem on posts.")
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.74))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    VStack(spacing: 10) {
+                        BuildCategoryOptionCard(
+                            title: "No Specification",
+                            subtitle: "No emblem will be shown on posts.",
+                            category: nil,
+                            isSelected: tempBuildCategory == nil
+                        )
+                        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                                tempBuildCategory = nil
+                            }
+                        }
+
+                        ForEach(BuildCategory.allCases) { category in
+                            BuildCategoryOptionCard(
+                                title: category.title,
+                                subtitle: category.subtitle,
+                                category: category,
+                                isSelected: tempBuildCategory == category
+                            )
+                            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                                    tempBuildCategory = category
+                                }
                             }
                         }
                     }
@@ -587,6 +639,31 @@ struct VehicleEditorView: View {
                         .foregroundColor(.black)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+            case .buildCategory:
+                Button(action: { step = previousStep(from: step) }) {
+                    Text("Back")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .stroke(Color("EmpireMint"), lineWidth: 1.3)
+                        )
+                        .foregroundColor(Color("EmpireMint"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button(action: { step = nextStep(from: step) }) {
+                    Text("Next")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(Color("EmpireMint"))
+                        )
+                        .foregroundColor(.black)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             case .modsSpecs:
                 // Step 2: Back and Next side by side
                 Button(action: { step = previousStep(from: step) }) {
@@ -648,14 +725,16 @@ struct VehicleEditorView: View {
         switch step {
         case .details: return .details
         case .vehicleClass: return .details
-        case .modsSpecs: return .vehicleClass
+        case .buildCategory: return .vehicleClass
+        case .modsSpecs: return .buildCategory
         case .stage: return .modsSpecs
         }
     }
     private func nextStep(from step: Step) -> Step {
         switch step {
         case .details: return .vehicleClass
-        case .vehicleClass: return .modsSpecs
+        case .vehicleClass: return .buildCategory
+        case .buildCategory: return .modsSpecs
         case .modsSpecs: return .stage
         case .stage: return .stage
         }
@@ -769,6 +848,7 @@ struct VehicleEditorView: View {
         }
 
         updated.vehicleClass = tempVehicleClass
+        updated.buildCategory = tempBuildCategory
         updated.specs = syncedSpecsForSave()
 
         let assessment = computeStageAssessment()

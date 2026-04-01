@@ -21,6 +21,7 @@ struct ExploreFeedView: View {
     @State private var selectedStageFilter: ExploreStageFilter? = nil
     @State private var selectedVehicleClassFilter: VehicleClass? = nil
     @State private var expandedFilterMenu: ExpandedExploreFilterMenu? = nil
+    @State private var filterMenuFrames: [ExpandedExploreFilterMenu: CGRect] = [:]
     @State private var showShareToFeed: Bool = false
     @State private var upcomingMeets: [Meet] = []
     @State private var selectedMeetFilterID: UUID? = nil
@@ -152,8 +153,15 @@ struct ExploreFeedView: View {
         }
         .preferredColorScheme(.dark)
         .task {
+            await socialStore.refreshFromBackend()
             await vm.refresh()
             await loadProgrammingSurfaces()
+        }
+        .onAppear {
+            Task { await socialStore.refreshFromBackend() }
+        }
+        .onChange(of: currentUserId) { _, _ in
+            Task { await socialStore.refreshFromBackend() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
             Task {
@@ -177,11 +185,13 @@ struct ExploreFeedView: View {
 
                 filterChips
                     .padding(.top, 6)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 10)
+                    .zIndex(3)
 
                 feedDiscoveryPanel
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
+                    .zIndex(1)
 
                 ForEach(rankedPosts) { post in
                     feedPostCard(post)
@@ -221,14 +231,16 @@ struct ExploreFeedView: View {
     }
 
     private func feedPostCard(_ post: CommunityPost) -> some View {
-        FeedPostCard(
-            post: post,
-            currentUserId: currentUserId,
-            communityVM: vm,
-            avatarURL: vm.avatarURL(for: post),
-            socialStore: socialStore
-        )
-        .frame(maxWidth: .infinity)
+        HStack(spacing: 0) {
+            FeedPostCard(
+                post: post,
+                currentUserId: currentUserId,
+                communityVM: vm,
+                avatarURL: vm.avatarURL(for: post),
+                socialStore: socialStore
+            )
+            .frame(maxWidth: .infinity)
+        }
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
         .onAppear {
@@ -612,99 +624,108 @@ struct ExploreFeedView: View {
     // MARK: - Filter chips
 
     private var filterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 8) {
-                FilterChip(
-                    label: "Liked",
-                    icon: "heart.fill",
-                    accentColor: Color(red: 0.95, green: 0.3, blue: 0.45),
-                    isSelected: showLikedOnly
-                ) {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showLikedOnly.toggle()
-                    }
-                }
+        GeometryReader { proxy in
+            ZStack(alignment: .topLeading) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .center, spacing: 8) {
+                        FilterChip(
+                            label: "Liked",
+                            icon: "heart.fill",
+                            accentColor: Color(red: 0.95, green: 0.3, blue: 0.45),
+                            isSelected: showLikedOnly
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showLikedOnly.toggle()
+                            }
+                        }
 
-                FilterChip(
-                    label: "Saved",
-                    icon: "bookmark.fill",
-                    accentColor: Color("EmpireMint"),
-                    isSelected: showSavedOnly
-                ) {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showSavedOnly.toggle()
-                    }
-                }
+                        FilterChip(
+                            label: "Saved",
+                            icon: "bookmark.fill",
+                            accentColor: Color("EmpireMint"),
+                            isSelected: showSavedOnly
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showSavedOnly.toggle()
+                            }
+                        }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    ExpandableFilterChip(
-                        label: selectedStageFilter?.label ?? "Stage Levels",
-                        icon: "slider.horizontal.3",
-                        accentColor: selectedStageFilter?.accentColor ?? Color("EmpireMint"),
-                        isSelected: selectedStageFilter != nil || expandedFilterMenu == .stageLevels,
-                        isExpanded: expandedFilterMenu == .stageLevels
-                    ) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                            expandedFilterMenu = expandedFilterMenu == .stageLevels ? nil : .stageLevels
+                        ExpandableFilterChip(
+                            label: selectedStageFilter?.label ?? "Stage Levels",
+                            icon: "slider.horizontal.3",
+                            accentColor: selectedStageFilter?.accentColor ?? Color("EmpireMint"),
+                            isSelected: selectedStageFilter != nil || expandedFilterMenu == .stageLevels,
+                            isExpanded: expandedFilterMenu == .stageLevels
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                expandedFilterMenu = expandedFilterMenu == .stageLevels ? nil : .stageLevels
+                            }
+                        }
+                        .background(filterMenuFrameReader(for: .stageLevels))
+
+                        ExpandableFilterChip(
+                            label: selectedVehicleClassFilter.map { "Class \($0.code)" } ?? "Vehicle Class",
+                            icon: "car.fill",
+                            accentColor: selectedVehicleClassFilter?.accentColor ?? Color("EmpireMint"),
+                            isSelected: selectedVehicleClassFilter != nil || expandedFilterMenu == .vehicleClass,
+                            isExpanded: expandedFilterMenu == .vehicleClass
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                expandedFilterMenu = expandedFilterMenu == .vehicleClass ? nil : .vehicleClass
+                            }
+                        }
+                        .background(filterMenuFrameReader(for: .vehicleClass))
+
+                        if hasActiveUtilityFilters {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                    clearUtilityFilters()
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                    Text("Clear")
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .foregroundStyle(.white.opacity(0.78))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(Color.white.opacity(0.07)))
+                                .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-
-                    if expandedFilterMenu == .stageLevels {
-                        expandedStageFilterList
-                            .frame(width: 148, alignment: .leading)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 2)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    ExpandableFilterChip(
-                        label: selectedVehicleClassFilter.map { "Class \($0.code)" } ?? "Vehicle Class",
-                        icon: "car.fill",
-                        accentColor: selectedVehicleClassFilter?.accentColor ?? Color("EmpireMint"),
-                        isSelected: selectedVehicleClassFilter != nil || expandedFilterMenu == .vehicleClass,
-                        isExpanded: expandedFilterMenu == .vehicleClass
-                    ) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                            expandedFilterMenu = expandedFilterMenu == .vehicleClass ? nil : .vehicleClass
-                        }
-                    }
-
-                    if expandedFilterMenu == .vehicleClass {
-                        expandedVehicleClassFilterList
-                            .frame(width: 136, alignment: .leading)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-                }
-
-                if hasActiveUtilityFilters {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                            clearUtilityFilters()
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 10, weight: .bold))
-                            Text("Clear")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .foregroundStyle(.white.opacity(0.78))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Capsule().fill(Color.white.opacity(0.07)))
-                        .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
+                if let expandedFilterMenu,
+                   let frame = filterMenuFrames[expandedFilterMenu] {
+                    expandedMenuView(for: expandedFilterMenu)
+                        .frame(width: menuWidth(for: expandedFilterMenu), alignment: .leading)
+                        .offset(
+                            x: clampedMenuX(
+                                for: frame,
+                                menu: expandedFilterMenu,
+                                containerWidth: proxy.size.width
+                            ),
+                            y: frame.maxY + 8
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading)))
+                        .zIndex(5)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 2)
+            .coordinateSpace(name: "ExploreFilterChips")
+            .onPreferenceChange(ExploreFilterMenuFramePreferenceKey.self) { filterMenuFrames = $0 }
         }
+        .frame(height: 42)
     }
 
     private var hasActiveUtilityFilters: Bool {
@@ -741,7 +762,12 @@ struct ExploreFeedView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.black.opacity(0.52), Color.black.opacity(0.34)],
+                        colors: [
+                            Color("EmpireMint").opacity(0.14),
+                            Color.white.opacity(0.05),
+                            Color.black.opacity(0.34),
+                            Color.black.opacity(0.22)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -753,14 +779,15 @@ struct ExploreFeedView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        colors: [Color.white.opacity(0.28), Color("EmpireMint").opacity(0.18), Color.white.opacity(0.08)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.28), radius: 12, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.16), radius: 12, x: 0, y: 8)
+        .shadow(color: Color("EmpireMint").opacity(0.08), radius: 10, x: 0, y: 4)
     }
 
     private var expandedVehicleClassFilterList: some View {
@@ -784,7 +811,12 @@ struct ExploreFeedView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.black.opacity(0.52), Color.black.opacity(0.34)],
+                        colors: [
+                            Color("EmpireMint").opacity(0.14),
+                            Color.white.opacity(0.05),
+                            Color.black.opacity(0.34),
+                            Color.black.opacity(0.22)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -796,14 +828,15 @@ struct ExploreFeedView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
+                        colors: [Color.white.opacity(0.28), Color("EmpireMint").opacity(0.18), Color.white.opacity(0.08)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.28), radius: 12, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.16), radius: 12, x: 0, y: 8)
+        .shadow(color: Color("EmpireMint").opacity(0.08), radius: 10, x: 0, y: 4)
     }
 
     private func expandedFilterRow(label: String, accentColor: Color, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -829,14 +862,49 @@ struct ExploreFeedView: View {
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? accentColor.opacity(0.15) : Color.white.opacity(0.03))
+                    .fill(isSelected ? accentColor.opacity(0.16) : Color.white.opacity(0.055))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? accentColor.opacity(0.52) : Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(isSelected ? accentColor.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
+    }
+
+    private func expandedMenuView(for menu: ExpandedExploreFilterMenu) -> some View {
+        Group {
+            switch menu {
+            case .stageLevels:
+                expandedStageFilterList
+            case .vehicleClass:
+                expandedVehicleClassFilterList
+            }
+        }
+    }
+
+    private func menuWidth(for menu: ExpandedExploreFilterMenu) -> CGFloat {
+        switch menu {
+        case .stageLevels:
+            return 148
+        case .vehicleClass:
+            return 136
+        }
+    }
+
+    private func clampedMenuX(for frame: CGRect, menu: ExpandedExploreFilterMenu, containerWidth: CGFloat) -> CGFloat {
+        let desiredX = frame.minX
+        let maxX = max(16, containerWidth - menuWidth(for: menu) - 16)
+        return min(max(desiredX, 16), maxX)
+    }
+
+    private func filterMenuFrameReader(for menu: ExpandedExploreFilterMenu) -> some View {
+        GeometryReader { proxy in
+            Color.clear.preference(
+                key: ExploreFilterMenuFramePreferenceKey.self,
+                value: [menu: proxy.frame(in: .named("ExploreFilterChips"))]
+            )
+        }
     }
 
     // MARK: - Empty / error states
@@ -998,6 +1066,14 @@ private enum ExpandedExploreFilterMenu {
     case vehicleClass
 }
 
+private struct ExploreFilterMenuFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [ExpandedExploreFilterMenu: CGRect] = [:]
+
+    static func reduce(value: inout [ExpandedExploreFilterMenu: CGRect], nextValue: () -> [ExpandedExploreFilterMenu: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
 // MARK: - Filter chip
 
 private struct FilterChip: View {
@@ -1147,7 +1223,12 @@ struct FeedPostCard: View {
             Group {
                 if !photoURLs.isEmpty {
                     if photoURLs.count == 1, let url = photoURLs.first {
-                        communityPhoto(url: url)
+                        GeometryReader { geo in
+                            communityPhoto(url: url)
+                                .frame(width: geo.size.width, height: 340)
+                        }
+                        .frame(height: 340)
+                        .clipped()
                     } else {
                         GeometryReader { geo in
                             HStack(spacing: 0) {
@@ -1362,6 +1443,9 @@ struct FeedPostCard: View {
                         .font(.system(.title3, design: .rounded).weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
+                    if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                        BuildCategoryBadge(category: buildCategory, size: 18, materialOpacity: 0.14, strokeOpacity: 0.5)
+                    }
                     if let vehicleClass = VehicleClass.from(rawValue: post.vehicleClass) {
                         Text(vehicleClass.code)
                             .font(.caption2.weight(.semibold))
@@ -1525,7 +1609,6 @@ struct FeedPostCard: View {
             switch phase {
             case .success(let img):
                 img.resizable().scaledToFill()
-                    .frame(maxWidth: .infinity)
                     .frame(height: 340)
                     .clipped()
                     .opacity(0.62)
@@ -1642,6 +1725,7 @@ struct CommunityProfilePostsView: View {
                         }
                     }
                     .refreshable {
+                        await socialStore.refreshFollowerCount(for: userId)
                         await vm.refresh()
                         await refreshGarage()
                     }
@@ -1693,6 +1777,8 @@ struct CommunityProfilePostsView: View {
         }
         .preferredColorScheme(.dark)
         .task {
+            await socialStore.refreshFromBackend()
+            await socialStore.refreshFollowerCount(for: userId)
             await vm.refresh()
             await refreshGarage()
         }
@@ -1969,7 +2055,8 @@ struct CommunityProfilePostsView: View {
                 specs: [],
                 mods: [],
                 isJailbreak: post.isJailbreak,
-                vehicleClass: VehicleClass.from(rawValue: post.vehicleClass)
+                vehicleClass: VehicleClass.from(rawValue: post.vehicleClass),
+                buildCategory: BuildCategory.from(rawValue: post.buildCategory)
             )
 
             entries.append(
@@ -2038,8 +2125,8 @@ struct CommunityProfilePostsView: View {
 
     private var followButton: some View {
         Button {
-            socialStore.toggleFollow(userId)
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            Task { await socialStore.toggleFollow(userId) }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: socialStore.isFollowing(userId) ? "checkmark.circle.fill" : "person.badge.plus")
@@ -2169,118 +2256,135 @@ private struct CommunityProfileGridTile: View {
     var onDelete: (() -> Void)? = nil
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Group {
-                if let photoURL {
-                    AsyncImage(url: photoURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        case .empty:
-                            ZStack {
-                                Color.white.opacity(0.04)
-                                ProgressView().tint(Color("EmpireMint"))
+        GeometryReader { proxy in
+            ZStack(alignment: .bottomLeading) {
+                Group {
+                    if let photoURL {
+                        AsyncImage(url: photoURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFill()
+                            case .empty:
+                                ZStack {
+                                    Color.white.opacity(0.04)
+                                    ProgressView().tint(Color("EmpireMint"))
+                                }
+                            default:
+                                tileFallback
                             }
-                        default:
-                            tileFallback
                         }
                     }
-                } else {
-                    tileFallback
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 184)
-            .clipped()
-            .overlay(
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.16), .black.opacity(0.8)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(alignment: .center, spacing: 5) {
-                    Text(profileStageLabel)
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                        .allowsTightening(true)
-                        .foregroundStyle(stageColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(stageColor.opacity(0.15)))
-                        .overlay(Capsule().stroke(stageColor.opacity(0.5), lineWidth: 1))
-                        .layoutPriority(2)
-
-                    Text("\(post.horsepower) WHP")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                        .allowsTightening(true)
-                        .foregroundStyle(Color.cyan)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.cyan.opacity(0.15)))
-                        .overlay(Capsule().stroke(Color.cyan.opacity(0.5), lineWidth: 1))
-                        .layoutPriority(1)
-
-                    Spacer(minLength: 6)
-
-                    HStack(spacing: 3) {
-                        Image(systemName: "heart.fill")
-                        Text("\(post.likesCount)")
-                    }
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color("EmpireMint"))
-                    .fixedSize(horizontal: true, vertical: true)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(post.carName)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                    if let makeModel {
-                        Text(makeModel)
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.68))
-                            .lineLimit(1)
+                    else {
+                        tileFallback
                     }
                 }
-            }
-            .padding(9)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .clipped()
+                .overlay(
                     LinearGradient(
-                        colors: [stageColor.opacity(0.5), Color.white.opacity(0.08)],
-                        startPoint: .bottomLeading,
-                        endPoint: .topTrailing
-                    ),
-                    lineWidth: 1.2
+                        colors: [.clear, .black.opacity(0.16), .black.opacity(0.8)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                 )
-        )
-        .overlay(alignment: .topTrailing) {
-            if showsDeleteButton {
-                Button(role: .destructive) {
-                    onDelete?()
-                } label: {
-                    Image(systemName: "trash.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(8)
-                        .background(Circle().fill(Color.red.opacity(0.9)))
-                        .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
+                .overlay(alignment: .topTrailing) {
+                    if !showsDeleteButton {
+                        VStack(alignment: .trailing, spacing: 6) {
+                            if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                                BuildCategoryBadge(category: buildCategory, size: 18, materialOpacity: 0.14, strokeOpacity: 0.45)
+                            }
+
+                            HStack(spacing: 3) {
+                                Image(systemName: "heart.fill")
+                                Text("\(post.likesCount)")
+                            }
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color("EmpireMint"))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color.black.opacity(0.24)))
+                            .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 1))
+                        }
+                        .padding(.top, 8)
+                        .padding(.trailing, 8)
+                    }
                 }
-                .buttonStyle(.plain)
-                .padding(10)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .center, spacing: 5) {
+                        Text(profileStageLabel)
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                            .allowsTightening(true)
+                            .foregroundStyle(stageColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(stageColor.opacity(0.15)))
+                            .overlay(Capsule().stroke(stageColor.opacity(0.5), lineWidth: 1))
+                            .layoutPriority(2)
+
+                        Text("\(post.horsepower) WHP")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                            .allowsTightening(true)
+                            .foregroundStyle(Color.cyan)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color.cyan.opacity(0.15)))
+                            .overlay(Capsule().stroke(Color.cyan.opacity(0.5), lineWidth: 1))
+                            .layoutPriority(1)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(post.carName)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        if let makeModel {
+                            Text(makeModel)
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.68))
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .padding(9)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottomLeading)
             }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottomLeading)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [stageColor.opacity(0.5), Color.white.opacity(0.08)],
+                            startPoint: .bottomLeading,
+                            endPoint: .topTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
+            )
+            .overlay(alignment: .topTrailing) {
+                if showsDeleteButton {
+                    Button(role: .destructive) {
+                        onDelete?()
+                    } label: {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(Circle().fill(Color.red.opacity(0.9)))
+                            .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(10)
+                }
+            }
+            .shadow(color: Color.black.opacity(0.28), radius: 10, y: 7)
         }
-        .shadow(color: Color.black.opacity(0.28), radius: 10, y: 7)
+        .frame(height: 184)
     }
 
     private var tileFallback: some View {
@@ -2346,10 +2450,16 @@ private struct CommunityGarageCard: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(car.name)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(car.name)
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+
+                        if let buildCategory = car.buildCategory {
+                            BuildCategoryBadge(category: buildCategory, size: 16, materialOpacity: 0.14, strokeOpacity: 0.5)
+                        }
+                    }
 
                     if let makeModelLine {
                         Text(makeModelLine)
@@ -2640,10 +2750,16 @@ private struct ExpandedCommunityPostCard: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(post.carName)
-                        .font(.system(size: 32, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(post.carName)
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+
+                        if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                            BuildCategoryBadge(category: buildCategory, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
+                        }
+                    }
 
                     if let makeModelLine {
                         Text(makeModelLine)
@@ -2816,6 +2932,9 @@ private struct ExpandedCommunityPostCard: View {
 final class CommunitySocialStore: ObservableObject {
     @Published private(set) var followedUserIDs: Set<String> = []
     @Published private(set) var savedPostIDs: Set<UUID> = []
+    @Published private(set) var followerCounts: [String: Int] = [:]
+
+    private let communityService = SupabaseCommunityService()
 
     private var currentUserKey: String {
         UserDefaults.standard.string(forKey: "currentUserId")?.lowercased() ?? "guest"
@@ -2823,6 +2942,7 @@ final class CommunitySocialStore: ObservableObject {
 
     private var followedUsersKey: String { "community_followed_users_\(currentUserKey)" }
     private var savedPostsKey: String { "community_saved_posts_\(currentUserKey)" }
+    private let followerCountsKey = "community_follower_counts"
 
     init() {
         reload()
@@ -2838,25 +2958,86 @@ final class CommunitySocialStore: ObservableObject {
             (UserDefaults.standard.stringArray(forKey: savedPostsKey) ?? [])
                 .compactMap(UUID.init(uuidString:))
         )
+        followerCounts = (UserDefaults.standard.dictionary(forKey: followerCountsKey) ?? [:]).reduce(into: [:]) { partial, item in
+            let key = item.key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty else { return }
+
+            if let count = item.value as? Int {
+                partial[key] = max(0, count)
+            } else if let count = item.value as? NSNumber {
+                partial[key] = max(0, count.intValue)
+            }
+        }
     }
 
     func isFollowing(_ userId: String) -> Bool {
         followedUserIDs.contains(normalized(userId))
     }
 
-    func toggleFollow(_ userId: String) {
+    func refreshFromBackend() async {
+        reload()
+        guard currentUserKey != "guest" else { return }
+        do {
+            let remoteIDs = try await communityService.fetchFollowedUserIDs(currentUserId: currentUserKey)
+            followedUserIDs = remoteIDs
+            UserDefaults.standard.set(Array(remoteIDs).sorted(), forKey: followedUsersKey)
+        } catch {
+            // Keep cached local state when backend fetch fails.
+        }
+    }
+
+    func refreshFollowerCount(for userId: String) async {
         let key = normalized(userId)
         guard !key.isEmpty else { return }
-        if followedUserIDs.contains(key) {
+
+        do {
+            let remoteCount = try await communityService.fetchFollowerCount(userId: key)
+            followerCounts[key] = remoteCount
+            persistFollowerCounts()
+        } catch {
+            // Keep cached local state when backend fetch fails.
+        }
+    }
+
+    func toggleFollow(_ userId: String) async {
+        let key = normalized(userId)
+        guard !key.isEmpty else { return }
+
+        let wasFollowing = followedUserIDs.contains(key)
+        let previousFollowerCount = followerCounts[key] ?? 0
+
+        if wasFollowing {
             followedUserIDs.remove(key)
+            followerCounts[key] = max(0, previousFollowerCount - 1)
         } else {
             followedUserIDs.insert(key)
+            followerCounts[key] = previousFollowerCount + 1
         }
         UserDefaults.standard.set(Array(followedUserIDs).sorted(), forKey: followedUsersKey)
+        persistFollowerCounts()
+
+        guard currentUserKey != "guest" else { return }
+
+        do {
+            if wasFollowing {
+                try await communityService.unfollowUser(currentUserId: currentUserKey, targetUserId: key)
+            } else {
+                try await communityService.followUser(currentUserId: currentUserKey, targetUserId: key)
+            }
+        } catch {
+            if wasFollowing {
+                followedUserIDs.insert(key)
+            } else {
+                followedUserIDs.remove(key)
+            }
+            followerCounts[key] = previousFollowerCount
+            UserDefaults.standard.set(Array(followedUserIDs).sorted(), forKey: followedUsersKey)
+            persistFollowerCounts()
+        }
     }
 
     func followerCount(for userId: String) -> Int {
-        isFollowing(userId) ? 1 : 0
+        followerCounts[normalized(userId)] ?? 0
     }
 
     func isSaved(_ postId: UUID) -> Bool {
@@ -2892,6 +3073,10 @@ final class CommunitySocialStore: ObservableObject {
 
     private func normalized(_ userId: String) -> String {
         userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private func persistFollowerCounts() {
+        UserDefaults.standard.set(followerCounts, forKey: followerCountsKey)
     }
 }
 
