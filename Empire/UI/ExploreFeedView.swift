@@ -224,14 +224,16 @@ struct ExploreFeedView: View {
     }
 
     private func feedPostCard(_ post: CommunityPost) -> some View {
-        FeedPostCard(
-            post: post,
-            currentUserId: currentUserId,
-            communityVM: vm,
-            avatarURL: vm.avatarURL(for: post),
-            socialStore: socialStore
-        )
-        .frame(maxWidth: .infinity)
+        HStack(spacing: 0) {
+            FeedPostCard(
+                post: post,
+                currentUserId: currentUserId,
+                communityVM: vm,
+                avatarURL: vm.avatarURL(for: post),
+                socialStore: socialStore
+            )
+            .frame(maxWidth: .infinity)
+        }
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
         .onAppear {
@@ -1214,7 +1216,12 @@ struct FeedPostCard: View {
             Group {
                 if !photoURLs.isEmpty {
                     if photoURLs.count == 1, let url = photoURLs.first {
-                        communityPhoto(url: url)
+                        GeometryReader { geo in
+                            communityPhoto(url: url)
+                                .frame(width: geo.size.width, height: 340)
+                        }
+                        .frame(height: 340)
+                        .clipped()
                     } else {
                         GeometryReader { geo in
                             HStack(spacing: 0) {
@@ -1592,7 +1599,6 @@ struct FeedPostCard: View {
             switch phase {
             case .success(let img):
                 img.resizable().scaledToFill()
-                    .frame(maxWidth: .infinity)
                     .frame(height: 340)
                     .clipped()
                     .opacity(0.62)
