@@ -5,7 +5,6 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject var authViewModel: AuthViewModel
     @State private var enableHaptics: Bool = true
-    @State private var notificationsEnabled: Bool = true
     @State private var reduceMotion: Bool = false
     @State private var showManageAccount: Bool = false
 
@@ -61,9 +60,16 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        settingsSection(title: "Notifications") {
+                        settingsSection(title: "Experience") {
                             SettingsGlassCard {
-                                ToggleRow(icon: "bell.badge.fill", title: "Enable Notifications", isOn: $notificationsEnabled)
+                                GlassButtonRow(icon: "sparkles.rectangle.stack.fill", title: "Replay App Tour", subtitle: "View the feature walkthrough again", trailingAccessory: (text: "Open", systemImage: "")) {
+                                    let gen = UIImpactFeedbackGenerator(style: .light)
+                                    gen.impactOccurred()
+                                    dismiss()
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                        authViewModel.replayOnboarding()
+                                    }
+                                }
                             }
                         }
                         settingsSection(title: "About") {

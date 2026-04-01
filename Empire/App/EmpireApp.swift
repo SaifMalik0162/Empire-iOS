@@ -57,6 +57,15 @@ struct EmpireApp: App {
                     .environmentObject(authViewModel)
                     .preferredColorScheme(.dark)
             }
+            .fullScreenCover(isPresented: Binding(get: { authViewModel.isPresentingOnboarding }, set: { newValue in
+                if !newValue {
+                    authViewModel.completeOnboarding()
+                }
+            })) {
+                EmpireOnboardingView()
+                    .environmentObject(authViewModel)
+                    .preferredColorScheme(.dark)
+            }
             .id(authViewModel.isAuthenticated ? "auth" : "loggedOut")
             .onAppear {
                 Self.normalizeLegacyCarPhotosIfNeeded()

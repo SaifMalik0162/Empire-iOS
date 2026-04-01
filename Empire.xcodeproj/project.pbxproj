@@ -87,6 +87,7 @@
 		70B0CF672F1067F0003FCD20 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF642F1067F0003FCD20 /* ForgotPasswordView.swift */; };
 		70B0CF6A2F106908003FCD20 /* EmpireTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF682F106908003FCD20 /* EmpireTheme.swift */; };
 		70B0CF6D2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */; };
+		70B5AA102F90000100ABCD01 /* EmpireOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B5AA0F2F90000100ABCD01 /* EmpireOnboardingView.swift */; };
 		70C0A6842F457D18003F8425 /* VIPJoinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6832F457D18003F8425 /* VIPJoinView.swift */; };
 		70C0A6892F457D1D003F8425 /* VIPWelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A6872F457D1D003F8425 /* VIPWelcomeView.swift */; };
 		70C0A68E2F457D2C003F8425 /* VIPDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */; };
@@ -202,6 +203,7 @@
 		70B0CF642F1067F0003FCD20 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
 		70B0CF682F106908003FCD20 /* EmpireTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireTheme.swift; sourceTree = "<group>"; };
 		70B0CF6C2F106B6B003FCD20 /* EmpireInteractiveBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireInteractiveBackground.swift; sourceTree = "<group>"; };
+		70B5AA0F2F90000100ABCD01 /* EmpireOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmpireOnboardingView.swift; sourceTree = "<group>"; };
 		70C0A6832F457D18003F8425 /* VIPJoinView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VIPJoinView.swift; sourceTree = "<group>"; };
 		70C0A6872F457D1D003F8425 /* VIPWelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VIPWelcomeView.swift; sourceTree = "<group>"; };
 		70C0A68B2F457D2C003F8425 /* VIPDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VIPDashboardView.swift; sourceTree = "<group>"; };
@@ -343,6 +345,7 @@
 				70A016EE2F0DF49000A084C2 /* CoolRipple.swift */,
 				70A016EF2F0DF49000A084C2 /* EmpireAppView.swift */,
 				70A016F02F0DF49000A084C2 /* EmpireSplashView.swift */,
+				70B5AA0F2F90000100ABCD01 /* EmpireOnboardingView.swift */,
 				70A016F12F0DF49000A084C2 /* EmpireTabView.swift */,
 				70A016F22F0DF49000A084C2 /* ExpandedCarView.swift */,
 				70A016F32F0DF49000A084C2 /* GlassOptionRow.swift */,
@@ -630,6 +633,7 @@
 				70C0A6912F457D5D003F8425 /* VIPExperienceView.swift in Sources */,
 				703F05D92F63911F00D4EF47 /* SupabaseConfig.swift in Sources */,
 				70B0CF6D2F106B6B003FCD20 /* EmpireInteractiveBackground.swift in Sources */,
+				70B5AA102F90000100ABCD01 /* EmpireOnboardingView.swift in Sources */,
 				70AAC8632F6B863E00BB4A58 /* SupabaseMeetsParticipationService.swift in Sources */,
 				70A017232F0DF49000A084C2 /* Models.swift in Sources */,
 				7089A7C82F1C2B5800EDB4D5 /* RecentBuyView.swift in Sources */,
@@ -830,7 +834,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 140;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -873,7 +877,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Empire/Empire.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 140;
 				DEVELOPMENT_TEAM = MLF346W74P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
