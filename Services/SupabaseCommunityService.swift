@@ -599,6 +599,27 @@ final class SupabaseCommunityService {
         )
     }
 
+    func fetchFollowerCount(userId: String) async throws -> Int {
+        let normalizedUserId = userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedUserId.isEmpty else { return 0 }
+
+        let baseQuery = client
+            .from("user_follows")
+            .select("follower_id", head: true, count: .exact)
+
+        let response = if let userUUID = UUID(uuidString: normalizedUserId) {
+            try await baseQuery
+                .eq("followed_id", value: userUUID)
+                .execute()
+        } else {
+            try await baseQuery
+                .eq("followed_id", value: normalizedUserId)
+                .execute()
+        }
+
+        return response.count ?? 0
+    }
+
     func followUser(currentUserId: String, targetUserId: String) async throws {
         let authenticatedUserId = try await requireAuthenticatedUserId()
         let normalizedCurrent = authenticatedUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

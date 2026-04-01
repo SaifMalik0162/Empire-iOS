@@ -1725,6 +1725,7 @@ struct CommunityProfilePostsView: View {
                         }
                     }
                     .refreshable {
+                        await socialStore.refreshFollowerCount(for: userId)
                         await vm.refresh()
                         await refreshGarage()
                     }
@@ -1777,6 +1778,7 @@ struct CommunityProfilePostsView: View {
         .preferredColorScheme(.dark)
         .task {
             await socialStore.refreshFromBackend()
+            await socialStore.refreshFollowerCount(for: userId)
             await vm.refresh()
             await refreshGarage()
         }
@@ -2930,6 +2932,7 @@ private struct ExpandedCommunityPostCard: View {
 final class CommunitySocialStore: ObservableObject {
     @Published private(set) var followedUserIDs: Set<String> = []
     @Published private(set) var savedPostIDs: Set<UUID> = []
+    @Published private(set) var followerCounts: [String: Int] = [:]
 
     private let communityService = SupabaseCommunityService()
 
@@ -2939,6 +2942,7 @@ final class CommunitySocialStore: ObservableObject {
 
     private var followedUsersKey: String { "community_followed_users_\(currentUserKey)" }
     private var savedPostsKey: String { "community_saved_posts_\(currentUserKey)" }
+    private let followerCountsKey = "community_follower_counts"
 
     init() {
         reload()
@@ -2954,6 +2958,16 @@ final class CommunitySocialStore: ObservableObject {
             (UserDefaults.standard.stringArray(forKey: savedPostsKey) ?? [])
                 .compactMap(UUID.init(uuidString:))
         )
+        followerCounts = (UserDefaults.standard.dictionary(forKey: followerCountsKey) ?? [:]).reduce(into: [:]) { partial, item in
+            let key = item.key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty else { return }
+
+            if let count = item.value as? Int {
+                partial[key] = max(0, count)
+            } else if let count = item.value as? NSNumber {
+                partial[key] = max(0, count.intValue)
+            }
+        }
     }
 
     func isFollowing(_ userId: String) -> Bool {
@@ -2972,17 +2986,35 @@ final class CommunitySocialStore: ObservableObject {
         }
     }
 
+    func refreshFollowerCount(for userId: String) async {
+        let key = normalized(userId)
+        guard !key.isEmpty else { return }
+
+        do {
+            let remoteCount = try await communityService.fetchFollowerCount(userId: key)
+            followerCounts[key] = remoteCount
+            persistFollowerCounts()
+        } catch {
+            // Keep cached local state when backend fetch fails.
+        }
+    }
+
     func toggleFollow(_ userId: String) async {
         let key = normalized(userId)
         guard !key.isEmpty else { return }
 
         let wasFollowing = followedUserIDs.contains(key)
+        let previousFollowerCount = followerCounts[key] ?? 0
+
         if wasFollowing {
             followedUserIDs.remove(key)
+            followerCounts[key] = max(0, previousFollowerCount - 1)
         } else {
             followedUserIDs.insert(key)
+            followerCounts[key] = previousFollowerCount + 1
         }
         UserDefaults.standard.set(Array(followedUserIDs).sorted(), forKey: followedUsersKey)
+        persistFollowerCounts()
 
         guard currentUserKey != "guest" else { return }
 
@@ -2998,12 +3030,14 @@ final class CommunitySocialStore: ObservableObject {
             } else {
                 followedUserIDs.remove(key)
             }
+            followerCounts[key] = previousFollowerCount
             UserDefaults.standard.set(Array(followedUserIDs).sorted(), forKey: followedUsersKey)
+            persistFollowerCounts()
         }
     }
 
     func followerCount(for userId: String) -> Int {
-        isFollowing(userId) ? 1 : 0
+        followerCounts[normalized(userId)] ?? 0
     }
 
     func isSaved(_ postId: UUID) -> Bool {
@@ -3039,6 +3073,10 @@ final class CommunitySocialStore: ObservableObject {
 
     private func normalized(_ userId: String) -> String {
         userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private func persistFollowerCounts() {
+        UserDefaults.standard.set(followerCounts, forKey: followerCountsKey)
     }
 }
 
