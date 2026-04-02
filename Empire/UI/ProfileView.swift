@@ -203,20 +203,33 @@ struct ProfileView: View {
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.65))
                             
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 ForEach(computedStats, id: \.0) { stat in
-                                    HStack(spacing: 6) {
-                                        Text(stat.0)
-                                            .font(.caption2.weight(.semibold))
-                                            .foregroundColor(.white.opacity(0.75))
+                                    VStack(spacing: 3) {
                                         Text("\(stat.1)")
-                                            .font(.caption2.weight(.bold))
-                                            .foregroundColor(.white)
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(.white)
+                                        Text(stat.0.uppercased())
+                                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                                            .foregroundStyle(.white.opacity(0.58))
                                     }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Capsule().fill(.ultraThinMaterial))
-                                    .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .fill(Color.white.opacity(0.05))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                    .stroke(
+                                                        LinearGradient(
+                                                            colors: [Color.white.opacity(0.28), Color.white.opacity(0.05)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        ),
+                                                        lineWidth: 1
+                                                    )
+                                            )
+                                    )
                                 }
                             }
                             

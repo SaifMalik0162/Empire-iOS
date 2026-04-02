@@ -11,6 +11,7 @@ struct HomeView: View {
 
     // MARK: - Meets Data
     @State private var meets: [Meet] = []
+    @State private var garageSnapshot: [Car] = []
     @State private var showSettings: Bool = false
     @State private var showCommunityInbox: Bool = false
     @State private var isLoadingMeets = false
@@ -20,6 +21,10 @@ struct HomeView: View {
     @State private var isRefreshingFeaturedMerch = false
     @State private var lastFeaturedMerchRefreshAt: Date? = nil
     @State private var lastMeetsRefreshAt: Date? = nil
+    @State private var lastFeaturedCardsRefreshAt: Date? = nil
+
+    @StateObject private var communityVM = CommunityViewModel()
+    @StateObject private var socialStore = CommunitySocialStore()
 
     // MARK: - Data Sources
     private let communityCars: [Car] = [
@@ -27,6 +32,147 @@ struct HomeView: View {
         Car(name: "Civic Si Coupe", description: "@fg2_corey — FG2 Si coupe", imageName: "civic_si_fg2", horsepower: 220, stage: 2),
         Car(name: "1968 Mustang", description: "347 Stroker V8", imageName: "68_blaze", horsepower: 350, stage: 2)
     ]
+
+    private var currentUserId: String {
+        UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
+    }
+
+    private var featuredCards: [HomeFeaturedCardItem] {
+        var cards: [HomeFeaturedCardItem] = []
+
+        if let featuredUserCarPhotoData, let firstCar = garageSnapshot.first {
+            cards.append(
+                HomeFeaturedCardItem(
+                    title: firstCar.name,
+                    subtitle: "Your build",
+                    badge: "Garage",
+                    localImageData: featuredUserCarPhotoData
+                )
+            )
+        }
+
+        let vehicleClasses = Set(garageSnapshot.compactMap(\.vehicleClass?.rawValue))
+        let buildCategories = Set(garageSnapshot.compactMap(\.buildCategory?.rawValue))
+        let userMakes = Set(garageSnapshot.compactMap { $0.make?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+        let normalizedCurrentUser = currentUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        let rankedPosts = communityVM.posts.compactMap { post -> HomeFeaturedCardItem? in
+            let normalizedAuthor = post.userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard normalizedAuthor != normalizedCurrentUser else { return nil }
+
+            var score = 0
+            var badge = "Featured"
+
+            if socialStore.isFollowing(post.userId) {
+                score += 40
+                badge = "Following"
+            }
+            if let vehicleClass = post.vehicleClass, vehicleClasses.contains(vehicleClass) {
+                score += 28
+                badge = "Your Class"
+            }
+            if let buildCategory = post.buildCategory, buildCategories.contains(buildCategory) {
+                score += 22
+                badge = "Your Style"
+            }
+            if let make = post.make?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+               userMakes.contains(make) {
+                score += 18
+                badge = "Same Platform"
+            }
+
+            score += min(post.likesCount, 16)
+            score += min(post.commentsCount * 2, 14)
+
+            guard score > 0 else { return nil }
+
+            let username = post.username?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return HomeFeaturedCardItem(
+                title: post.carName,
+                subtitle: username.map { "@\($0)" } ?? "Empire Driver",
+                badge: badge,
+                remoteImageURL: communityVM.photoURL(for: post, variant: .feed),
+                fallbackImageName: fallbackAssetName(for: post),
+                score: score,
+                authorKey: normalizedAuthor
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.score != rhs.score { return lhs.score > rhs.score }
+            return lhs.title < rhs.title
+        }
+
+        var selectedPostCards: [HomeFeaturedCardItem] = []
+        var usedAuthors: Set<String> = []
+        var usedBadges: Set<String> = []
+
+        if let samePlatformCard = rankedPosts.first(where: { $0.badge == "Same Platform" }) {
+            selectedPostCards.append(samePlatformCard)
+            if let authorKey = samePlatformCard.authorKey {
+                usedAuthors.insert(authorKey)
+            }
+            usedBadges.insert(samePlatformCard.badge)
+        }
+
+        let prioritizedVariety = rankedPosts.filter { card in
+            guard selectedPostCards.count < 3 else { return false }
+            if let authorKey = card.authorKey, usedAuthors.contains(authorKey) {
+                return false
+            }
+            if usedBadges.contains(card.badge) {
+                return false
+            }
+            return true
+        }
+
+        for card in prioritizedVariety {
+            guard selectedPostCards.count < 3 else { break }
+            selectedPostCards.append(card)
+            if let authorKey = card.authorKey {
+                usedAuthors.insert(authorKey)
+            }
+            usedBadges.insert(card.badge)
+        }
+
+        let fallbackVariety = rankedPosts.filter { card in
+            guard selectedPostCards.count < 3 else { return false }
+            if card.badge == "Same Platform", usedBadges.contains("Same Platform") {
+                return false
+            }
+            if let authorKey = card.authorKey, usedAuthors.contains(authorKey) {
+                return false
+            }
+            return !selectedPostCards.contains(where: { $0.title == card.title && $0.subtitle == card.subtitle })
+        }
+
+        for card in fallbackVariety {
+            guard selectedPostCards.count < 3 else { break }
+            selectedPostCards.append(card)
+            if let authorKey = card.authorKey {
+                usedAuthors.insert(authorKey)
+            }
+        }
+
+        cards.append(contentsOf: selectedPostCards)
+
+        if cards.count < 4 {
+            for car in communityCars {
+                guard cards.count < 4 else { break }
+                let duplicate = cards.contains { $0.title == car.name }
+                if duplicate { continue }
+                cards.append(
+                    HomeFeaturedCardItem(
+                        title: car.name,
+                        subtitle: car.description,
+                        badge: "Spotlight",
+                        fallbackImageName: car.imageName
+                    )
+                )
+            }
+        }
+
+        return cards
+    }
 
     var body: some View {
         NavigationStack {
@@ -160,100 +306,13 @@ struct HomeView: View {
                             GlassCard(height: 200) {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 20) {
-                                        // Prepend static first image card: car0
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 20)
-                                                .fill(.ultraThinMaterial)
-                                                .frame(width: 150, height: 180)
-                                                .shadow(color: .black.opacity(0.5), radius: 12, y: 6)
-                                                .overlay(
-                                                    LinearGradient(
-                                                        colors: [Color.white.opacity(0.15), Color.clear, Color.white.opacity(0.05)],
-                                                        startPoint: .top,
-                                                        endPoint: .bottom
-                                                    )
-                                                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                )
-
-                                            Group {
-                                                if let data = featuredUserCarPhotoData, let uiImage = UIImage(data: data) {
-                                                    Image(uiImage: uiImage)
-                                                        .resizable()
-                                                } else {
-                                                    Image("car0")
-                                                        .resizable()
-                                                }
+                                        ForEach(featuredCards) { card in
+                                            NavigationLink {
+                                                CarsView()
+                                            } label: {
+                                                HomeFeaturedCard(card: card)
                                             }
-                                            .scaledToFill()
-                                            .frame(width: 150, height: 180)
-                                            .cornerRadius(20)
-                                            .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
-
-                                            LinearGradient(
-                                                colors: [Color.black.opacity(0.0), Color.black.opacity(0.35)],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                            .cornerRadius(20)
-
-                                            LinearGradient(
-                                                gradient: Gradient(stops: [
-                                                    .init(color: .clear, location: 0.0),
-                                                    .init(color: .white.opacity(0.18), location: 0.5),
-                                                    .init(color: .clear, location: 1.0)
-                                                ]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                            .blendMode(.screen)
-                                            .opacity(0.22)
-                                            .blur(radius: 8)
-                                            .rotationEffect(.degrees(16))
-                                        }
-
-                                        ForEach(communityCars.indices, id: \.self) { idx in
-                                            ZStack {
-                                                RoundedRectangle(cornerRadius: 20)
-                                                    .fill(.ultraThinMaterial)
-                                                    .frame(width: 150, height: 180)
-                                                    .shadow(color: .black.opacity(0.5), radius: 12, y: 6)
-                                                    .overlay(
-                                                        LinearGradient(
-                                                            colors: [Color.white.opacity(0.15), Color.clear, Color.white.opacity(0.05)],
-                                                            startPoint: .top,
-                                                            endPoint: .bottom
-                                                        )
-                                                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                    )
-
-                                                Image(communityCars[idx].imageName)
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 150, height: 180)
-                                                    .cornerRadius(20)
-                                                    .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
-
-                                                LinearGradient(
-                                                    colors: [Color.black.opacity(0.0), Color.black.opacity(0.35)],
-                                                    startPoint: .top,
-                                                    endPoint: .bottom
-                                                )
-                                                .cornerRadius(20)
-
-                                                LinearGradient(
-                                                    gradient: Gradient(stops: [
-                                                        .init(color: .clear, location: 0.0),
-                                                        .init(color: .white.opacity(0.18), location: 0.5),
-                                                        .init(color: .clear, location: 1.0)
-                                                    ]),
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                                .blendMode(.screen)
-                                                .opacity(0.22)
-                                                .blur(radius: 8)
-                                                .rotationEffect(.degrees(16))
-                                            }
+                                            .buttonStyle(.plain)
                                         }
                                         Spacer(minLength: 0)
                                     }
@@ -291,65 +350,70 @@ struct HomeView: View {
                                     HStack(spacing: 16) {
                                         ForEach(Array(featuredMerch.prefix(3)).indices, id: \.self) { i in
                                             let item = featuredMerch[i]
-                                            ZStack {
-                                                // Card base
-                                                RoundedRectangle(cornerRadius: 18)
-                                                    .fill(.ultraThinMaterial)
-                                                    .frame(width: 100, height: 100)
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 18)
-                                                            .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                                                            .blendMode(.screen)
-                                                    )
-                                                    .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, y: 3)
-
-                                                // Full-bleed merch image
-                                                Image(item.imageName)
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 100, height: 100)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 18))
-                                                    .opacity(0.9)
-                                                    .overlay(
-                                                        LinearGradient(
-                                                            colors: [Color.black.opacity(0.0), Color.black.opacity(0.35)],
-                                                            startPoint: .top,
-                                                            endPoint: .bottom
+                                            NavigationLink {
+                                                ProductDetailView(item: item, related: relatedMerch(for: item))
+                                            } label: {
+                                                ZStack {
+                                                    // Card base
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .fill(.ultraThinMaterial)
+                                                        .frame(width: 100, height: 100)
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 18)
+                                                                .stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                                                                .blendMode(.screen)
                                                         )
+                                                        .shadow(color: Color("EmpireMint").opacity(0.25), radius: 8, y: 3)
+
+                                                    // Full-bleed merch image
+                                                    Image(item.imageName)
+                                                        .resizable()
+                                                        .scaledToFill()
+                                                        .frame(width: 100, height: 100)
                                                         .clipShape(RoundedRectangle(cornerRadius: 18))
-                                                    )
-                                                    .overlay(
-                                                        LinearGradient(
-                                                            gradient: Gradient(stops: [
-                                                                .init(color: .clear, location: 0.0),
-                                                                .init(color: .white.opacity(0.18), location: 0.5),
-                                                                .init(color: .clear, location: 1.0)
-                                                            ]),
-                                                            startPoint: .topLeading,
-                                                            endPoint: .bottomTrailing
+                                                        .opacity(0.9)
+                                                        .overlay(
+                                                            LinearGradient(
+                                                                colors: [Color.black.opacity(0.0), Color.black.opacity(0.35)],
+                                                                startPoint: .top,
+                                                                endPoint: .bottom
+                                                            )
+                                                            .clipShape(RoundedRectangle(cornerRadius: 18))
                                                         )
-                                                        .blendMode(.screen)
-                                                        .opacity(0.22)
-                                                        .blur(radius: 6)
-                                                        .rotationEffect(.degrees(16))
-                                                    )
+                                                        .overlay(
+                                                            LinearGradient(
+                                                                gradient: Gradient(stops: [
+                                                                    .init(color: .clear, location: 0.0),
+                                                                    .init(color: .white.opacity(0.18), location: 0.5),
+                                                                    .init(color: .clear, location: 1.0)
+                                                                ]),
+                                                                startPoint: .topLeading,
+                                                                endPoint: .bottomTrailing
+                                                            )
+                                                            .blendMode(.screen)
+                                                            .opacity(0.22)
+                                                            .blur(radius: 6)
+                                                            .rotationEffect(.degrees(16))
+                                                        )
 
-                                                // Bottom caption overlay
-                                                VStack {
-                                                    Spacer()
-                                                    Text(item.name)
-                                                        .font(.caption2.weight(.semibold))
-                                                        .foregroundColor(.white)
-                                                        .lineLimit(2)
-                                                        .multilineTextAlignment(.center)
-                                                        .padding(.horizontal, 6)
-                                                        .padding(.vertical, 4)
-                                                        .background(Color.black.opacity(0.25))
-                                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                        .padding(6)
+                                                    // Bottom caption overlay
+                                                    VStack {
+                                                        Spacer()
+                                                        Text(item.name)
+                                                            .font(.caption2.weight(.semibold))
+                                                            .foregroundColor(.white)
+                                                            .lineLimit(2)
+                                                            .multilineTextAlignment(.center)
+                                                            .padding(.horizontal, 6)
+                                                            .padding(.vertical, 4)
+                                                            .background(Color.black.opacity(0.25))
+                                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                            .padding(6)
+                                                    }
+                                                    .frame(width: 100, height: 100)
                                                 }
-                                                .frame(width: 100, height: 100)
                                             }
+                                            .buttonStyle(.plain)
                                         }
                                     }
                                 }
@@ -373,23 +437,33 @@ struct HomeView: View {
             }
             .onAppear {
                 reloadFeaturedUserCarPhoto()
+                refreshGarageSnapshot()
                 loadFeaturedMerch()
+                refreshFeaturedCardsIfNeeded()
                 Task { await communityInboxVM.refresh() }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     reloadFeaturedUserCarPhoto()
+                    refreshGarageSnapshot()
                     loadFeaturedMerch()
+                    refreshFeaturedCardsIfNeeded()
                     Task { await communityInboxVM.refresh() }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
                 reloadFeaturedUserCarPhoto()
+                refreshGarageSnapshot()
             }
             .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
+                refreshFeaturedCardsIfNeeded(force: true)
                 Task { await communityInboxVM.refresh() }
             }
         }
+    }
+
+    private func refreshGarageSnapshot() {
+        garageSnapshot = LocalStore.shared.fetchCars(context: modelContext, userKey: currentUserId)
     }
 
     private func reloadFeaturedUserCarPhoto() {
@@ -446,6 +520,36 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    private func refreshFeaturedCardsIfNeeded(force: Bool = false) {
+        if !force,
+           let lastFeaturedCardsRefreshAt,
+           Date().timeIntervalSince(lastFeaturedCardsRefreshAt) < 90,
+           !communityVM.posts.isEmpty {
+            return
+        }
+
+        lastFeaturedCardsRefreshAt = Date()
+        Task {
+            await socialStore.refreshFromBackend()
+            await communityVM.refresh()
+        }
+    }
+
+    private func fallbackAssetName(for post: CommunityPost) -> String {
+        if let make = post.make?.lowercased(), make.contains("mustang") {
+            return "68_blaze"
+        }
+        if let make = post.make?.lowercased(), make.contains("honda") {
+            return "civic_si_fg2"
+        }
+        return "prelude_bb2"
+    }
+
+    private func relatedMerch(for item: MerchItem) -> [MerchItem] {
+        let all = Array((featuredMerch + MerchCatalog.featured + MerchCatalog.bestSellers + MerchCatalog.newArrivals).uniqued(on: \.id))
+        return Array(all.filter { $0.id != item.id }.prefix(4))
     }
 
     private func loadFeaturedMerch() {
@@ -835,6 +939,150 @@ private extension CommunityInboxItemKind {
         case .reply: return "arrowshape.turn.up.left.fill"
         case .follow: return "person.badge.plus.fill"
         }
+    }
+}
+
+private struct HomeFeaturedCardItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let badge: String
+    let localImageData: Data?
+    let remoteImageURL: URL?
+    let fallbackImageName: String?
+    let score: Int
+    let authorKey: String?
+
+    init(
+        title: String,
+        subtitle: String,
+        badge: String,
+        localImageData: Data? = nil,
+        remoteImageURL: URL? = nil,
+        fallbackImageName: String? = nil,
+        score: Int = 0,
+        authorKey: String? = nil
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.badge = badge
+        self.localImageData = localImageData
+        self.remoteImageURL = remoteImageURL
+        self.fallbackImageName = fallbackImageName
+        self.score = score
+        self.authorKey = authorKey
+    }
+}
+
+private struct HomeFeaturedCard: View {
+    let card: HomeFeaturedCardItem
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .frame(width: 150, height: 180)
+                .shadow(color: .black.opacity(0.5), radius: 12, y: 6)
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.15), Color.clear, Color.white.opacity(0.05)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                )
+
+            imageContent
+                .scaledToFill()
+                .frame(width: 150, height: 180)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
+
+            LinearGradient(
+                colors: [Color.black.opacity(0.0), Color.black.opacity(0.16), Color.black.opacity(0.68)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .clear, location: 0.0),
+                    .init(color: .white.opacity(0.18), location: 0.5),
+                    .init(color: .clear, location: 1.0)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .blendMode(.screen)
+            .opacity(0.22)
+            .blur(radius: 8)
+            .rotationEffect(.degrees(16))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(card.badge.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("EmpireMint"))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Color.black.opacity(0.28)))
+                    .overlay(Capsule().stroke(Color("EmpireMint").opacity(0.26), lineWidth: 1))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(card.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                    Text(card.subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .lineLimit(1)
+                }
+            }
+            .padding(10)
+            .frame(width: 150, height: 180, alignment: .bottomLeading)
+        }
+    }
+
+    @ViewBuilder
+    private var imageContent: some View {
+        if let data = card.localImageData, let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
+                .resizable()
+        } else if let remoteImageURL = card.remoteImageURL {
+            AsyncImage(url: remoteImageURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable()
+                default:
+                    fallbackImage
+                }
+            }
+        } else {
+            fallbackImage
+        }
+    }
+
+    @ViewBuilder
+    private var fallbackImage: some View {
+        if let fallbackImageName = card.fallbackImageName {
+            Image(fallbackImageName)
+                .resizable()
+        } else {
+            ZStack {
+                Color.white.opacity(0.05)
+                Image(systemName: "car.fill")
+                    .font(.system(size: 34))
+                    .foregroundStyle(Color("EmpireMint").opacity(0.34))
+            }
+        }
+    }
+}
+
+private extension Array {
+    func uniqued<Key: Hashable>(on keyPath: KeyPath<Element, Key>) -> [Element] {
+        var seen: Set<Key> = []
+        return filter { seen.insert($0[keyPath: keyPath]).inserted }
     }
 }
 
