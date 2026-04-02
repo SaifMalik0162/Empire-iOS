@@ -4,16 +4,15 @@ import Combine
 struct EmpireTabView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var cart: Cart
+    @EnvironmentObject private var appNavigation: AppNavigationModel
     @Environment(\.dismiss) private var dismiss
-
-    @State private var selectedTab: EmpireTab = .home
     @State private var searchText: String = ""
     @State private var tabPulse: Bool = false
 
     @State private var dismissObserver: AnyCancellable?
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $appNavigation.selectedTab) {
             HomeView()
                 .tabItem { Image(systemName: EmpireTab.home.icon) }
                 .tag(EmpireTab.home)
@@ -39,7 +38,7 @@ struct EmpireTabView: View {
         .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
         .tint(Color("EmpireMint"))
-        .onChange(of: selectedTab) { oldValue, newValue in
+        .onChange(of: appNavigation.selectedTab) { oldValue, newValue in
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 tabPulse = true
             }

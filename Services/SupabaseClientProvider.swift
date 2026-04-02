@@ -2,6 +2,55 @@ import Foundation
 import Supabase
 
 enum SupabaseClientProvider {
+    private static let supportsImageTransformations = false
+
+    enum ImageVariant {
+        case avatar
+        case thumbnail
+        case grid
+        case feed
+        case detail
+
+        fileprivate var width: Int {
+            switch self {
+            case .avatar:
+                return 160
+            case .thumbnail:
+                return 160
+            case .grid:
+                return 640
+            case .feed:
+                return 1280
+            case .detail:
+                return 1800
+            }
+        }
+
+        fileprivate var height: Int? {
+            switch self {
+            case .avatar, .thumbnail, .grid:
+                return width
+            case .feed, .detail:
+                return nil
+            }
+        }
+
+        fileprivate var quality: Int {
+            switch self {
+            case .avatar:
+                return 70
+            case .thumbnail:
+                return 65
+            case .grid:
+                return 68
+            case .feed:
+                return 72
+            case .detail:
+                return 82
+            }
+        }
+    }
+
     private static let fallbackProjectURL = URL(string: "https://matwihdeczmkdvsbuxvv.supabase.co")!
     private static let fallbackPublishableKey = "sb_publishable_Bd_9Istn0C4ep16Qg2M1RA_FCHJW4Bf"
 
@@ -70,6 +119,46 @@ enum SupabaseClientProvider {
             .appendingPathComponent("public")
             .appendingPathComponent(bucket)
             .appendingPathComponent(encodedPath)
+    }
+
+    static func transformedPublicObjectURL(bucket: String, path: String, variant: ImageVariant) -> URL? {
+        guard supportsImageTransformations else {
+            return publicObjectURL(bucket: bucket, path: path)
+        }
+
+        let trimmedPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedPath.isEmpty else { return nil }
+
+        let encodedPath = trimmedPath
+            .split(separator: "/", omittingEmptySubsequences: true)
+            .map { component in
+                String(component).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String(component)
+            }
+            .joined(separator: "/")
+
+        var components = URLComponents(
+            url: projectURL
+                .appendingPathComponent("storage")
+                .appendingPathComponent("v1")
+                .appendingPathComponent("render")
+                .appendingPathComponent("image")
+                .appendingPathComponent("public")
+                .appendingPathComponent(bucket)
+                .appendingPathComponent(encodedPath),
+            resolvingAgainstBaseURL: false
+        )
+
+        var queryItems = [
+            URLQueryItem(name: "width", value: String(variant.width)),
+            URLQueryItem(name: "quality", value: String(variant.quality))
+        ]
+        if let height = variant.height {
+            queryItems.append(URLQueryItem(name: "height", value: String(height)))
+            queryItems.append(URLQueryItem(name: "resize", value: "cover"))
+        }
+        components?.queryItems = queryItems
+
+        return components?.url ?? publicObjectURL(bucket: bucket, path: path)
     }
 
     private static func configValue(

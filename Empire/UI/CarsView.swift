@@ -8,6 +8,7 @@ struct CarsView: View {
     @StateObject private var userVehiclesVM = UserVehiclesViewModel()
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var authViewModel: AuthViewModel
+    @EnvironmentObject private var appNavigation: AppNavigationModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var showAddVehicle: Bool = false
     @State private var editingCarID: UUID? = nil
@@ -37,6 +38,8 @@ struct CarsView: View {
     @State private var showSpecsPopup: Bool = false
     @State private var showModsPopup: Bool = false
     @State private var showExploreFeed: Bool = false
+    @State private var exploreInitialPostID: UUID? = nil
+    @State private var exploreInitialProfileUserID: String? = nil
 
     var body: some View {
         ZStack {
@@ -155,7 +158,13 @@ struct CarsView: View {
             Color.black.ignoresSafeArea()
         }
         .fullScreenCover(isPresented: $showExploreFeed) {
-            ExploreFeedView(communityCars: [], userCars: userVehiclesVM.vehicles, likedCommunity: $likedCommunity) {
+            ExploreFeedView(
+                communityCars: [],
+                userCars: userVehiclesVM.vehicles,
+                initialPostID: exploreInitialPostID,
+                initialProfileUserID: exploreInitialProfileUserID,
+                likedCommunity: $likedCommunity
+            ) {
                 showExploreFeed = false
             }
             .environmentObject(authViewModel)
@@ -259,6 +268,12 @@ struct CarsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
             Task { await communityVM.refresh() }
+        }
+        .onAppear {
+            handlePendingDeepLink()
+        }
+        .onChange(of: appNavigation.pendingDeepLink) { _, _ in
+            handlePendingDeepLink()
         }
     }
 }
@@ -565,7 +580,7 @@ private extension CarsView {
                         ForEach(Array(communityVM.posts.prefix(3))) { post in
                             CommunityPreviewTile(
                                 post: post,
-                                photoURL: communityVM.photoURL(for: post)
+                                photoURL: communityVM.photoURL(for: post, variant: .grid)
                             )
                         }
                     }
@@ -603,6 +618,24 @@ private extension CarsView {
 }
 
 private extension CarsView {
+    func handlePendingDeepLink() {
+        guard let deepLink = appNavigation.pendingDeepLink else { return }
+        switch deepLink {
+        case .post(let postId):
+            exploreInitialPostID = postId
+            exploreInitialProfileUserID = nil
+            showExploreFeed = true
+            appNavigation.consume(deepLink)
+        case .profile(let userId):
+            exploreInitialProfileUserID = userId
+            exploreInitialPostID = nil
+            showExploreFeed = true
+            appNavigation.consume(deepLink)
+        case .meet:
+            break
+        }
+    }
+
     var editingVehicleIndex: Int? {
         guard let editingCarID else { return nil }
         return userVehiclesVM.vehicles.firstIndex(where: { $0.id == editingCarID })

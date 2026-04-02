@@ -258,13 +258,18 @@ final class SupabaseAuthService {
         let normalizedUserID = user.id.uuidString.lowercased()
         let path = "\(normalizedUserID)/avatar.jpg"
 
-        let compressed = compressImageData(imageData, maxBytes: 600_000) ?? imageData
+        let optimized = optimizedImageData(
+            from: imageData,
+            maxPixelSize: 256,
+            maxBytes: 140_000,
+            compressionFloor: 0.55
+        ) ?? imageData
 
         try await client.storage
             .from(avatarBucket)
             .upload(
                 path,
-                data: compressed,
+                data: optimized,
                 options: FileOptions(
                     cacheControl: "3600",
                     contentType: "image/jpeg",
@@ -387,6 +392,42 @@ final class SupabaseAuthService {
         }
 
         return result
+    }
+
+    private func optimizedImageData(
+        from data: Data,
+        maxPixelSize: CGFloat,
+        maxBytes: Int,
+        compressionFloor: CGFloat
+    ) -> Data? {
+        guard let image = UIImage(data: data) else { return data }
+
+        let resizedImage = resizedImageIfNeeded(image, maxPixelSize: maxPixelSize)
+        var compression: CGFloat = 0.82
+        var result = resizedImage.jpegData(compressionQuality: compression)
+
+        while let current = result, current.count > maxBytes, compression > compressionFloor {
+            compression -= 0.07
+            result = resizedImage.jpegData(compressionQuality: compression)
+        }
+
+        return result ?? data
+    }
+
+    private func resizedImageIfNeeded(_ image: UIImage, maxPixelSize: CGFloat) -> UIImage {
+        let size = image.size
+        let longestEdge = max(size.width, size.height)
+        guard longestEdge > maxPixelSize, longestEdge > 0 else { return image }
+
+        let scale = maxPixelSize / longestEdge
+        let targetSize = CGSize(width: floor(size.width * scale), height: floor(size.height * scale))
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = false
+
+        return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
     }
 
     private func parseISODate(_ value: String?) -> Date? {

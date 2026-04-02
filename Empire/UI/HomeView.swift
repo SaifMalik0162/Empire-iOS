@@ -2,10 +2,12 @@ import SwiftUI
 import UIKit
 import SwiftData
 import Combine
+import UserNotifications
 
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var communityInboxVM: CommunityInboxViewModel
 
     // MARK: - Meets Data
     @State private var meets: [Meet] = []
@@ -18,7 +20,6 @@ struct HomeView: View {
     @State private var isRefreshingFeaturedMerch = false
     @State private var lastFeaturedMerchRefreshAt: Date? = nil
     @State private var lastMeetsRefreshAt: Date? = nil
-    @StateObject private var communityInboxVM = CommunityInboxViewModel()
 
     // MARK: - Data Sources
     private let communityCars: [Car] = [
@@ -530,17 +531,19 @@ final class CommunityInboxViewModel: ObservableObject {
 
     func markAllSeen() {
         UserDefaults.standard.set(Date(), forKey: lastSeenKey)
+        UNUserNotificationCenter.current().setBadgeCount(0)
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
         objectWillChange.send()
     }
 
     func postPhotoURL(for item: CommunityInboxItem) -> URL? {
         guard let path = item.postPhotoPath else { return nil }
-        return service.publicURL(for: path)
+        return service.publicURL(for: path, variant: .thumbnail)
     }
 
     func avatarURL(for item: CommunityInboxItem) -> URL? {
         guard let path = item.actorAvatarPath else { return nil }
-        return service.avatarPublicURL(for: path)
+        return service.avatarPublicURL(for: path, variant: .avatar)
     }
 }
 
@@ -657,7 +660,7 @@ private struct CommunityInboxView: View {
             Text("No community activity yet")
                 .font(.headline)
                 .foregroundStyle(.white)
-            Text("Likes, comments, and thread replies will show up here.")
+            Text("Likes, comments, follows, and thread replies will show up here.")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
@@ -731,6 +734,8 @@ private struct CommunityInboxCard: View {
             return "\(actor) commented on your \(item.postCarName) post"
         case .reply:
             return "\(actor) replied in a thread you joined"
+        case .follow:
+            return "\(actor) started following you"
         }
     }
 
@@ -797,7 +802,10 @@ private struct CommunityInboxCard: View {
     private var thumbnailFallback: some View {
         RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Color.white.opacity(0.06))
-            .overlay(Image(systemName: "car.fill").foregroundStyle(Color("EmpireMint").opacity(0.5)))
+            .overlay(
+                Image(systemName: item.kind == .follow ? "person.crop.circle.badge.plus" : "car.fill")
+                    .foregroundStyle(item.kind == .follow ? item.kind.tint.opacity(0.75) : Color("EmpireMint").opacity(0.5))
+            )
     }
 }
 
@@ -807,6 +815,7 @@ private extension CommunityInboxItemKind {
         case .like: return "Likes"
         case .comment: return "Comments"
         case .reply: return "Replies"
+        case .follow: return "Follows"
         }
     }
 
@@ -815,6 +824,7 @@ private extension CommunityInboxItemKind {
         case .like: return Color("EmpireMint")
         case .comment: return .cyan
         case .reply: return Color(red: 0.72, green: 0.48, blue: 0.95)
+        case .follow: return Color(red: 0.98, green: 0.78, blue: 0.18)
         }
     }
 
@@ -823,6 +833,7 @@ private extension CommunityInboxItemKind {
         case .like: return "heart.fill"
         case .comment: return "bubble.left.fill"
         case .reply: return "arrowshape.turn.up.left.fill"
+        case .follow: return "person.badge.plus.fill"
         }
     }
 }

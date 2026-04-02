@@ -79,6 +79,26 @@ final class CommunityViewModel: ObservableObject {
         isLoadingMore = false
     }
 
+    func ensurePostLoaded(_ postId: UUID) async -> Bool {
+        if posts.contains(where: { $0.id == postId }) {
+            return true
+        }
+
+        do {
+            guard let post = try await service.fetchPost(postId: postId, currentUserId: currentUserId) else {
+                return false
+            }
+            posts.insert(post, at: 0)
+            if authorUserId == nil {
+                totalPostsCount = max(totalPostsCount, posts.count)
+            }
+            return true
+        } catch {
+            logger.error("ensurePostLoaded failed: \(String(describing: error), privacy: .public)")
+            return false
+        }
+    }
+
     // MARK: - Share
 
     func sharePost(
@@ -161,19 +181,19 @@ final class CommunityViewModel: ObservableObject {
 
     // MARK: - Public URL helpers
 
-    func photoURL(for post: CommunityPost) -> URL? {
+    func photoURL(for post: CommunityPost, variant: SupabaseClientProvider.ImageVariant? = .feed) -> URL? {
         guard let path = post.photoPath else { return nil }
-        return service.publicURL(for: path)
+        return service.publicURL(for: path, variant: variant)
     }
 
-    func photoURLs(for post: CommunityPost) -> [URL] {
+    func photoURLs(for post: CommunityPost, variant: SupabaseClientProvider.ImageVariant? = .feed) -> [URL] {
         let resolvedPaths = post.photoPaths.isEmpty ? (post.photoPath.map { [$0] } ?? []) : post.photoPaths
-        return resolvedPaths.compactMap(service.publicURL(for:))
+        return resolvedPaths.compactMap { service.publicURL(for: $0, variant: variant) }
     }
 
-    func avatarURL(for post: CommunityPost) -> URL? {
+    func avatarURL(for post: CommunityPost, variant: SupabaseClientProvider.ImageVariant? = .avatar) -> URL? {
         guard let path = post.avatarPath, !path.isEmpty else { return nil }
-        return service.avatarPublicURL(for: path)
+        return service.avatarPublicURL(for: path, variant: variant)
     }
 }
 

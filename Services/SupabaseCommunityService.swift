@@ -47,6 +47,7 @@ enum CommunityInboxItemKind: String, CaseIterable {
     case like
     case comment
     case reply
+    case follow
 }
 
 struct CommunityInboxItem: Identifiable, Equatable {
@@ -118,6 +119,12 @@ private struct SBLikeRow: Codable {
 private struct SBFollowRow: Codable {
     let follower_id: String
     let followed_id: String
+}
+
+private struct SBFollowActivityRow: Codable {
+    let follower_id: String
+    let followed_id: String
+    let created_at: String?
 }
 
 private struct SBFollowInsertUUID: Encodable {
@@ -425,6 +432,111 @@ final class SupabaseCommunityService {
         }
     }
 
+    func fetchPost(postId: UUID, currentUserId: String) async throws -> CommunityPost? {
+        let rows: [SBCommunityPostRow] = try await client
+            .from("community_posts")
+            .select()
+            .eq("id", value: postId)
+            .limit(1)
+            .execute()
+            .value
+
+        guard let row = rows.first else { return nil }
+
+        let likedIds: Set<String>
+        do {
+            let likes: [SBLikeRow]
+            if let userUUID = UUID(uuidString: currentUserId) {
+                likes = try await client
+                    .from("post_likes")
+                    .select("post_id, user_id")
+                    .eq("user_id", value: userUUID)
+                    .eq("post_id", value: postId)
+                    .execute()
+                    .value
+            } else {
+                likes = try await client
+                    .from("post_likes")
+                    .select("post_id, user_id")
+                    .eq("user_id", value: currentUserId)
+                    .eq("post_id", value: postId.uuidString)
+                    .execute()
+                    .value
+            }
+            likedIds = Set(likes.map(\.post_id))
+        } catch {
+            likedIds = []
+        }
+
+        let commentsCount: Int
+        do {
+            let commentRows: [SBCommentCountRow] = try await client
+                .from("post_comments")
+                .select("post_id")
+                .eq("post_id", value: postId)
+                .execute()
+                .value
+            commentsCount = commentRows.count
+        } catch {
+            commentsCount = row.comments_count ?? 0
+        }
+
+        let profile: SBProfileRow?
+        do {
+            let profiles: [SBProfileRow]
+            if let userUUID = UUID(uuidString: row.user_id) {
+                profiles = try await client
+                    .from("profiles")
+                    .select("id, username, avatar_path")
+                    .eq("id", value: userUUID)
+                    .limit(1)
+                    .execute()
+                    .value
+            } else {
+                profiles = try await client
+                    .from("profiles")
+                    .select("id, username, avatar_path")
+                    .eq("id", value: row.user_id)
+                    .limit(1)
+                    .execute()
+                    .value
+            }
+            profile = profiles.first
+        } catch {
+            profile = nil
+        }
+
+        guard let date = parseDate(row.created_at) else { return nil }
+        let decoded = ProgramMetadataCodec.decode(row.caption)
+
+        var post = CommunityPost(
+            id: UUID(uuidString: row.id) ?? postId,
+            userId: row.user_id,
+            carId: row.car_id.flatMap { UUID(uuidString: $0) },
+            caption: decoded.caption,
+            challengeID: decoded.metadata.challengeID,
+            linkedMeetId: decoded.metadata.linkedMeetId,
+            linkedMeetTitle: decoded.metadata.linkedMeetTitle,
+            photoPath: row.photo_path,
+            photoPaths: normalizedPhotoPaths(primary: row.photo_path, paths: row.photo_paths),
+            make: row.make,
+            model: row.model,
+            carName: row.car_name,
+            horsepower: row.horsepower,
+            stage: row.stage,
+            isJailbreak: row.is_jailbreak,
+            vehicleClass: row.vehicle_class,
+            buildCategory: row.build_category,
+            likesCount: row.likes_count,
+            commentsCount: commentsCount,
+            createdAt: date,
+            username: profile?.username,
+            avatarPath: profile?.avatar_path
+        )
+        post.isLiked = likedIds.contains(row.id)
+        return post
+    }
+
     func countPosts(authorUserId: String? = nil) async throws -> Int {
         let baseQuery = client
             .from("community_posts")
@@ -457,7 +569,12 @@ final class SupabaseCommunityService {
 
         if let photoDataList {
             for data in photoDataList.prefix(5) {
-                let compressed = compressImageData(data, maxBytes: 900_000) ?? data
+                let compressed = optimizedImageData(
+                    from: data,
+                    maxPixelSize: 1280,
+                    maxBytes: 420_000,
+                    compressionFloor: 0.48
+                ) ?? data
                 let path = "\(authenticatedUserId)/community_\(UUID().uuidString).jpg"
                 do {
                     try await client.storage
@@ -880,6 +997,27 @@ final class SupabaseCommunityService {
             ownPostLikes = []
         }
 
+        let ownFollowerRows: [SBFollowActivityRow]
+        if let userUUID = UUID(uuidString: currentUserId) {
+            ownFollowerRows = (try? await client
+                .from("user_follows")
+                .select("follower_id, followed_id, created_at")
+                .eq("followed_id", value: userUUID)
+                .order("created_at", ascending: false)
+                .limit(limit * 2)
+                .execute()
+                .value) ?? []
+        } else {
+            ownFollowerRows = (try? await client
+                .from("user_follows")
+                .select("follower_id, followed_id, created_at")
+                .eq("followed_id", value: currentUserId)
+                .order("created_at", ascending: false)
+                .limit(limit * 2)
+                .execute()
+                .value) ?? []
+        }
+
         let myCommentRows: [SBCommentRow]
         if let userUUID = UUID(uuidString: currentUserId) {
             myCommentRows = (try? await client
@@ -958,6 +1096,7 @@ final class SupabaseCommunityService {
             ownPostComments.map(\.user_id)
             + ownPostLikes.map(\.user_id)
             + replyRows.map(\.user_id)
+            + ownFollowerRows.map(\.follower_id)
         ).subtracting([currentUserId])
 
         let actorProfilesByUserId: [String: SBProfileRow]
@@ -993,6 +1132,7 @@ final class SupabaseCommunityService {
         )
 
         var items: [CommunityInboxItem] = []
+        let placeholderPostId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
 
         for like in ownPostLikes where like.user_id != currentUserId {
             guard let createdAtString = like.created_at,
@@ -1011,6 +1151,26 @@ final class SupabaseCommunityService {
                     postCarName: post.car_name,
                     postPhotoPath: post.photo_path,
                     previewText: nil,
+                    createdAt: createdAt
+                )
+            )
+        }
+
+        for follow in ownFollowerRows where follow.follower_id != currentUserId {
+            guard let createdAtString = follow.created_at,
+                  let createdAt = parseDate(createdAtString) else { continue }
+            let profile = actorProfilesByUserId[follow.follower_id]
+            items.append(
+                CommunityInboxItem(
+                    id: "follow-\(follow.follower_id)-\(createdAtString)",
+                    kind: .follow,
+                    actorUserId: follow.follower_id,
+                    actorUsername: profile?.username,
+                    actorAvatarPath: profile?.avatar_path,
+                    postId: placeholderPostId,
+                    postCarName: "",
+                    postPhotoPath: nil,
+                    previewText: "Started following your profile.",
                     createdAt: createdAt
                 )
             )
@@ -1069,12 +1229,18 @@ final class SupabaseCommunityService {
 
     // MARK: - Public URL helpers
 
-    func publicURL(for path: String) -> URL? {
-        SupabaseClientProvider.publicObjectURL(bucket: photosBucket, path: path)
+    func publicURL(for path: String, variant: SupabaseClientProvider.ImageVariant? = nil) -> URL? {
+        if let variant {
+            return SupabaseClientProvider.transformedPublicObjectURL(bucket: photosBucket, path: path, variant: variant)
+        }
+        return SupabaseClientProvider.publicObjectURL(bucket: photosBucket, path: path)
     }
 
-    func avatarPublicURL(for path: String) -> URL? {
-        SupabaseClientProvider.publicObjectURL(bucket: avatarsBucket, path: path)
+    func avatarPublicURL(for path: String, variant: SupabaseClientProvider.ImageVariant? = .avatar) -> URL? {
+        if let variant {
+            return SupabaseClientProvider.transformedPublicObjectURL(bucket: avatarsBucket, path: path, variant: variant)
+        }
+        return SupabaseClientProvider.publicObjectURL(bucket: avatarsBucket, path: path)
     }
 
     // MARK: - Private helpers
@@ -1098,6 +1264,42 @@ final class SupabaseCommunityService {
             }
         }
         return result
+    }
+
+    private func optimizedImageData(
+        from data: Data,
+        maxPixelSize: CGFloat,
+        maxBytes: Int,
+        compressionFloor: CGFloat
+    ) -> Data? {
+        guard let image = UIImage(data: data) else { return data }
+
+        let resizedImage = resizedImageIfNeeded(image, maxPixelSize: maxPixelSize)
+        var compression: CGFloat = 0.78
+        var result = resizedImage.jpegData(compressionQuality: compression)
+
+        while let current = result, current.count > maxBytes, compression > compressionFloor {
+            compression -= 0.07
+            result = resizedImage.jpegData(compressionQuality: compression)
+        }
+
+        return result ?? data
+    }
+
+    private func resizedImageIfNeeded(_ image: UIImage, maxPixelSize: CGFloat) -> UIImage {
+        let size = image.size
+        let longestEdge = max(size.width, size.height)
+        guard longestEdge > maxPixelSize, longestEdge > 0 else { return image }
+
+        let scale = maxPixelSize / longestEdge
+        let targetSize = CGSize(width: floor(size.width * scale), height: floor(size.height * scale))
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = false
+
+        return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
     }
 
     private func compressImageData(_ data: Data, maxBytes: Int) -> Data? {

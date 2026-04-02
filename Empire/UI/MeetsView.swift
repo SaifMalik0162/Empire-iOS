@@ -5,6 +5,7 @@ import EventKit
 // MARK: - MeetsView
 
 struct MeetsView: View {
+    @EnvironmentObject private var appNavigation: AppNavigationModel
     @StateObject private var meetsVM = MeetsViewModel()
     @State private var meets: [Meet] = []
     @State private var isLoadingMeets = false
@@ -17,6 +18,8 @@ struct MeetsView: View {
     @State private var checkedInMeetTitle = ""
     @State private var showQRAlert = false
     @State private var qrAlertMessage = ""
+    @State private var focusedMeetID: UUID? = nil
+    @State private var didHandleDeepLink = false
 
     var body: some View {
         ZStack {
@@ -33,58 +36,67 @@ struct MeetsView: View {
             )
             .ignoresSafeArea()
 
-            ScrollView(showsIndicators: false) {
-                // Scroll offset tracker
-                GeometryReader { geo in
-                    Color.clear
-                        .preference(key: OffsetKey.self, value: geo.frame(in: .named("scroll")).minY)
-                }
-                .frame(height: 0)
-
-                VStack(spacing: 22) {
-                    MeetsHeader(
-                        meets: meets,
-                        showMap: $showMap
-                    )
-                    .padding(.top, 12)
-                    .padding(.horizontal, 18)
-
-                    if isLoadingMeets {
-                        ProgressView("Loading meets...")
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 60)
-                    } else if let err = meetsError {
-                        Text(err)
-                            .font(.caption)
-                            .foregroundColor(.red.opacity(0.9))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 60)
-                    } else if meets.isEmpty {
-                        emptyMeetsView
-                    } else {
-                        ForEach(meets) { meet in
-                            MeetCard(
-                                meet: meet,
-                                meetsVM: meetsVM,
-                                onQRScan: {
-                                    qrTargetMeet = meet
-                                    showQR = true
-                                },
-                                onAddToCalendar: { addToCalendar(meet: meet) }
-                            )
-                            .padding(.horizontal, 18)
-                            .shadow(color: Color("EmpireMint").opacity(0.22), radius: 20, x: 0, y: 12)
-                            .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 6)
-                            .modifier(ParallaxEffect(y: scrollOffset, strength: 16))
-                        }
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    // Scroll offset tracker
+                    GeometryReader { geo in
+                        Color.clear
+                            .preference(key: OffsetKey.self, value: geo.frame(in: .named("scroll")).minY)
                     }
+                    .frame(height: 0)
 
-                    Color.clear.frame(height: 100)
+                    VStack(spacing: 22) {
+                        MeetsHeader(
+                            meets: meets,
+                            showMap: $showMap
+                        )
+                        .padding(.top, 12)
+                        .padding(.horizontal, 18)
+
+                        if isLoadingMeets {
+                            ProgressView("Loading meets...")
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 60)
+                        } else if let err = meetsError {
+                            Text(err)
+                                .font(.caption)
+                                .foregroundColor(.red.opacity(0.9))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 60)
+                        } else if meets.isEmpty {
+                            emptyMeetsView
+                        } else {
+                            ForEach(meets) { meet in
+                                MeetCard(
+                                    meet: meet,
+                                    meetsVM: meetsVM,
+                                    onQRScan: {
+                                        qrTargetMeet = meet
+                                        showQR = true
+                                    },
+                                    onAddToCalendar: { addToCalendar(meet: meet) }
+                                )
+                                .id(meet.id)
+                                .padding(.horizontal, 18)
+                                .shadow(color: Color("EmpireMint").opacity(0.22), radius: 20, x: 0, y: 12)
+                                .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 6)
+                                .modifier(ParallaxEffect(y: scrollOffset, strength: 16))
+                            }
+                        }
+
+                        Color.clear.frame(height: 100)
+                    }
+                }
+                .coordinateSpace(name: "scroll")
+                .onPreferenceChange(OffsetKey.self) { scrollOffset = $0 }
+                .onAppear {
+                    handlePendingDeepLink(scrollProxy: proxy)
+                }
+                .onChange(of: meets.map(\.id)) { _, _ in
+                    handlePendingDeepLink(scrollProxy: proxy)
                 }
             }
-            .coordinateSpace(name: "scroll")
-            .onPreferenceChange(OffsetKey.self) { scrollOffset = $0 }
         }
         .task { await loadMeets() }
         .sheet(isPresented: $showMap) {
@@ -111,6 +123,13 @@ struct MeetsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(qrAlertMessage)
+        }
+        .onAppear {
+            focusedMeetID = meetIDFromPendingDeepLink
+        }
+        .onChange(of: appNavigation.pendingDeepLink) { _, _ in
+            focusedMeetID = meetIDFromPendingDeepLink
+            didHandleDeepLink = false
         }
     }
 
@@ -210,6 +229,22 @@ struct MeetsView: View {
     @MainActor
     private func addAllToCalendar() {
         meets.forEach { addToCalendar(meet: $0) }
+    }
+
+    private var meetIDFromPendingDeepLink: UUID? {
+        guard case .meet(let meetID) = appNavigation.pendingDeepLink else { return nil }
+        return meetID
+    }
+
+    private func handlePendingDeepLink(scrollProxy: ScrollViewProxy) {
+        guard let focusedMeetID, !didHandleDeepLink, meets.contains(where: { $0.id == focusedMeetID }) else { return }
+        didHandleDeepLink = true
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                scrollProxy.scrollTo(focusedMeetID, anchor: .center)
+            }
+        }
+        appNavigation.consume(.meet(focusedMeetID))
     }
 }
 
