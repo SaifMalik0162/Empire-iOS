@@ -399,7 +399,7 @@ final class PushNotificationsManager: ObservableObject {
     }
 
     private var apnsEnvironment: String {
-        "development"
+        "production"
     }
 
     private var embeddedProvisionAPNsEnvironment: String? {
