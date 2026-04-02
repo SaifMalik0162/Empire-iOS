@@ -108,6 +108,10 @@ struct CarExpandedCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tilt: CGSize = .zero
 
+    private var hasMetadataBadges: Bool {
+        car.buildCategory != nil || car.vehicleClass != nil
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
@@ -208,10 +212,20 @@ struct CarExpandedCard: View {
                     }
                     .padding(.top, 4)
 
-                    // Compact badges
-                    HStack(spacing: 10) {
-                        StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
-                        StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+                    if hasMetadataBadges {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 10) {
+                                metadataBadges
+                                stageAndPowerBadges
+                            }
+
+                            VStack(spacing: 8) {
+                                metadataBadges
+                                stageAndPowerBadges
+                            }
+                        }
+                    } else {
+                        stageAndPowerBadges
                     }
 
                     // Stat meters with unified animation
@@ -283,30 +297,27 @@ struct CarExpandedCard: View {
         }
     }
 
-    private func stageAccentColor() -> Color {
-        StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
+    @ViewBuilder
+    private var metadataBadges: some View {
+        HStack(spacing: 8) {
+            if let buildCategory = car.buildCategory {
+                BuildCategoryBadge(category: buildCategory, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
+            }
+            if let vehicleClass = car.vehicleClass {
+                VehicleClassBadge(vehicleClass: vehicleClass, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
+            }
+        }
     }
-    private func stageDisplayName() -> String {
-        StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak)
-    }
-    private func stageDisplayValue() -> Int {
-        if car.isJailbreak { return 1 }
-        return car.stage
-    }
-    private func stageMax() -> Double {
-        if car.isJailbreak { return 1 }
-        return 6
-    }
-    private func stageBarTitle() -> String {
-        StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak)
-    }
-    private func stageBarValue() -> Int {
-        if car.isJailbreak { return 1 }
-        return car.stage
-    }
-    private func stageBarMax() -> Double {
-        if car.isJailbreak { return 1 }
-        return 6
+
+    private var stageAndPowerBadges: some View {
+        HStack(spacing: 10) {
+            StatCapsule(
+                label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
+                value: "",
+                tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
+            )
+            StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+        }
     }
 }
 

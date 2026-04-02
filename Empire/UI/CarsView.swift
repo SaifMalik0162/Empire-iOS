@@ -617,6 +617,10 @@ private struct LiquidGlassCarCard: View {
     var isSource: Bool = true
     var isCentered: Bool = false
 
+    private var hasMetadataBadges: Bool {
+        car.buildCategory != nil || car.vehicleClass != nil
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -709,15 +713,50 @@ private struct LiquidGlassCarCard: View {
                     .minimumScaleFactor(0.85)
                     .foregroundStyle(.white)
                     .matchedGeometryEffect(id: "title-\(car.id)", in: ns, isSource: isSource)
-                HStack(spacing: 6) {
-                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
-                    StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+
+                if hasMetadataBadges {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 6) {
+                            metadataBadges
+                            stageAndPowerBadges
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            metadataBadges
+                            stageAndPowerBadges
+                        }
+                    }
+                } else {
+                    stageAndPowerBadges
                 }
             }
             .padding(14)
         }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .compositingGroup()
+    }
+
+    @ViewBuilder
+    private var metadataBadges: some View {
+        HStack(spacing: 6) {
+            if let buildCategory = car.buildCategory {
+                BuildCategoryBadge(category: buildCategory, size: 20, materialOpacity: 0.14, strokeOpacity: 0.5)
+            }
+            if let vehicleClass = car.vehicleClass {
+                VehicleClassBadge(vehicleClass: vehicleClass, size: 20, materialOpacity: 0.14, strokeOpacity: 0.5)
+            }
+        }
+    }
+
+    private var stageAndPowerBadges: some View {
+        HStack(spacing: 6) {
+            StatCapsule(
+                label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
+                value: "",
+                tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
+            )
+            StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+        }
     }
 }
 
@@ -972,6 +1011,10 @@ private struct CarExpandedCardInline: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tilt: CGSize = .zero
 
+    private var hasMetadataBadges: Bool {
+        car.buildCategory != nil || car.vehicleClass != nil
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -1038,9 +1081,20 @@ private struct CarExpandedCardInline: View {
                 }
                 .padding(.top, 8)
 
-                HStack(spacing: 10) {
-                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
-                    StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+                if hasMetadataBadges {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 10) {
+                            metadataBadges
+                            stageAndPowerBadges
+                        }
+
+                        VStack(spacing: 8) {
+                            metadataBadges
+                            stageAndPowerBadges
+                        }
+                    }
+                } else {
+                    stageAndPowerBadges
                 }
 
                 VStack(spacing: 10) {
@@ -1088,6 +1142,29 @@ private struct CarExpandedCardInline: View {
         #if os(iOS)
         .hoverEffect(.lift)
         #endif
+    }
+
+    @ViewBuilder
+    private var metadataBadges: some View {
+        HStack(spacing: 8) {
+            if let buildCategory = car.buildCategory {
+                BuildCategoryBadge(category: buildCategory, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
+            }
+            if let vehicleClass = car.vehicleClass {
+                VehicleClassBadge(vehicleClass: vehicleClass, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
+            }
+        }
+    }
+
+    private var stageAndPowerBadges: some View {
+        HStack(spacing: 10) {
+            StatCapsule(
+                label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
+                value: "",
+                tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
+            )
+            StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+        }
     }
 }
 
