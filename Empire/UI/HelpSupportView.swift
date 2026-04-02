@@ -28,40 +28,6 @@ struct HelpSupportView: View {
 
                         section(title: "Links") {
                             HelpGlassCard {
-                                HStack(spacing: 12) {
-                                    Circle()
-                                        .fill(.ultraThinMaterial)
-                                        .frame(width: 36, height: 36)
-                                        .overlay(Image(systemName: "chevron.left.slash.chevron.right").foregroundStyle(Color("EmpireMint")))
-                                        .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("GitHub Repository")
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(.white)
-                                        Text("Open source & issues")
-                                            .font(.caption)
-                                            .foregroundStyle(.white.opacity(0.7))
-                                    }
-                                    Spacer()
-                                    if let url = URL(string: "https://github.com/SaifMalik0162/Empire-iOS") {
-                                        Link(destination: url) {
-                                            Text("Open")
-                                                .font(.caption.weight(.semibold))
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 8)
-                                                .background(Capsule().fill(.ultraThinMaterial))
-                                                .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
-                                                .foregroundStyle(.white)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(10)
-                                .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
-                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(LinearGradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
-                            }
-
-                            HelpGlassCard {
                                 HelpRow(icon: "questionmark.circle.fill", title: "FAQ") {
                                     haptic()
                                     // Placeholder action: show FAQ or open link

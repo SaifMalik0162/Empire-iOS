@@ -46,7 +46,7 @@ struct ProductDetailView: View {
                     Text("Description")
                         .font(.headline)
                         .foregroundStyle(.white)
-                    Text("A premium item from Empire with top-notch materials and design aesthetics. Perfect for fans and collectors.")
+                    Text(item.productDescription)
                         .foregroundStyle(.white.opacity(0.8))
                 }
 
@@ -175,3 +175,39 @@ struct ProductDetailView: View {
     }
 }
 
+private extension MerchItem {
+    var productDescription: String {
+        switch name {
+        case "Street Royalty Hoodie":
+            return "A heavyweight Empire hoodie with the Street Royalty graphic front and center. Made for colder nights, early meets, and everyday wear."
+        case "Empire Single Logo Tee":
+            return "A clean Empire tee with a minimal single-logo hit. Easy to wear with anything and built for a simple everyday look."
+        case "Air Freshener Kit":
+            return "A freshener set made to add a subtle Empire touch to your interior. An easy accessory for keeping the cabin looking and smelling dialed in."
+        case "Classic Banner":
+            return "A clean Empire banner-style decal made for rear glass, quarter windows, or other smooth surfaces. Simple, readable, and easy to work into a clean setup."
+        case "Death Metal Banner":
+            return "A death-metal inspired banner-style decal for rear glass or side windows. Built for louder styling and a more aggressive visual hit on the car."
+        case "Metal Banner":
+            return "A heavy metal-inspired banner-style decal designed for glass and other clean surfaces. A strong option if you want a sharper, harder-edged look on the car."
+        case "Urban Banner":
+            return "A street-driven banner-style decal made for rear windows and other visible placements. Clean enough for daily use but still distinct from a basic logo decal."
+        case "Astro Banner":
+            return "A banner-style decal with a more atmospheric graphic direction, made for rear glass or other smooth mounting spots. Good if you want something different without going overly loud."
+        case "Empire™ Banner":
+            return "A signature Empire banner-style decal featuring the wordmark front and center. Ideal for rear glass when you want the cleanest and most direct Empire look."
+        case "Mini Banner":
+            return "A smaller banner-style decal for tighter rear windows, quarter glass, or compact placements. Easy to fit into cleaner builds without taking over the whole view."
+        case "Tribal Flames Banner":
+            return "A tribal flame banner-style decal with an older-school custom vibe. Best suited for rear glass or side window placement when you want a louder statement."
+        case "Empire Tsurikawa":
+            return "An Empire tsurikawa-style accessory that adds character to the interior or rear setup. A style-driven piece inspired by classic street culture details."
+        case "Civic Decal":
+            return "A Civic-themed Empire decal made for windows, toolboxes, or any clean surface that could use a subtle platform-specific touch."
+        case "i-VTEC Decal":
+            return "An i-VTEC inspired decal for Honda fans who want a lightweight detail piece. Easy to place and made to complement a clean setup."
+        default:
+            return "A premium Empire merch item designed to look clean, feel intentional, and fit naturally into your garage, car, or daily setup."
+        }
+    }
+}

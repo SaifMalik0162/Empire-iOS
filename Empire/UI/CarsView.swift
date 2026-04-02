@@ -8,6 +8,7 @@ struct CarsView: View {
     @StateObject private var userVehiclesVM = UserVehiclesViewModel()
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var authViewModel: AuthViewModel
+    @EnvironmentObject private var appNavigation: AppNavigationModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var showAddVehicle: Bool = false
     @State private var editingCarID: UUID? = nil
@@ -37,6 +38,8 @@ struct CarsView: View {
     @State private var showSpecsPopup: Bool = false
     @State private var showModsPopup: Bool = false
     @State private var showExploreFeed: Bool = false
+    @State private var exploreInitialPostID: UUID? = nil
+    @State private var exploreInitialProfileUserID: String? = nil
 
     var body: some View {
         ZStack {
@@ -155,7 +158,13 @@ struct CarsView: View {
             Color.black.ignoresSafeArea()
         }
         .fullScreenCover(isPresented: $showExploreFeed) {
-            ExploreFeedView(communityCars: [], userCars: userVehiclesVM.vehicles, likedCommunity: $likedCommunity) {
+            ExploreFeedView(
+                communityCars: [],
+                userCars: userVehiclesVM.vehicles,
+                initialPostID: exploreInitialPostID,
+                initialProfileUserID: exploreInitialProfileUserID,
+                likedCommunity: $likedCommunity
+            ) {
                 showExploreFeed = false
             }
             .environmentObject(authViewModel)
@@ -259,6 +268,12 @@ struct CarsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
             Task { await communityVM.refresh() }
+        }
+        .onAppear {
+            handlePendingDeepLink()
+        }
+        .onChange(of: appNavigation.pendingDeepLink) { _, _ in
+            handlePendingDeepLink()
         }
     }
 }
@@ -565,7 +580,7 @@ private extension CarsView {
                         ForEach(Array(communityVM.posts.prefix(3))) { post in
                             CommunityPreviewTile(
                                 post: post,
-                                photoURL: communityVM.photoURL(for: post)
+                                photoURL: communityVM.photoURL(for: post, variant: .grid)
                             )
                         }
                     }
@@ -603,6 +618,24 @@ private extension CarsView {
 }
 
 private extension CarsView {
+    func handlePendingDeepLink() {
+        guard let deepLink = appNavigation.pendingDeepLink else { return }
+        switch deepLink {
+        case .post(let postId):
+            exploreInitialPostID = postId
+            exploreInitialProfileUserID = nil
+            showExploreFeed = true
+            appNavigation.consume(deepLink)
+        case .profile(let userId):
+            exploreInitialProfileUserID = userId
+            exploreInitialPostID = nil
+            showExploreFeed = true
+            appNavigation.consume(deepLink)
+        case .meet:
+            break
+        }
+    }
+
     var editingVehicleIndex: Int? {
         guard let editingCarID else { return nil }
         return userVehiclesVM.vehicles.firstIndex(where: { $0.id == editingCarID })
@@ -616,6 +649,10 @@ private struct LiquidGlassCarCard: View {
     var ns: Namespace.ID
     var isSource: Bool = true
     var isCentered: Bool = false
+
+    private var hasMetadataBadges: Bool {
+        car.buildCategory != nil || car.vehicleClass != nil
+    }
 
     var body: some View {
         ZStack {
@@ -709,15 +746,50 @@ private struct LiquidGlassCarCard: View {
                     .minimumScaleFactor(0.85)
                     .foregroundStyle(.white)
                     .matchedGeometryEffect(id: "title-\(car.id)", in: ns, isSource: isSource)
-                HStack(spacing: 6) {
-                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
-                    StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+
+                if hasMetadataBadges {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 6) {
+                            metadataBadges
+                            stageAndPowerBadges
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            metadataBadges
+                            stageAndPowerBadges
+                        }
+                    }
+                } else {
+                    stageAndPowerBadges
                 }
             }
             .padding(14)
         }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .compositingGroup()
+    }
+
+    @ViewBuilder
+    private var metadataBadges: some View {
+        HStack(spacing: 6) {
+            if let buildCategory = car.buildCategory {
+                BuildCategoryBadge(category: buildCategory, size: 20, materialOpacity: 0.14, strokeOpacity: 0.5)
+            }
+            if let vehicleClass = car.vehicleClass {
+                VehicleClassBadge(vehicleClass: vehicleClass, size: 20, materialOpacity: 0.14, strokeOpacity: 0.5)
+            }
+        }
+    }
+
+    private var stageAndPowerBadges: some View {
+        HStack(spacing: 6) {
+            StatCapsule(
+                label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
+                value: "",
+                tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
+            )
+            StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+        }
     }
 }
 
@@ -972,6 +1044,10 @@ private struct CarExpandedCardInline: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tilt: CGSize = .zero
 
+    private var hasMetadataBadges: Bool {
+        car.buildCategory != nil || car.vehicleClass != nil
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -1038,9 +1114,20 @@ private struct CarExpandedCardInline: View {
                 }
                 .padding(.top, 8)
 
-                HStack(spacing: 10) {
-                    StatCapsule(label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak), value: "", tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak))
-                    StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+                if hasMetadataBadges {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 10) {
+                            metadataBadges
+                            stageAndPowerBadges
+                        }
+
+                        VStack(spacing: 8) {
+                            metadataBadges
+                            stageAndPowerBadges
+                        }
+                    }
+                } else {
+                    stageAndPowerBadges
                 }
 
                 VStack(spacing: 10) {
@@ -1088,6 +1175,29 @@ private struct CarExpandedCardInline: View {
         #if os(iOS)
         .hoverEffect(.lift)
         #endif
+    }
+
+    @ViewBuilder
+    private var metadataBadges: some View {
+        HStack(spacing: 8) {
+            if let buildCategory = car.buildCategory {
+                BuildCategoryBadge(category: buildCategory, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
+            }
+            if let vehicleClass = car.vehicleClass {
+                VehicleClassBadge(vehicleClass: vehicleClass, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
+            }
+        }
+    }
+
+    private var stageAndPowerBadges: some View {
+        HStack(spacing: 10) {
+            StatCapsule(
+                label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
+                value: "",
+                tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
+            )
+            StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
+        }
     }
 }
 

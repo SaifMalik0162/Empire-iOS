@@ -1,5 +1,34 @@
 import SwiftUI
 
+struct VehicleClassBadge: View {
+    let vehicleClass: VehicleClass
+    var size: CGFloat = 24
+    var materialOpacity: Double = 0.18
+    var strokeOpacity: Double = 0.6
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.black.opacity(0.22))
+                .background(
+                    Circle()
+                        .fill(vehicleClass.accentColor.opacity(materialOpacity))
+                )
+
+            Text(vehicleClass.code)
+                .font(.system(size: size * 0.46, weight: .black, design: .rounded))
+                .foregroundStyle(vehicleClass.accentColor)
+        }
+        .frame(width: size, height: size)
+        .overlay(
+            Circle()
+                .stroke(vehicleClass.accentColor.opacity(strokeOpacity), lineWidth: 1)
+        )
+        .shadow(color: vehicleClass.accentColor.opacity(0.25), radius: 8, x: 0, y: 3)
+        .accessibilityLabel(Text("Class \(vehicleClass.code), \(vehicleClass.displayName)"))
+    }
+}
+
 struct VehicleClassChip: View {
     let vehicleClass: VehicleClass
     var compact: Bool = false

@@ -6,6 +6,8 @@ struct ExploreFeedView: View {
 
     var communityCars: [Car] = []
     var userCars: [Car] = []
+    var initialPostID: UUID? = nil
+    var initialProfileUserID: String? = nil
     @Binding var likedCommunity: Set<UUID>
     var onClose: () -> Void = {}
 
@@ -25,6 +27,10 @@ struct ExploreFeedView: View {
     @State private var showShareToFeed: Bool = false
     @State private var upcomingMeets: [Meet] = []
     @State private var selectedMeetFilterID: UUID? = nil
+    @State private var deepLinkedProfileTarget: DeepLinkedProfileTarget? = nil
+    @State private var didHandleInitialPostLink = false
+    @State private var didHandleInitialProfileLink = false
+    @State private var isResolvingInitialPostLink = false
 
     private let meetsService = SupabaseMeetsService()
 
@@ -174,59 +180,116 @@ struct ExploreFeedView: View {
                 .environmentObject(authViewModel)
                 .preferredColorScheme(.dark)
         }
+        .sheet(item: $deepLinkedProfileTarget) { target in
+            CommunityProfilePostsView(
+                userId: target.userId,
+                username: nil,
+                avatarURL: nil,
+                currentUserId: currentUserId,
+                socialStore: socialStore
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Post list
 
     private var postList: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                Color.clear.frame(height: 8)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 0) {
+                    Color.clear.frame(height: 8)
 
-                filterChips
-                    .padding(.top, 6)
-                    .padding(.bottom, 10)
-                    .zIndex(3)
+                    filterChips
+                        .padding(.top, 6)
+                        .padding(.bottom, 10)
+                        .zIndex(3)
 
-                feedDiscoveryPanel
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
-                    .zIndex(1)
+                    feedDiscoveryPanel
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                        .zIndex(1)
 
-                ForEach(rankedPosts) { post in
-                    feedPostCard(post)
-                }
-
-                if rankedPosts.isEmpty && !vm.isLoading {
-                    VStack(spacing: 12) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 30))
-                            .foregroundStyle(Color("EmpireMint").opacity(0.5))
-                        Text("No posts match")
-                            .font(.headline).foregroundStyle(.white)
-                        Text("Try a different filter or search term.")
-                            .font(.caption).foregroundStyle(.white.opacity(0.6))
+                    ForEach(rankedPosts) { post in
+                        feedPostCard(post)
+                            .id(post.id)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 60)
-                }
 
-                if vm.isLoadingMore {
-                    ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
-                }
+                    if rankedPosts.isEmpty && !vm.isLoading {
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 30))
+                                .foregroundStyle(Color("EmpireMint").opacity(0.5))
+                            Text("No posts match")
+                                .font(.headline).foregroundStyle(.white)
+                            Text("Try a different filter or search term.")
+                                .font(.caption).foregroundStyle(.white.opacity(0.6))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
+                    }
 
-                if !vm.hasMore && !rankedPosts.isEmpty {
-                    Text("You've seen it all 🏁")
-                        .font(.caption).foregroundStyle(.white.opacity(0.4))
-                        .padding(.vertical, 20)
-                }
+                    if vm.isLoadingMore {
+                        ProgressView().tint(Color("EmpireMint")).padding(.vertical, 20)
+                    }
 
-                Color.clear.frame(height: 60)
+                    if !vm.hasMore && !rankedPosts.isEmpty {
+                        Text("You've seen it all 🏁")
+                            .font(.caption).foregroundStyle(.white.opacity(0.4))
+                            .padding(.vertical, 20)
+                    }
+
+                    Color.clear.frame(height: 60)
+                }
+            }
+            .refreshable {
+                await vm.refresh()
+                await loadProgrammingSurfaces()
+            }
+            .onAppear {
+                handleInitialDeepLinks(scrollProxy: proxy)
+            }
+            .onChange(of: rankedPosts.map(\.id)) { _, _ in
+                handleInitialDeepLinks(scrollProxy: proxy)
             }
         }
-        .refreshable {
-            await vm.refresh()
-            await loadProgrammingSurfaces()
+    }
+
+    private func handleInitialDeepLinks(scrollProxy: ScrollViewProxy) {
+        if let initialProfileUserID, !didHandleInitialProfileLink {
+            didHandleInitialProfileLink = true
+            deepLinkedProfileTarget = DeepLinkedProfileTarget(userId: initialProfileUserID)
+        }
+
+        guard let initialPostID, !didHandleInitialPostLink else { return }
+
+        if rankedPosts.contains(where: { $0.id == initialPostID }) {
+            didHandleInitialPostLink = true
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    scrollProxy.scrollTo(initialPostID, anchor: .center)
+                }
+            }
+            return
+        }
+
+        guard !isResolvingInitialPostLink else { return }
+        isResolvingInitialPostLink = true
+
+        Task {
+            let found = await vm.ensurePostLoaded(initialPostID)
+            await MainActor.run {
+                isResolvingInitialPostLink = false
+                if found, rankedPosts.contains(where: { $0.id == initialPostID }) {
+                    didHandleInitialPostLink = true
+                    DispatchQueue.main.async {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                            scrollProxy.scrollTo(initialPostID, anchor: .center)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -236,7 +299,7 @@ struct ExploreFeedView: View {
                 post: post,
                 currentUserId: currentUserId,
                 communityVM: vm,
-                avatarURL: vm.avatarURL(for: post),
+                avatarURL: vm.avatarURL(for: post, variant: .avatar),
                 socialStore: socialStore
             )
             .frame(maxWidth: .infinity)
@@ -1194,7 +1257,7 @@ struct FeedPostCard: View {
         post.userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             == currentUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
-    private var photoURLs: [URL] { communityVM.photoURLs(for: post) }
+    private var photoURLs: [URL] { communityVM.photoURLs(for: post, variant: .feed) }
 
     private var stageAccent: Color {
         StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
@@ -1989,7 +2052,7 @@ struct CommunityProfilePostsView: View {
                     ForEach(vm.posts) { post in
                         CommunityProfileGridTile(
                             post: post,
-                            photoURL: vm.photoURL(for: post),
+                            photoURL: vm.photoURL(for: post, variant: .grid),
                             showsDeleteButton: isOwnProfile && isDeleteMode,
                             onDelete: {
                                 pendingDeletePost = post
@@ -2062,7 +2125,7 @@ struct CommunityProfilePostsView: View {
             entries.append(
                 CommunityGarageEntry(
                     car: synthesized,
-                    photoURL: vm.photoURL(for: post),
+                    photoURL: vm.photoURL(for: post, variant: .grid),
                     hasFullDetails: false
                 )
             )
@@ -2655,8 +2718,8 @@ private struct ExpandedCommunityPostOverlay: View {
                     currentUserId: currentUserId,
                     communityVM: communityVM,
                     socialStore: socialStore,
-                    photoURL: communityVM.photoURL(for: post),
-                    avatarURL: communityVM.avatarURL(for: post),
+                    photoURL: communityVM.photoURL(for: post, variant: .detail),
+                    avatarURL: communityVM.avatarURL(for: post, variant: .avatar),
                     allowsProfileNavigation: false
                 )
                 .padding(.horizontal, 16)
@@ -3084,6 +3147,11 @@ struct CommunityReputation {
     let title: String
     let symbol: String
     let tint: Color
+}
+
+private struct DeepLinkedProfileTarget: Identifiable {
+    let userId: String
+    var id: String { userId }
 }
 
 private func stageTint(for stage: Int) -> Color {
