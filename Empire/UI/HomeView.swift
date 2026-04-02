@@ -316,8 +316,10 @@ struct HomeView: View {
                                         }
                                         Spacer(minLength: 0)
                                     }
+                                    .frame(maxHeight: .infinity, alignment: .center)
                                     .padding(.leading, 16)
                                     .padding(.trailing, 60)
+                                    .padding(.vertical, 10)
                                 }
                             }
                             .padding(.horizontal, 16)
