@@ -254,6 +254,7 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
     case performance4Cyl = "B - Performance 4-Cylinder"
     case sixCylinderStreet = "C - 6-Cylinder Street"
     case dragTrack = "D - Drag & Track"
+    case rotary = "R - Rotary"
     case highPerformance = "S - High-Performance Sports"
     case m_AmericanMuscle = "M - American Muscle"
     case importV8 = "I - Import V8 Performance"
@@ -269,6 +270,7 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
         case .performance4Cyl: return "B"
         case .sixCylinderStreet: return "C"
         case .dragTrack: return "D"
+        case .rotary: return "R"
         case .highPerformance: return "S"
         case .m_AmericanMuscle: return "M"
         case .importV8: return "I"
@@ -284,6 +286,7 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
         case .performance4Cyl: return "Performance 4-Cylinder"
         case .sixCylinderStreet: return "6-Cylinder Street"
         case .dragTrack: return "Drag & Track Cars"
+        case .rotary: return "Rotary Platforms"
         case .highPerformance: return "High-Performance Sports Platforms"
         case .m_AmericanMuscle: return "American Muscle"
         case .importV8: return "Import V8 Performance"
@@ -303,6 +306,8 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
             return "Factory 6-cylinder vehicles built as street-focused sedans and coupes, not flagships."
         case .dragTrack:
             return "Purpose-built drag and track cars where quarter-mile performance matters more than the standard class horsepower ladder."
+        case .rotary:
+            return "Factory rotary-engine platforms and swaps built around high-revving power delivery, lightweight chassis balance, and a distinct tuning path."
         case .highPerformance:
             return "Factory top-tier performance platforms engineered for speed, handling, and motorsport capability."
         case .m_AmericanMuscle:
@@ -328,6 +333,8 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
             return "Comfort-biased sport sedans and V6 coupes"
         case .dragTrack:
             return "Drag builds, drag-and-drive cars, stripped race builds"
+        case .rotary:
+            return "RX platforms, rotary swaps, lightweight rotary street and track builds"
         case .highPerformance:
             return "Performance flagships and advanced AWD platforms"
         case .m_AmericanMuscle:
@@ -353,6 +360,8 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
             return "Charger SXT, Acura TL/TLX V6, BMW 340i, Infiniti Q50"
         case .dragTrack:
             return "Foxbody drag car, tube-chassis import, drag-and-drive build"
+        case .rotary:
+            return "RX-7, RX-8, 13B swap, 20B build"
         case .highPerformance:
             return "Nissan GT-R, 911, Corvette, Supra 3.0, BMW M"
         case .m_AmericanMuscle:
@@ -378,6 +387,8 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
             return "USA, Japan, Germany"
         case .dragTrack:
             return "Global"
+        case .rotary:
+            return "Japan, Global"
         case .highPerformance:
             return "Global"
         case .m_AmericanMuscle:
@@ -399,6 +410,7 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
         case .performance4Cyl: return Color(red: 0.95, green: 0.78, blue: 0.12)
         case .sixCylinderStreet: return Color(red: 0.45, green: 0.72, blue: 1.0)
         case .dragTrack: return Color(red: 1.0, green: 0.42, blue: 0.32)
+        case .rotary: return Color(red: 0.98, green: 0.36, blue: 0.78)
         case .highPerformance: return Color(red: 0.98, green: 0.45, blue: 0.20)
         case .m_AmericanMuscle: return Color(red: 0.94, green: 0.24, blue: 0.24)
         case .importV8: return Color(red: 0.72, green: 0.48, blue: 1.0)
@@ -439,6 +451,15 @@ enum VehicleClass: String, CaseIterable, Identifiable, Codable {
             ]
         case .dragTrack:
             return []
+        case .rotary:
+            return [
+                StageBand(rank: .stage1, lowerBound: 220, upperBound: 280),
+                StageBand(rank: .stage2, lowerBound: 281, upperBound: 360),
+                StageBand(rank: .stage3, lowerBound: 361, upperBound: 500),
+                StageBand(rank: .stage4, lowerBound: 501, upperBound: 650),
+                StageBand(rank: .stage5, lowerBound: 651, upperBound: 850),
+                StageBand(rank: .maxOut, lowerBound: 851, upperBound: nil)
+            ]
         case .highPerformance:
             return [
                 StageBand(rank: .stage1, lowerBound: 350, upperBound: 450),
