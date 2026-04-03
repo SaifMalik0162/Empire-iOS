@@ -6,4 +6,5 @@ enum AppLogger {
     static let supabaseAuth = Logger(subsystem: subsystem, category: "supabase-auth")
     static let supabaseCars = Logger(subsystem: subsystem, category: "supabase-cars")
     static let supabaseMeets = Logger(subsystem: subsystem, category: "supabase-meets")
+    static let pushNotifications = Logger(subsystem: subsystem, category: "push-notifications")
 }
