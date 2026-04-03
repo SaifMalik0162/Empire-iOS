@@ -6,6 +6,7 @@ import GoogleSignIn
 import UserNotifications
 import Supabase
 import PostgREST
+import OSLog
 
 @main
 struct EmpireApp: App {
@@ -284,10 +285,12 @@ final class PushNotificationsManager: ObservableObject {
         do {
             let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
             await refreshAuthorizationStatus()
+            AppLogger.pushNotifications.info("authorization requested granted=\(granted, privacy: .public) status=\(String(describing: self.authorizationStatus), privacy: .public)")
             guard granted else { return }
             UIApplication.shared.registerForRemoteNotifications()
         } catch {
             lastRegistrationError = error.localizedDescription
+            AppLogger.pushNotifications.error("authorization request failed error=\(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -299,11 +302,13 @@ final class PushNotificationsManager: ObservableObject {
     func didRegisterForRemoteNotifications(deviceToken: Data) async {
         currentDeviceToken = deviceToken.map { String(format: "%02x", $0) }.joined()
         lastRegistrationError = nil
+        AppLogger.pushNotifications.info("didRegisterForRemoteNotifications token_length=\(self.currentDeviceToken?.count ?? 0, privacy: .public) environment=\(self.apnsEnvironment, privacy: .public)")
         await syncCurrentDeviceTokenIfPossible()
     }
 
     func didFailToRegisterForRemoteNotifications(error: Error) async {
         lastRegistrationError = error.localizedDescription
+        AppLogger.pushNotifications.error("didFailToRegisterForRemoteNotifications error=\(error.localizedDescription, privacy: .public)")
     }
 
     func refreshPreferences() async {
@@ -388,8 +393,10 @@ final class PushNotificationsManager: ObservableObject {
                 .from("user_push_tokens")
                 .upsert(row, onConflict: "device_token")
                 .execute()
+            AppLogger.pushNotifications.info("synced push token user_id=\(userUUID.uuidString, privacy: .public) environment=\(row.environment, privacy: .public) bundle_id=\(row.bundle_id, privacy: .public)")
         } catch {
             lastRegistrationError = error.localizedDescription
+            AppLogger.pushNotifications.error("failed to sync push token user_id=\(userUUID.uuidString, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -399,7 +406,7 @@ final class PushNotificationsManager: ObservableObject {
     }
 
     private var apnsEnvironment: String {
-        "production"
+        embeddedProvisionAPNsEnvironment ?? "production"
     }
 
     private var embeddedProvisionAPNsEnvironment: String? {
