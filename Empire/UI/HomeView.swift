@@ -43,6 +43,7 @@ struct HomeView: View {
         if let featuredUserCarPhotoData, let firstCar = garageSnapshot.first {
             cards.append(
                 HomeFeaturedCardItem(
+                    id: "garage-\(firstCar.id.uuidString.lowercased())",
                     title: firstCar.name,
                     subtitle: "Your build",
                     badge: "Garage",
@@ -88,6 +89,7 @@ struct HomeView: View {
 
             let username = post.username?.trimmingCharacters(in: .whitespacesAndNewlines)
             return HomeFeaturedCardItem(
+                id: "post-\(post.id.uuidString.lowercased())",
                 title: post.carName,
                 subtitle: username.map { "@\($0)" } ?? "Empire Driver",
                 badge: badge,
@@ -162,6 +164,7 @@ struct HomeView: View {
                 if duplicate { continue }
                 cards.append(
                     HomeFeaturedCardItem(
+                        id: "fallback-\(car.imageName)",
                         title: car.name,
                         subtitle: car.description,
                         badge: "Spotlight",
@@ -945,7 +948,7 @@ private extension CommunityInboxItemKind {
 }
 
 private struct HomeFeaturedCardItem: Identifiable {
-    let id = UUID()
+    let id: String
     let title: String
     let subtitle: String
     let badge: String
@@ -956,6 +959,7 @@ private struct HomeFeaturedCardItem: Identifiable {
     let authorKey: String?
 
     init(
+        id: String,
         title: String,
         subtitle: String,
         badge: String,
@@ -965,6 +969,7 @@ private struct HomeFeaturedCardItem: Identifiable {
         score: Int = 0,
         authorKey: String? = nil
     ) {
+        self.id = id
         self.title = title
         self.subtitle = subtitle
         self.badge = badge
@@ -973,6 +978,138 @@ private struct HomeFeaturedCardItem: Identifiable {
         self.fallbackImageName = fallbackImageName
         self.score = score
         self.authorKey = authorKey
+    }
+}
+
+private final class HomeFeaturedImageCache {
+    static let shared = HomeFeaturedImageCache()
+
+    private let cache = NSCache<NSURL, UIImage>()
+
+    private init() {
+        cache.countLimit = 64
+        cache.totalCostLimit = 80 * 1024 * 1024
+    }
+
+    func image(for url: URL) -> UIImage? {
+        cache.object(forKey: url as NSURL)
+    }
+
+    func insert(_ image: UIImage, for url: URL) {
+        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? 0
+        cache.setObject(image, forKey: url as NSURL, cost: cost)
+    }
+}
+
+private actor HomeFeaturedImagePipeline {
+    static let shared = HomeFeaturedImagePipeline()
+
+    private var inFlightTasks: [URL: Task<UIImage?, Never>] = [:]
+
+    func loadImage(from url: URL) async -> UIImage? {
+        if let cachedImage = await MainActor.run(body: {
+            HomeFeaturedImageCache.shared.image(for: url)
+        }) {
+            return cachedImage
+        }
+
+        if let existingTask = inFlightTasks[url] {
+            return await existingTask.value
+        }
+
+        let task = Task<UIImage?, Never> {
+            do {
+                var request = URLRequest(url: url)
+                request.cachePolicy = .returnCacheDataElseLoad
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse,
+                      (200..<300).contains(httpResponse.statusCode),
+                      let image = UIImage(data: data) else {
+                    return nil
+                }
+
+                await MainActor.run {
+                    HomeFeaturedImageCache.shared.insert(image, for: url)
+                }
+                return image
+            } catch {
+                return nil
+            }
+        }
+
+        inFlightTasks[url] = task
+        let image = await task.value
+        inFlightTasks[url] = nil
+        return image
+    }
+}
+
+private final class HomeFeaturedImageLoader: ObservableObject {
+    @Published private(set) var image: UIImage? = nil
+    @Published private(set) var didFail = false
+
+    private let url: URL
+    private var hasAttemptedLoad = false
+
+    init(url: URL) {
+        self.url = url
+    }
+
+    func loadIfNeeded() async {
+        guard !hasAttemptedLoad else { return }
+        hasAttemptedLoad = true
+
+        if let cachedImage = HomeFeaturedImageCache.shared.image(for: url) {
+            await MainActor.run {
+                image = cachedImage
+            }
+            return
+        }
+
+        await MainActor.run {
+            didFail = false
+        }
+
+        let loadedImage = await HomeFeaturedImagePipeline.shared.loadImage(from: url)
+        await MainActor.run {
+            image = loadedImage
+            didFail = loadedImage == nil
+        }
+    }
+}
+
+private struct HomeFeaturedRemoteImage<Success: View, Placeholder: View, Failure: View>: View {
+    let success: (Image) -> Success
+    let placeholder: () -> Placeholder
+    let failure: () -> Failure
+
+    @StateObject private var loader: HomeFeaturedImageLoader
+
+    init(
+        url: URL,
+        @ViewBuilder success: @escaping (Image) -> Success,
+        @ViewBuilder placeholder: @escaping () -> Placeholder,
+        @ViewBuilder failure: @escaping () -> Failure
+    ) {
+        self.success = success
+        self.placeholder = placeholder
+        self.failure = failure
+        _loader = StateObject(wrappedValue: HomeFeaturedImageLoader(url: url))
+    }
+
+    var body: some View {
+        Group {
+            if let image = loader.image {
+                success(Image(uiImage: image))
+            } else if loader.didFail {
+                failure()
+            } else {
+                placeholder()
+            }
+        }
+        .task {
+            await loader.loadIfNeeded()
+        }
     }
 }
 
@@ -1052,13 +1189,13 @@ private struct HomeFeaturedCard: View {
             Image(uiImage: uiImage)
                 .resizable()
         } else if let remoteImageURL = card.remoteImageURL {
-            AsyncImage(url: remoteImageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable()
-                default:
-                    fallbackImage
-                }
+            HomeFeaturedRemoteImage(url: remoteImageURL) { image in
+                image
+                    .resizable()
+            } placeholder: {
+                fallbackImage
+            } failure: {
+                fallbackImage
             }
         } else {
             fallbackImage

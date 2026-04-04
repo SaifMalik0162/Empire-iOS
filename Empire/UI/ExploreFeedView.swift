@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import Combine
+import UIKit
 
 struct ExploreFeedView: View {
 
@@ -31,6 +32,7 @@ struct ExploreFeedView: View {
     @State private var didHandleInitialPostLink = false
     @State private var didHandleInitialProfileLink = false
     @State private var isResolvingInitialPostLink = false
+    @State private var stableRankedPostIDs: [ExploreFeedMode: [UUID]] = [:]
 
     private let meetsService = SupabaseMeetsService()
 
@@ -76,9 +78,21 @@ struct ExploreFeedView: View {
     }
 
     private var rankedPosts: [CommunityPost] {
-        switch selectedFeedMode {
+        let orderedIDs = stableRankedPostIDs[selectedFeedMode] ?? sortedPosts(filteredPosts, for: selectedFeedMode).map(\.id)
+        let filteredPostsByID = Dictionary(uniqueKeysWithValues: filteredPosts.map { ($0.id, $0) })
+        let orderedPosts = orderedIDs.compactMap { filteredPostsByID[$0] }
+
+        guard orderedPosts.count != filteredPosts.count else { return orderedPosts }
+
+        let orderedPostIDs = Set(orderedPosts.map(\.id))
+        let missingPosts = filteredPosts.filter { !orderedPostIDs.contains($0.id) }
+        return orderedPosts + sortedPosts(missingPosts, for: selectedFeedMode)
+    }
+
+    private func sortedPosts(_ posts: [CommunityPost], for mode: ExploreFeedMode) -> [CommunityPost] {
+        switch mode {
         case .forYou:
-            return filteredPosts.sorted { lhs, rhs in
+            return posts.sorted { lhs, rhs in
                 let lhsIsOwnPost = isOwnPost(lhs)
                 let rhsIsOwnPost = isOwnPost(rhs)
 
@@ -95,10 +109,18 @@ struct ExploreFeedView: View {
                 return lhs.createdAt > rhs.createdAt
             }
         case .trending:
-            return filteredPosts.sorted { trendingScore(for: $0) > trendingScore(for: $1) }
+            return posts.sorted { trendingScore(for: $0) > trendingScore(for: $1) }
         case .latest:
-            return filteredPosts.sorted { $0.createdAt > $1.createdAt }
+            return posts.sorted { $0.createdAt > $1.createdAt }
         }
+    }
+
+    private func refreshStableRankings() {
+        stableRankedPostIDs = Dictionary(
+            uniqueKeysWithValues: ExploreFeedMode.allCases.map { mode in
+                (mode, sortedPosts(vm.posts, for: mode).map(\.id))
+            }
+        )
     }
 
     private var highlightedPost: CommunityPost? {
@@ -180,6 +202,7 @@ struct ExploreFeedView: View {
         .task {
             await socialStore.refreshFromBackend()
             await vm.refresh()
+            refreshStableRankings()
             await loadProgrammingSurfaces()
         }
         .onAppear {
@@ -191,8 +214,12 @@ struct ExploreFeedView: View {
         .onReceive(NotificationCenter.default.publisher(for: .empireCommunityDidPost)) { _ in
             Task {
                 await vm.refresh()
+                refreshStableRankings()
                 await loadProgrammingSurfaces()
             }
+        }
+        .onChange(of: vm.posts.map(\.id)) { _, _ in
+            refreshStableRankings()
         }
         .sheet(isPresented: $showShareToFeed) {
             ShareToFeedSheet(userCars: userCars) { _ in }
@@ -232,7 +259,6 @@ struct ExploreFeedView: View {
 
                     ForEach(rankedPosts) { post in
                         feedPostCard(post)
-                            .id(post.id)
                     }
 
                     if rankedPosts.isEmpty && !vm.isLoading {
@@ -264,6 +290,7 @@ struct ExploreFeedView: View {
             }
             .refreshable {
                 await vm.refresh()
+                refreshStableRankings()
                 await loadProgrammingSurfaces()
             }
             .onAppear {
@@ -1257,6 +1284,137 @@ private struct FeedModeChip: View {
     }
 }
 
+private final class ExploreFeedImageCache {
+    static let shared = ExploreFeedImageCache()
+
+    private let cache = NSCache<NSURL, UIImage>()
+
+    private init() {
+        cache.countLimit = 180
+        cache.totalCostLimit = 160 * 1024 * 1024
+    }
+
+    func image(for url: URL) -> UIImage? {
+        cache.object(forKey: url as NSURL)
+    }
+
+    func insert(_ image: UIImage, for url: URL) {
+        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? 0
+        cache.setObject(image, forKey: url as NSURL, cost: cost)
+    }
+}
+
+private actor ExploreFeedImagePipeline {
+    static let shared = ExploreFeedImagePipeline()
+
+    private var inFlightTasks: [URL: Task<UIImage?, Never>] = [:]
+
+    func loadImage(from url: URL) async -> UIImage? {
+        if let cachedImage = await MainActor.run(body: {
+            ExploreFeedImageCache.shared.image(for: url)
+        }) {
+            return cachedImage
+        }
+
+        if let existingTask = inFlightTasks[url] {
+            return await existingTask.value
+        }
+
+        let task = Task<UIImage?, Never> {
+            do {
+                var request = URLRequest(url: url)
+                request.cachePolicy = .returnCacheDataElseLoad
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse,
+                      (200..<300).contains(httpResponse.statusCode),
+                      let image = UIImage(data: data) else {
+                    return nil
+                }
+
+                await MainActor.run {
+                    ExploreFeedImageCache.shared.insert(image, for: url)
+                }
+                return image
+            } catch {
+                return nil
+            }
+        }
+
+        inFlightTasks[url] = task
+        let image = await task.value
+        inFlightTasks[url] = nil
+        return image
+    }
+}
+
+private final class ExploreFeedImageLoader: ObservableObject {
+    @Published private(set) var image: UIImage? = nil
+    @Published private(set) var didFail = false
+
+    private let url: URL
+    private var hasAttemptedLoad = false
+
+    init(url: URL) {
+        self.url = url
+    }
+
+    func loadIfNeeded() async {
+        guard !hasAttemptedLoad else { return }
+        hasAttemptedLoad = true
+
+        if let cachedImage = ExploreFeedImageCache.shared.image(for: url) {
+            await MainActor.run {
+                image = cachedImage
+            }
+            return
+        }
+
+        await MainActor.run {
+            didFail = false
+        }
+        let loadedImage = await ExploreFeedImagePipeline.shared.loadImage(from: url)
+        await MainActor.run {
+            image = loadedImage
+            didFail = loadedImage == nil
+        }
+    }
+}
+
+private struct ExploreFeedRemoteImage<Success: View, Placeholder: View, Failure: View>: View {
+    let success: (Image) -> Success
+    let placeholder: () -> Placeholder
+    let failure: () -> Failure
+
+    @StateObject private var loader: ExploreFeedImageLoader
+
+    init(
+        url: URL,
+        @ViewBuilder success: @escaping (Image) -> Success,
+        @ViewBuilder placeholder: @escaping () -> Placeholder,
+        @ViewBuilder failure: @escaping () -> Failure
+    ) {
+        self.success = success
+        self.placeholder = placeholder
+        self.failure = failure
+        _loader = StateObject(wrappedValue: ExploreFeedImageLoader(url: url))
+    }
+
+    var body: some View {
+        Group {
+            if let image = loader.image {
+                success(Image(uiImage: image))
+            } else if loader.didFail {
+                failure()
+            } else {
+                placeholder()
+            }
+        }
+        .task {
+            await loader.loadIfNeeded()
+        }
+    }
+}
+
 // MARK: - Individual post card
 
 struct FeedPostCard: View {
@@ -1691,19 +1849,22 @@ struct FeedPostCard: View {
     }
 
     private func communityPhoto(url: URL) -> some View {
-        AsyncImage(url: url, transaction: Transaction(animation: nil)) { phase in
-            switch phase {
-            case .success(let img):
-                img.resizable().scaledToFill()
-                    .frame(height: 340)
-                    .clipped()
-                    .opacity(0.62)
-            case .empty:
-                ZStack { Color.white.opacity(0.04); ProgressView().tint(Color("EmpireMint")) }
-                    .frame(height: 340)
-            default:
-                Color.white.opacity(0.04).frame(height: 340)
+        ExploreFeedRemoteImage(url: url) { image in
+            image
+                .resizable()
+                .scaledToFill()
+                .frame(height: 340)
+                .clipped()
+                .opacity(0.62)
+        } placeholder: {
+            ZStack {
+                Color.white.opacity(0.04)
+                ProgressView().tint(Color("EmpireMint"))
             }
+            .frame(height: 340)
+        } failure: {
+            Color.white.opacity(0.04)
+                .frame(height: 340)
         }
     }
 
