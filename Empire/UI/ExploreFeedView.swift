@@ -29,6 +29,7 @@ struct ExploreFeedView: View {
     @State private var upcomingMeets: [Meet] = []
     @State private var selectedMeetFilterID: UUID? = nil
     @State private var deepLinkedProfileTarget: DeepLinkedProfileTarget? = nil
+    @State private var deepLinkedExpandedPost: CommunityPost? = nil
     @State private var didHandleInitialPostLink = false
     @State private var didHandleInitialProfileLink = false
     @State private var isResolvingInitialPostLink = false
@@ -237,6 +238,17 @@ struct ExploreFeedView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .fullScreenCover(item: $deepLinkedExpandedPost) { post in
+            ExpandedCommunityPostOverlay(
+                post: post,
+                currentUserId: currentUserId,
+                communityVM: vm,
+                socialStore: socialStore
+            ) {
+                deepLinkedExpandedPost = nil
+            }
+            .preferredColorScheme(.dark)
+        }
     }
 
     // MARK: - Post list
@@ -312,6 +324,7 @@ struct ExploreFeedView: View {
 
         if rankedPosts.contains(where: { $0.id == initialPostID }) {
             didHandleInitialPostLink = true
+            deepLinkedExpandedPost = rankedPosts.first(where: { $0.id == initialPostID })
             DispatchQueue.main.async {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                     scrollProxy.scrollTo(initialPostID, anchor: .center)
@@ -329,6 +342,7 @@ struct ExploreFeedView: View {
                 isResolvingInitialPostLink = false
                 if found, rankedPosts.contains(where: { $0.id == initialPostID }) {
                     didHandleInitialPostLink = true
+                    deepLinkedExpandedPost = rankedPosts.first(where: { $0.id == initialPostID })
                     DispatchQueue.main.async {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                             scrollProxy.scrollTo(initialPostID, anchor: .center)
@@ -350,6 +364,7 @@ struct ExploreFeedView: View {
             )
             .frame(maxWidth: .infinity)
         }
+        .id(post.id)
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
         .onAppear {
@@ -2876,7 +2891,7 @@ private struct CommunityGarageCard: View {
     }
 }
 
-private struct ExpandedCommunityPostOverlay: View {
+struct ExpandedCommunityPostOverlay: View {
     let post: CommunityPost
     let currentUserId: String
     @ObservedObject var communityVM: CommunityViewModel
@@ -2898,19 +2913,29 @@ private struct ExpandedCommunityPostOverlay: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            ScrollView(showsIndicators: false) {
-                ExpandedCommunityPostCard(
-                    post: post,
-                    currentUserId: currentUserId,
-                    communityVM: communityVM,
-                    socialStore: socialStore,
-                    photoURL: communityVM.photoURL(for: post, variant: .detail),
-                    avatarURL: communityVM.avatarURL(for: post, variant: .avatar),
-                    allowsProfileNavigation: false
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 56)
-                .padding(.bottom, 24)
+            GeometryReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    let cardWidth = max(proxy.size.width - 32, 0)
+
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 16)
+                        ExpandedCommunityPostCard(
+                            cardWidth: cardWidth,
+                            post: post,
+                            currentUserId: currentUserId,
+                            communityVM: communityVM,
+                            socialStore: socialStore,
+                            photoURL: communityVM.photoURL(for: post, variant: .detail),
+                            avatarURL: communityVM.avatarURL(for: post, variant: .avatar),
+                            allowsProfileNavigation: false
+                        )
+                        .frame(width: cardWidth)
+                        Spacer(minLength: 16)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 56)
+                    .padding(.bottom, 24)
+                }
             }
 
             Button("Done", action: onClose)
@@ -2938,6 +2963,10 @@ private struct ExpandablePostCaption: View {
         caption.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var softenedCaption: String {
+        softWrappedText(trimmedCaption)
+    }
+
     private var shouldOfferExpansion: Bool {
         trimmedCaption.count > 120 || trimmedCaption.filter(\.isNewline).count >= 2
     }
@@ -2945,7 +2974,7 @@ private struct ExpandablePostCaption: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .bottomTrailing) {
-                Text(trimmedCaption)
+                Text(softenedCaption)
                     .font(font)
                     .foregroundStyle(textColor)
                     .lineLimit(isExpanded ? nil : lineLimit)
@@ -2994,6 +3023,7 @@ private struct ExpandablePostCaption: View {
 }
 
 private struct ExpandedCommunityPostCard: View {
+    let cardWidth: CGFloat
     let post: CommunityPost
     let currentUserId: String
     @ObservedObject var communityVM: CommunityViewModel
@@ -3006,6 +3036,66 @@ private struct ExpandedCommunityPostCard: View {
 
     private var stageAccent: Color {
         StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
+    }
+
+    private var softenedCarName: String {
+        softWrappedText(post.carName)
+    }
+
+    private var softenedMakeModelLine: String? {
+        makeModelLine.map { softWrappedText($0) }
+    }
+
+    private var contentWidth: CGFloat {
+        max(cardWidth - 36, 0)
+    }
+
+    private var expandedMetaChipItems: [ExpandedMetaChipItem] {
+        var items: [ExpandedMetaChipItem] = [
+            ExpandedMetaChipItem(label: stageLabel.uppercased(), tint: stageAccent),
+            ExpandedMetaChipItem(label: "\(post.horsepower) WHP", tint: .cyan)
+        ]
+
+        if let cls = VehicleClass.from(rawValue: post.vehicleClass) {
+            items.append(ExpandedMetaChipItem(label: "\(cls.code) \(cls.displayName)", tint: cls.accentColor))
+        }
+
+        return items
+    }
+
+    private var expandedActionItems: [ExpandedActionItem] {
+        [
+            ExpandedActionItem(
+                kind: .like,
+                icon: post.isLiked ? "heart.fill" : "heart",
+                title: "\(post.likesCount)",
+                tint: post.isLiked ? Color("EmpireMint") : .white
+            ) {
+                Task { await communityVM.toggleLike(postId: post.id) }
+            },
+            ExpandedActionItem(
+                kind: .comment,
+                icon: "bubble.left",
+                title: "\(post.commentsCount)",
+                tint: .white
+            ) {
+                showComments = true
+            },
+            ExpandedActionItem(
+                kind: .save,
+                icon: socialStore.isSaved(post.id) ? "bookmark.fill" : "bookmark",
+                title: socialStore.isSaved(post.id) ? "Saved" : "Save",
+                tint: socialStore.isSaved(post.id) ? Color("EmpireMint") : .white
+            ) {
+                socialStore.toggleSaved(post.id)
+            },
+            ExpandedActionItem(
+                kind: .share,
+                icon: "square.and.arrow.up",
+                title: "Share",
+                tint: .white
+            ) { }
+        ]
     }
 
     var body: some View {
@@ -3037,7 +3127,7 @@ private struct ExpandedCommunityPostCard: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity)
+                .frame(width: cardWidth)
                 .frame(height: 420)
                 .clipped()
                 .overlay(
@@ -3056,83 +3146,90 @@ private struct ExpandedCommunityPostCard: View {
                         Text(post.username ?? "Empire Driver")
                             .font(.headline.weight(.semibold))
                             .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                            .allowsTightening(true)
                         Text(post.createdAt.relativeFormatted)
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.62))
-                    }
-                }
-                .padding(16)
-            }
-
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(post.carName)
-                            .font(.system(size: 32, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-                            .lineLimit(2)
-
-                        if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
-                            BuildCategoryBadge(category: buildCategory, size: 22, materialOpacity: 0.14, strokeOpacity: 0.55)
-                        }
-                    }
-
-                    if let makeModelLine {
-                        Text(makeModelLine)
-                            .font(.title3.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(1)
                     }
                 }
+                .frame(width: contentWidth, alignment: .leading)
+                .padding(16)
+            }
+            .frame(width: cardWidth)
 
-                HStack(spacing: 8) {
-                    expandedChip(label: stageLabel.uppercased(), tint: stageAccent)
-                    expandedChip(label: "\(post.horsepower) WHP", tint: .cyan)
-                    if let cls = VehicleClass.from(rawValue: post.vehicleClass) {
-                        expandedChip(label: "\(cls.code) \(cls.displayName)", tint: cls.accentColor)
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(softenedCarName)
+                        .font(.system(size: 32, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if let softenedMakeModelLine {
+                        Text(softenedMakeModelLine)
+                            .font(.title3.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(expandedMetaChipItems, id: \.self) { item in
+                            expandedChip(label: item.label, tint: item.tint)
+                        }
+                        if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                            BuildCategoryBadge(category: buildCategory, size: 18, materialOpacity: 0.14, strokeOpacity: 0.5)
+                        }
+                        Spacer(minLength: 0)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(expandedMetaChipItems.prefix(2)), id: \.self) { item in
+                                expandedChip(label: item.label, tint: item.tint)
+                            }
+                            Spacer(minLength: 0)
+                        }
+
+                        HStack(spacing: 8) {
+                            if expandedMetaChipItems.count > 2, let trailingItem = expandedMetaChipItems.last {
+                                expandedChip(label: trailingItem.label, tint: trailingItem.tint)
+                            }
+                            if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                                BuildCategoryBadge(category: buildCategory, size: 18, materialOpacity: 0.14, strokeOpacity: 0.5)
+                            }
+                            Spacer(minLength: 0)
+                        }
+
+                    }
+                }
+                .frame(width: contentWidth, alignment: .leading)
 
                 HStack(spacing: 10) {
-                    expandedActionButton(
-                        icon: post.isLiked ? "heart.fill" : "heart",
-                        title: "\(post.likesCount)",
-                        tint: post.isLiked ? Color("EmpireMint") : .white
-                    ) {
-                        Task { await communityVM.toggleLike(postId: post.id) }
-                    }
-
-                    expandedActionButton(
-                        icon: "bubble.left",
-                        title: "\(post.commentsCount)",
-                        tint: .white
-                    ) {
-                        showComments = true
-                    }
-
-                    expandedActionButton(
-                        icon: socialStore.isSaved(post.id) ? "bookmark.fill" : "bookmark",
-                        title: socialStore.isSaved(post.id) ? "Saved" : "Save",
-                        tint: socialStore.isSaved(post.id) ? Color("EmpireMint") : .white
-                    ) {
-                        socialStore.toggleSaved(post.id)
-                    }
-
-                    if let shareURL = URL(string: "https://empireontario.shop/cars/\(post.id.uuidString)") {
-                        ShareLink(item: shareURL) {
-                            expandedActionLabel(icon: "square.and.arrow.up", title: "Share", tint: .white)
-                        }
+                    ForEach(expandedActionItems) { item in
+                        expandedActionView(for: item)
                     }
                 }
+                .frame(width: contentWidth, alignment: .leading)
 
                 if let caption = post.caption, !caption.isEmpty {
-                    Text(caption)
-                        .font(.title3.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .fixedSize(horizontal: false, vertical: true)
+                    ExpandablePostCaption(
+                        caption: caption,
+                        lineLimit: 3,
+                        font: .title3.weight(.medium),
+                        textColor: .white.opacity(0.9)
+                    )
+                    .frame(width: contentWidth, alignment: .leading)
                 }
             }
             .padding(18)
+            .frame(width: cardWidth, alignment: .leading)
             .background(
                 LinearGradient(
                     colors: [Color.white.opacity(0.08), Color.white.opacity(0.03)],
@@ -3141,6 +3238,7 @@ private struct ExpandedCommunityPostCard: View {
                 )
             )
         }
+        .frame(width: cardWidth, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(
@@ -3228,20 +3326,92 @@ private struct ExpandedCommunityPostCard: View {
             expandedActionLabel(icon: icon, title: title, tint: tint)
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func expandedActionView(for item: ExpandedActionItem) -> some View {
+        switch item.kind {
+        case .share:
+            if let shareURL = URL(string: "https://empireontario.shop/cars/\(post.id.uuidString)") {
+                ShareLink(item: shareURL) {
+                    expandedActionLabel(icon: item.icon, title: item.title, tint: item.tint)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+            }
+        default:
+            expandedActionButton(icon: item.icon, title: item.title, tint: item.tint) {
+                item.action()
+            }
+        }
     }
 
     private func expandedActionLabel(icon: String, title: String, tint: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
             Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
         }
-        .font(.caption.weight(.semibold))
+        .font(.caption.weight(.medium))
         .foregroundStyle(tint)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .background(Capsule().fill(Color.white.opacity(0.08)))
         .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
     }
+}
+
+private struct ExpandedMetaChipItem: Hashable {
+    let label: String
+    let tint: Color
+}
+
+private struct ExpandedActionItem: Identifiable {
+    enum Kind {
+        case like
+        case comment
+        case save
+        case share
+    }
+
+    let kind: Kind
+    let icon: String
+    let title: String
+    let tint: Color
+    let action: () -> Void
+
+    var id: String { "\(icon)-\(title)" }
+}
+
+private func softWrappedText(_ text: String, tokenChunkSize: Int = 12) -> String {
+    guard !text.isEmpty else { return text }
+
+    let breakableDelimiters: Set<Character> = ["_", "-", "/", ".", ":"]
+    let zeroWidthSpace = "\u{200B}"
+    var result = ""
+    var uninterruptedCount = 0
+
+    for character in text {
+        result.append(character)
+
+        if character.isWhitespace || character.isNewline {
+            uninterruptedCount = 0
+            continue
+        }
+
+        uninterruptedCount += 1
+
+        if breakableDelimiters.contains(character) || uninterruptedCount >= tokenChunkSize {
+            result.append(zeroWidthSpace)
+            uninterruptedCount = 0
+        }
+    }
+
+    return result
 }
 
 @MainActor
