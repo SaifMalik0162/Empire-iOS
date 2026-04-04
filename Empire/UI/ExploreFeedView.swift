@@ -1804,10 +1804,12 @@ struct FeedPostCard: View {
             }
 
             if let caption = post.caption, !caption.isEmpty {
-                Text(caption)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.85))
-                    .lineLimit(3)
+                ExpandablePostCaption(
+                    caption: caption,
+                    lineLimit: 3,
+                    font: .subheadline,
+                    textColor: .white.opacity(0.85)
+                )
             }
         }
     }
@@ -2920,6 +2922,73 @@ private struct ExpandedCommunityPostOverlay: View {
                 .overlay(Capsule().stroke(Color("EmpireMint").opacity(0.35), lineWidth: 1))
                 .padding(.leading, 16)
                 .padding(.top, 14)
+        }
+    }
+}
+
+private struct ExpandablePostCaption: View {
+    let caption: String
+    let lineLimit: Int
+    let font: Font
+    let textColor: Color
+
+    @State private var isExpanded = false
+
+    private var trimmedCaption: String {
+        caption.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var shouldOfferExpansion: Bool {
+        trimmedCaption.count > 120 || trimmedCaption.filter(\.isNewline).count >= 2
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack(alignment: .bottomTrailing) {
+                Text(trimmedCaption)
+                    .font(font)
+                    .foregroundStyle(textColor)
+                    .lineLimit(isExpanded ? nil : lineLimit)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.trailing, shouldOfferExpansion && !isExpanded ? 84 : 0)
+
+                if shouldOfferExpansion && !isExpanded {
+                    HStack(spacing: 0) {
+                        LinearGradient(
+                            colors: [.clear, Color.black.opacity(0.82)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 34, height: 22)
+
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                isExpanded = true
+                            }
+                        } label: {
+                            Text("Read more")
+                                .font(font.weight(.medium))
+                                .foregroundStyle(Color("EmpireMint"))
+                                .padding(.leading, 6)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .background(Color.black.opacity(0.01))
+                }
+            }
+
+            if shouldOfferExpansion && isExpanded {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        isExpanded = false
+                    }
+                } label: {
+                    Text("Show less")
+                        .font(font.weight(.medium))
+                        .foregroundStyle(Color("EmpireMint"))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }

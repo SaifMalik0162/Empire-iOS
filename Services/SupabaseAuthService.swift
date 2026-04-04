@@ -353,13 +353,20 @@ final class SupabaseAuthService {
             }
         }
 
+        var profileUpdate: [String: String] = [
+            "id": user.id.uuidString,
+            "username": normalizedUsername
+        ]
+
+        if let currentUsername = currentProfile?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !currentUsername.isEmpty,
+           currentUsername.caseInsensitiveCompare(normalizedUsername) != .orderedSame {
+            profileUpdate["last_username_change_at"] = iso8601Formatter.string(from: Date())
+        }
+
         _ = try await client
             .from("profiles")
-            .upsert([
-                "id": user.id.uuidString,
-                "username": normalizedUsername,
-                "last_username_change_at": iso8601Formatter.string(from: Date())
-            ], onConflict: "id")
+            .upsert(profileUpdate, onConflict: "id")
             .execute()
 
         _ = try await client.auth.update(
