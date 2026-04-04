@@ -172,6 +172,25 @@ struct StageAssessment {
     let hasTune: Bool
 }
 
+struct QuarterMileStageBand: Hashable {
+    let rank: BuildStageRank
+    let fastestInclusive: Double?
+    let slowestInclusive: Double?
+
+    var elapsedTimeLabel: String {
+        switch (fastestInclusive, slowestInclusive) {
+        case let (fastest?, slowest?):
+            return String(format: "%.2f - %.2f sec", fastest, slowest)
+        case let (fastest?, nil):
+            return String(format: "%.2f sec or quicker", fastest)
+        case let (nil, slowest?):
+            return String(format: "%.2f sec", slowest)
+        default:
+            return "Recorded run required"
+        }
+    }
+}
+
 enum CommunityProgrammingChallenge: String, CaseIterable, Identifiable {
     case dynoDiary = "dyno_diary"
     case meetReady = "meet_ready"
@@ -595,6 +614,14 @@ enum BuildCategory: String, CaseIterable, Identifiable, Codable {
 enum StageSystem {
     static let requiredMajorModCount = 3
     static let tuneKeywords = ["tune", "ecu", "flash", "map"]
+    static let dragTrackStageBands: [QuarterMileStageBand] = [
+        QuarterMileStageBand(rank: .maxOut, fastestInclusive: nil, slowestInclusive: 8.49),
+        QuarterMileStageBand(rank: .stage5, fastestInclusive: 8.50, slowestInclusive: 9.49),
+        QuarterMileStageBand(rank: .stage4, fastestInclusive: 9.50, slowestInclusive: 10.49),
+        QuarterMileStageBand(rank: .stage3, fastestInclusive: 10.50, slowestInclusive: 11.49),
+        QuarterMileStageBand(rank: .stage2, fastestInclusive: 11.50, slowestInclusive: 12.49),
+        QuarterMileStageBand(rank: .stage1, fastestInclusive: 12.50, slowestInclusive: 13.49)
+    ]
     static let majorModKeywords = [
         "tune",
         "intake",
@@ -622,7 +649,12 @@ enum StageSystem {
         return BuildStageRank.from(rawStage: stage).accentColor
     }
 
-    static func assessment(vehicleClass: VehicleClass?, horsepower: Int, selectedMajorMods: [String]) -> StageAssessment {
+    static func assessment(
+        vehicleClass: VehicleClass?,
+        horsepower: Int,
+        selectedMajorMods: [String],
+        quarterMile: String? = nil
+    ) -> StageAssessment {
         let normalized = selectedMajorMods.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
         let majorModCount = normalized.count
         let hasTune = normalized.contains { title in
@@ -652,11 +684,54 @@ enum StageSystem {
         }
 
         if vehicleClass == .dragTrack {
+            guard hasTune, majorModCount >= requiredMajorModCount else {
+                return StageAssessment(
+                    stage: .stock,
+                    isJailbreak: false,
+                    summary: "This build is still Stock.",
+                    detail: "A Class D car remains Stock until at least \(requiredMajorModCount) major mods including a tune are present. Current setup: \(majorModCount) major mod\(majorModCount == 1 ? "" : "s")\(hasTune ? " with a tune." : " and no tune detected.")",
+                    majorModCount: majorModCount,
+                    hasTune: hasTune
+                )
+            }
+
+            guard let elapsedTime = parseQuarterMileTime(quarterMile) else {
+                return StageAssessment(
+                    stage: .stock,
+                    isJailbreak: false,
+                    summary: "Class D needs a recorded quarter-mile result.",
+                    detail: "Drag and track cars are scored by fastest recorded 1/4 mile. Enter the quickest verified run to unlock a stage.",
+                    majorModCount: majorModCount,
+                    hasTune: hasTune
+                )
+            }
+
+            let matchedStage = dragTrackStageBands.first { band in
+                let minimumPass = band.fastestInclusive.map { elapsedTime >= $0 } ?? true
+                let maximumPass = band.slowestInclusive.map { elapsedTime <= $0 } ?? true
+                return minimumPass && maximumPass
+            }?.rank
+
+            guard let matchedStage else {
+                return StageAssessment(
+                    stage: .stock,
+                    isJailbreak: false,
+                    summary: "This Class D build is below the stage ladder.",
+                    detail: String(
+                        format: "%.2f sec is slower than the Stage 1 threshold of %.2f sec for Class D.",
+                        elapsedTime,
+                        dragTrackStageBands.last?.slowestInclusive ?? 13.49
+                    ),
+                    majorModCount: majorModCount,
+                    hasTune: hasTune
+                )
+            }
+
             return StageAssessment(
-                stage: .stock,
+                stage: matchedStage,
                 isJailbreak: false,
-                summary: "Class D uses quarter-mile results.",
-                detail: "Drag and track cars are scored by fastest recorded 1/4 mile, not the standard Stage 1-5 horsepower ladder.",
+                summary: "\(matchedStage.label) D build identified.",
+                detail: String(format: "%.2f sec lands in the %@ Class D quarter-mile band.", elapsedTime, matchedStage.label),
                 majorModCount: majorModCount,
                 hasTune: hasTune
             )
@@ -703,6 +778,19 @@ enum StageSystem {
         if isMajorFlag { return true }
         let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return majorModKeywords.contains { normalized.contains($0) }
+    }
+
+    private static func parseQuarterMileTime(_ value: String?) -> Double? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let sanitized = trimmed
+            .replacingOccurrences(of: ",", with: ".")
+            .filter { $0.isNumber || $0 == "." }
+
+        guard sanitized.isEmpty == false else { return nil }
+        return Double(sanitized)
     }
 }
 

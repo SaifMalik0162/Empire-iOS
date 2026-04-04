@@ -12,6 +12,7 @@ enum AuthUserFacingError: LocalizedError {
     case signupDisabled
     case emailNotConfirmed
     case rateLimited
+    case emailDeliveryLimited
     case invalidEmail
     case samePassword
     case generic(String)
@@ -31,7 +32,9 @@ enum AuthUserFacingError: LocalizedError {
         case .emailNotConfirmed:
             return "Check your inbox and confirm your email before logging in."
         case .rateLimited:
-            return "Too many attempts right now. Please wait a bit and try again."
+            return "Too many requests right now. Please wait a minute and try again."
+        case .emailDeliveryLimited:
+            return "We are getting a burst of sign-up emails right now. Please try again in a few minutes."
         case .invalidEmail:
             return "Enter a valid email address."
         case .samePassword:
@@ -496,8 +499,10 @@ final class SupabaseAuthService {
                 return AuthUserFacingError.invalidCredentials
             case .emailNotConfirmed:
                 return AuthUserFacingError.emailNotConfirmed
-            case .overRequestRateLimit, .overEmailSendRateLimit:
+            case .overRequestRateLimit:
                 return AuthUserFacingError.rateLimited
+            case .overEmailSendRateLimit:
+                return AuthUserFacingError.emailDeliveryLimited
             case .samePassword:
                 return AuthUserFacingError.samePassword
             case .validationFailed:
