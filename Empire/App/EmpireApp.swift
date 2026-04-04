@@ -76,6 +76,7 @@ struct EmpireApp: App {
             })) {
                 EmpireOnboardingView()
                     .environmentObject(authViewModel)
+                    .environmentObject(pushNotifications)
                     .preferredColorScheme(.dark)
             }
             .id(authViewModel.isAuthenticated ? "auth" : "loggedOut")
@@ -97,6 +98,7 @@ struct EmpireApp: App {
                 guard newPhase == .active else { return }
                 UNUserNotificationCenter.current().setBadgeCount(0)
                 Task { await communityInboxVM.refresh() }
+                Task { await pushNotifications.handleAppDidBecomeActive(user: authViewModel.currentUser) }
             }
             .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
                 Task {
@@ -311,6 +313,8 @@ final class PushNotificationsManager: ObservableObject {
 
     private var currentDeviceToken: String? = nil
     private let client = SupabaseClientProvider.client
+    private let installationIDKey = "push.installation_id"
+    private let lastSyncedDeviceTokenKey = "push.last_synced_device_token"
 
     private init() {
         Task { await refreshAuthorizationStatus() }
@@ -350,6 +354,13 @@ final class PushNotificationsManager: ObservableObject {
             lastRegistrationError = error.localizedDescription
             AppLogger.pushNotifications.error("authorization request failed error=\(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    func handleAppDidBecomeActive(user: BackendUser?) async {
+        await refreshAuthorizationStatus()
+        guard user != nil else { return }
+        await registerForRemoteNotificationsIfAuthorized()
+        await syncCurrentDeviceTokenIfPossible()
     }
 
     func openSystemNotificationSettings() {
@@ -436,8 +447,10 @@ final class PushNotificationsManager: ObservableObject {
         guard let token = currentDeviceToken,
               let userUUID = currentUserUUID else { return }
 
+        let installationID = persistedInstallationID
         let row = PushDeviceTokenRow(
             user_id: userUUID,
+            installation_id: installationID,
             device_token: token,
             platform: "ios",
             environment: apnsEnvironment,
@@ -449,8 +462,34 @@ final class PushNotificationsManager: ObservableObject {
         do {
             _ = try await client
                 .from("user_push_tokens")
-                .upsert(row, onConflict: "device_token")
+                .update(row)
+                .eq("device_token", value: token)
                 .execute()
+
+            _ = try await client
+                .from("user_push_tokens")
+                .upsert(row, onConflict: "installation_id,platform,bundle_id")
+                .execute()
+
+            _ = try await client
+                .from("user_push_tokens")
+                .update(PushDeviceTokenActiveUpdate(is_active: false))
+                .eq("user_id", value: userUUID)
+                .eq("installation_id", value: installationID)
+                .neq("device_token", value: token)
+                .execute()
+
+            if let previousToken = lastSyncedDeviceToken,
+               previousToken != token {
+                _ = try await client
+                    .from("user_push_tokens")
+                    .update(PushDeviceTokenActiveUpdate(is_active: false))
+                    .eq("user_id", value: userUUID)
+                    .eq("device_token", value: previousToken)
+                    .execute()
+            }
+
+            lastSyncedDeviceToken = token
             AppLogger.pushNotifications.info("synced push token user_id=\(userUUID.uuidString, privacy: .public) environment=\(row.environment, privacy: .public) bundle_id=\(row.bundle_id, privacy: .public)")
         } catch {
             lastRegistrationError = error.localizedDescription
@@ -463,8 +502,28 @@ final class PushNotificationsManager: ObservableObject {
         return UUID(uuidString: raw)
     }
 
+    private var persistedInstallationID: String {
+        if let existing = UserDefaults.standard.string(forKey: installationIDKey),
+           !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return existing
+        }
+
+        let created = UUID().uuidString.lowercased()
+        UserDefaults.standard.set(created, forKey: installationIDKey)
+        return created
+    }
+
+    private var lastSyncedDeviceToken: String? {
+        get { UserDefaults.standard.string(forKey: lastSyncedDeviceTokenKey) }
+        set { UserDefaults.standard.set(newValue, forKey: lastSyncedDeviceTokenKey) }
+    }
+
     private var apnsEnvironment: String {
-        embeddedProvisionAPNsEnvironment ?? "production"
+        #if DEBUG
+        return "development"
+        #else
+        return embeddedProvisionAPNsEnvironment ?? "production"
+        #endif
     }
 
     private var embeddedProvisionAPNsEnvironment: String? {
@@ -498,12 +557,17 @@ final class PushNotificationsManager: ObservableObject {
 
 private struct PushDeviceTokenRow: Encodable {
     let user_id: UUID
+    let installation_id: String
     let device_token: String
     let platform: String
     let environment: String
     let bundle_id: String
     let is_active: Bool
     let last_seen_at: String
+}
+
+private struct PushDeviceTokenActiveUpdate: Encodable {
+    let is_active: Bool
 }
 
 private struct NotificationPreferencesRow: Codable {

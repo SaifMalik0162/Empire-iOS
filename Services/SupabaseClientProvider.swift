@@ -1,8 +1,10 @@
 import Foundation
+import OSLog
 import Supabase
 
 enum SupabaseClientProvider {
     private static let supportsImageTransformations = false
+    private static let logger = Logger(subsystem: "com.empire.app", category: "supabase-config")
 
     enum ImageVariant {
         case avatar
@@ -55,20 +57,18 @@ enum SupabaseClientProvider {
     private static let fallbackPublishableKey = "sb_publishable_Bd_9Istn0C4ep16Qg2M1RA_FCHJW4Bf"
 
     static let projectURL: URL = {
-        guard let rawValue = configValue(
-            debugEnvironmentKey: "SUPABASE_URL",
-            infoPlistKey: "SUPABASE_URL",
-            invalidPlaceholders: ["YOUR_SUPABASE_URL"]
-        ) else {
-            assertionFailure("Missing Supabase URL config. Falling back to bundled publishable project URL.")
-            return fallbackProjectURL
+        if let environmentValue = debugEnvironmentValue(for: "SUPABASE_URL"),
+           let environmentURL = validatedSupabaseURL(from: environmentValue) {
+            return environmentURL
         }
 
-        guard let url = validatedSupabaseURL(from: rawValue) else {
-            assertionFailure("Invalid Supabase URL configured in SUPABASE_URL: \(rawValue). Falling back to bundled publishable project URL.")
-            return fallbackProjectURL
+        if let infoPlistValue = infoPlistValue(for: "SUPABASE_URL"),
+           let infoPlistURL = validatedSupabaseURL(from: infoPlistValue) {
+            return infoPlistURL
         }
-        return url
+
+        logger.error("Missing or invalid Supabase URL config. Falling back to bundled publishable project URL.")
+        return fallbackProjectURL
     }()
 
     static let publishableKey: String = {
@@ -77,7 +77,7 @@ enum SupabaseClientProvider {
             infoPlistKey: "SUPABASE_ANON_KEY",
             invalidPlaceholders: ["YOUR_SUPABASE_ANON_KEY"]
         ) else {
-            assertionFailure("Missing Supabase publishable key config. Falling back to bundled publishable key.")
+            logger.error("Missing Supabase publishable key config. Falling back to bundled publishable key.")
             return fallbackPublishableKey
         }
         return configuredKey
@@ -166,20 +166,34 @@ enum SupabaseClientProvider {
         infoPlistKey: String,
         invalidPlaceholders: [String]
     ) -> String? {
+        if let environmentValue = debugEnvironmentValue(for: debugEnvironmentKey),
+           isUsableConfigValue(environmentValue, invalidPlaceholders: invalidPlaceholders) {
+            return environmentValue
+        }
+
+        if let infoPlistValue = infoPlistValue(for: infoPlistKey),
+           isUsableConfigValue(infoPlistValue, invalidPlaceholders: invalidPlaceholders) {
+            return infoPlistValue
+        }
+
+        return nil
+    }
+
+    private static func debugEnvironmentValue(for key: String) -> String? {
         #if DEBUG
-        if let environmentValue = ProcessInfo.processInfo.environment[debugEnvironmentKey] {
+        if let environmentValue = ProcessInfo.processInfo.environment[key] {
             let trimmedEnvironmentValue = environmentValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if isUsableConfigValue(trimmedEnvironmentValue, invalidPlaceholders: invalidPlaceholders) {
-                return trimmedEnvironmentValue
-            }
+            return trimmedEnvironmentValue.isEmpty ? nil : trimmedEnvironmentValue
         }
         #endif
 
-        if let infoPlistValue = Bundle.main.object(forInfoDictionaryKey: infoPlistKey) as? String {
+        return nil
+    }
+
+    private static func infoPlistValue(for key: String) -> String? {
+        if let infoPlistValue = Bundle.main.object(forInfoDictionaryKey: key) as? String {
             let trimmedInfoPlistValue = infoPlistValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if isUsableConfigValue(trimmedInfoPlistValue, invalidPlaceholders: invalidPlaceholders) {
-                return trimmedInfoPlistValue
-            }
+            return trimmedInfoPlistValue.isEmpty ? nil : trimmedInfoPlistValue
         }
 
         return nil

@@ -3,6 +3,7 @@ import UserNotifications
 
 struct EmpireOnboardingView: View {
     @EnvironmentObject private var authViewModel: AuthViewModel
+    @EnvironmentObject private var pushNotifications: PushNotificationsManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -177,11 +178,7 @@ struct EmpireOnboardingView: View {
 
         switch notificationStatus {
         case .notDetermined:
-            do {
-                _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
-            } catch {
-                break
-            }
+            await pushNotifications.requestAuthorizationAndRegister()
             await refreshNotificationStatus()
             completeOnboarding()
         default:
