@@ -12,6 +12,7 @@ enum AuthUserFacingError: LocalizedError {
     case signupDisabled
     case emailNotConfirmed
     case rateLimited
+    case emailDeliveryLimited
     case invalidEmail
     case samePassword
     case generic(String)
@@ -31,7 +32,9 @@ enum AuthUserFacingError: LocalizedError {
         case .emailNotConfirmed:
             return "Check your inbox and confirm your email before logging in."
         case .rateLimited:
-            return "Too many attempts right now. Please wait a bit and try again."
+            return "Too many requests right now. Please wait a minute and try again."
+        case .emailDeliveryLimited:
+            return "We are getting a burst of sign-up emails right now. Please try again in a few minutes."
         case .invalidEmail:
             return "Enter a valid email address."
         case .samePassword:
@@ -96,7 +99,8 @@ final class SupabaseAuthService {
                     "username": .string(normalizedUsername),
                     "display_name": .string(normalizedUsername),
                     "full_name": .string(normalizedUsername)
-                ]
+                ],
+                redirectTo: SupabaseConfig.oauthRedirectURL
             )
         } catch {
             throw mapAuthError(error)
@@ -118,6 +122,11 @@ final class SupabaseAuthService {
             throw AuthUserFacingError.emailConfirmationRequired
         }
 
+        guard isEmailConfirmed(user) else {
+            try? await client.auth.signOut()
+            throw AuthUserFacingError.emailConfirmationRequired
+        }
+
         return try await backendUser(for: user, fallbackEmail: email, fallbackUsername: normalizedUsername)
     }
 
@@ -130,6 +139,10 @@ final class SupabaseAuthService {
             throw mapAuthError(error)
         }
         let user = response.user
+        guard isEmailConfirmed(user) else {
+            try? await client.auth.signOut()
+            throw AuthUserFacingError.emailNotConfirmed
+        }
         return try await backendUser(for: user, fallbackEmail: email)
     }
 
@@ -216,6 +229,17 @@ final class SupabaseAuthService {
         return true
     }
 
+    func completeAuthCallback(from url: URL) async throws -> BackendUser? {
+        guard Self.isAuthCallbackURL(url) else { return nil }
+        let session = try await client.auth.session(from: url)
+        let user = session.user
+        guard isEmailConfirmed(user) else {
+            try? await client.auth.signOut()
+            throw AuthUserFacingError.emailNotConfirmed
+        }
+        return try await backendUser(for: user, fallbackEmail: user.email ?? "")
+    }
+
     func completePasswordReset(newPassword: String) async throws {
         do {
             _ = try await client.auth.update(
@@ -248,6 +272,11 @@ final class SupabaseAuthService {
             user = try await client.auth.user()
         } catch {
             logger.debug("No active auth user/session found: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+        guard isEmailConfirmed(user) else {
+            logger.notice("Discarding auth session for unconfirmed email user \(user.id.uuidString, privacy: .public)")
+            try? await client.auth.signOut()
             return nil
         }
         return try await backendUser(for: user, fallbackEmail: "")
@@ -324,13 +353,20 @@ final class SupabaseAuthService {
             }
         }
 
+        var profileUpdate: [String: String] = [
+            "id": user.id.uuidString,
+            "username": normalizedUsername
+        ]
+
+        if let currentUsername = currentProfile?.username?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !currentUsername.isEmpty,
+           currentUsername.caseInsensitiveCompare(normalizedUsername) != .orderedSame {
+            profileUpdate["last_username_change_at"] = iso8601Formatter.string(from: Date())
+        }
+
         _ = try await client
             .from("profiles")
-            .upsert([
-                "id": user.id.uuidString,
-                "username": normalizedUsername,
-                "last_username_change_at": iso8601Formatter.string(from: Date())
-            ], onConflict: "id")
+            .upsert(profileUpdate, onConflict: "id")
             .execute()
 
         _ = try await client.auth.update(
@@ -377,6 +413,14 @@ final class SupabaseAuthService {
             email: user.email ?? fallbackEmail,
             avatarPath: profile?.avatar_path
         )
+    }
+
+    private func isEmailConfirmed(_ user: User) -> Bool {
+        guard let email = user.email?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !email.isEmpty else {
+            return true
+        }
+        return user.emailConfirmedAt != nil || user.confirmedAt != nil
     }
 
     private func compressImageData(_ data: Data, maxBytes: Int) -> Data? {
@@ -462,8 +506,10 @@ final class SupabaseAuthService {
                 return AuthUserFacingError.invalidCredentials
             case .emailNotConfirmed:
                 return AuthUserFacingError.emailNotConfirmed
-            case .overRequestRateLimit, .overEmailSendRateLimit:
+            case .overRequestRateLimit:
                 return AuthUserFacingError.rateLimited
+            case .overEmailSendRateLimit:
+                return AuthUserFacingError.emailDeliveryLimited
             case .samePassword:
                 return AuthUserFacingError.samePassword
             case .validationFailed:
@@ -487,6 +533,18 @@ final class SupabaseAuthService {
 
         let params = authCallbackParams(from: url)
         return params["type"] == "recovery"
+    }
+
+    private static func isAuthCallbackURL(_ url: URL) -> Bool {
+        if url.scheme == SupabaseConfig.appURLScheme,
+           url.host == "auth",
+           url.path == "/callback" {
+            return true
+        }
+
+        let params = authCallbackParams(from: url)
+        guard let type = params["type"]?.lowercased() else { return false }
+        return ["signup", "invite", "magiclink", "email_change"].contains(type)
     }
 
     private static func authCallbackParams(from url: URL) -> [String: String] {

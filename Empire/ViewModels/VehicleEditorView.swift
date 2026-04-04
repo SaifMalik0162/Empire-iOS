@@ -511,7 +511,37 @@ struct VehicleEditorView: View {
                 }
             }
 
-            if let selectedClass, !selectedClass.stageBands.isEmpty {
+            if let selectedClass, selectedClass == .dragTrack {
+                EditorGlassCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Class \(selectedClass.code) Quarter-Mile Ladder")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(selectedClass.accentColor)
+
+                        ForEach(StageSystem.dragTrackStageBands, id: \.rank) { band in
+                            HStack {
+                                Text(band.rank.label)
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(band.rank.accentColor)
+                                Spacer()
+                                Text(band.elapsedTimeLabel)
+                                    .font(.footnote)
+                                    .foregroundStyle(.white.opacity(0.78))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(band.rank == assessment.stage ? band.rank.accentColor.opacity(0.16) : Color.white.opacity(0.04))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(band.rank == assessment.stage ? band.rank.accentColor.opacity(0.8) : Color.white.opacity(0.08), lineWidth: 1)
+                            )
+                        }
+                    }
+                }
+            } else if let selectedClass, !selectedClass.stageBands.isEmpty {
                 EditorGlassCard {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Class \(selectedClass.code) Stage Ladder")
@@ -753,7 +783,8 @@ struct VehicleEditorView: View {
         StageSystem.assessment(
             vehicleClass: tempVehicleClass,
             horsepower: tempHorsepower,
-            selectedMajorMods: selectedMajorModTitles()
+            selectedMajorMods: selectedMajorModTitles(),
+            quarterMile: quarterMileValue
         )
     }
 

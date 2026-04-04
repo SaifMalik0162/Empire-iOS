@@ -9,6 +9,7 @@ struct SignUpView: View {
     @State private var showConfirmPassword = false
     @State private var showValidation = false
     @State private var isCreating = false
+    @State private var successMessage: String?
     @State private var errorMessage: String?
 
     @Environment(\.dismiss) private var dismiss
@@ -88,7 +89,9 @@ struct SignUpView: View {
                             )
                         }
 
-                        if showValidation && email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        if let successMessage {
+                            AuthMessage(text: successMessage, tone: .success)
+                        } else if showValidation && email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             AuthMessage(text: "Please enter your email address.", tone: .error)
                         } else if showValidation && !hasValidEmail {
                             AuthMessage(text: "Please enter a valid email address.", tone: .error)
@@ -163,6 +166,7 @@ struct SignUpView: View {
         }
 
         isCreating = true
+        successMessage = nil
         errorMessage = nil
 
         Task {
@@ -173,19 +177,30 @@ struct SignUpView: View {
                     isCreating = false
                     dismiss()
                 }
+            } catch AuthUserFacingError.emailConfirmationRequired {
+                await MainActor.run {
+                    isCreating = false
+                    errorMessage = nil
+                    successMessage = "Check your inbox for the Empire confirmation link, then tap it to finish creating your account."
+                    password = ""
+                    confirmPassword = ""
+                }
             } catch let error as AuthUserFacingError {
                 await MainActor.run {
                     isCreating = false
+                    successMessage = nil
                     errorMessage = error.errorDescription
                 }
             } catch let error as NetworkError {
                 await MainActor.run {
                     isCreating = false
+                    successMessage = nil
                     errorMessage = error.errorDescription
                 }
             } catch {
                 await MainActor.run {
                     isCreating = false
+                    successMessage = nil
                     let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
                     errorMessage = message.isEmpty ? "Could not create account. Please try again." : message
                 }

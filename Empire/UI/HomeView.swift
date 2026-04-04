@@ -22,35 +22,16 @@ struct HomeView: View {
     @State private var lastFeaturedMerchRefreshAt: Date? = nil
     @State private var lastMeetsRefreshAt: Date? = nil
     @State private var lastFeaturedCardsRefreshAt: Date? = nil
+    @State private var selectedFeaturedPost: CommunityPost? = nil
 
     @StateObject private var communityVM = CommunityViewModel()
     @StateObject private var socialStore = CommunitySocialStore()
-
-    // MARK: - Data Sources
-    private let communityCars: [Car] = [
-        Car(name: "Honda Prelude BB2", description: "@officialtobysemple — Clean BB2 build", imageName: "prelude_bb2", horsepower: 450, stage: 3),
-        Car(name: "Civic Si Coupe", description: "@fg2_corey — FG2 Si coupe", imageName: "civic_si_fg2", horsepower: 220, stage: 2),
-        Car(name: "1968 Mustang", description: "347 Stroker V8", imageName: "68_blaze", horsepower: 350, stage: 2)
-    ]
 
     private var currentUserId: String {
         UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
     }
 
     private var featuredCards: [HomeFeaturedCardItem] {
-        var cards: [HomeFeaturedCardItem] = []
-
-        if let featuredUserCarPhotoData, let firstCar = garageSnapshot.first {
-            cards.append(
-                HomeFeaturedCardItem(
-                    title: firstCar.name,
-                    subtitle: "Your build",
-                    badge: "Garage",
-                    localImageData: featuredUserCarPhotoData
-                )
-            )
-        }
-
         let vehicleClasses = Set(garageSnapshot.compactMap(\.vehicleClass?.rawValue))
         let buildCategories = Set(garageSnapshot.compactMap(\.buildCategory?.rawValue))
         let userMakes = Set(garageSnapshot.compactMap { $0.make?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
@@ -60,41 +41,48 @@ struct HomeView: View {
             let normalizedAuthor = post.userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard normalizedAuthor != normalizedCurrentUser else { return nil }
 
-            var score = 0
-            var badge = "Featured"
+            let isFollowing = socialStore.isFollowing(post.userId)
+            let matchesClass = post.vehicleClass.map(vehicleClasses.contains) ?? false
+            let matchesStyle = post.buildCategory.map(buildCategories.contains) ?? false
+            let matchesMake: Bool = {
+                guard let make = post.make?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased(),
+                    !make.isEmpty else {
+                    return false
+                }
+                return userMakes.contains(make)
+            }()
+            let pulseScore = communityPulseScore(for: post)
 
-            if socialStore.isFollowing(post.userId) {
-                score += 40
-                badge = "Following"
-            }
-            if let vehicleClass = post.vehicleClass, vehicleClasses.contains(vehicleClass) {
-                score += 28
-                badge = "Your Class"
-            }
-            if let buildCategory = post.buildCategory, buildCategories.contains(buildCategory) {
-                score += 22
-                badge = "Your Style"
-            }
-            if let make = post.make?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
-               userMakes.contains(make) {
-                score += 18
-                badge = "Same Platform"
-            }
+            let score =
+                (isFollowing ? 40 : 0) +
+                (matchesClass ? 28 : 0) +
+                (matchesStyle ? 22 : 0) +
+                (matchesMake ? 18 : 0) +
+                Int(pulseScore.rounded())
 
-            score += min(post.likesCount, 16)
-            score += min(post.commentsCount * 2, 14)
-
-            guard score > 0 else { return nil }
+            let baseBadge: String = {
+                if matchesMake { return "Same Platform" }
+                if matchesClass { return "Your Class" }
+                if matchesStyle { return "Your Style" }
+                if isFollowing { return "Following" }
+                return "Spotlight"
+            }()
 
             let username = post.username?.trimmingCharacters(in: .whitespacesAndNewlines)
             return HomeFeaturedCardItem(
+                id: "post-\(post.id.uuidString.lowercased())",
                 title: post.carName,
                 subtitle: username.map { "@\($0)" } ?? "Empire Driver",
-                badge: badge,
+                badge: baseBadge,
                 remoteImageURL: communityVM.photoURL(for: post, variant: .feed),
                 fallbackImageName: fallbackAssetName(for: post),
                 score: score,
-                authorKey: normalizedAuthor
+                pulseScore: pulseScore,
+                authorKey: normalizedAuthor,
+                postID: post.id,
+                profileUserID: post.userId
             )
         }
         .sorted { lhs, rhs in
@@ -102,76 +90,62 @@ struct HomeView: View {
             return lhs.title < rhs.title
         }
 
+        let trendingPosts = rankedPosts.sorted { lhs, rhs in
+            if lhs.pulseScore != rhs.pulseScore { return lhs.pulseScore > rhs.pulseScore }
+            return lhs.score > rhs.score
+        }
+
         var selectedPostCards: [HomeFeaturedCardItem] = []
         var usedAuthors: Set<String> = []
         var usedBadges: Set<String> = []
 
-        if let samePlatformCard = rankedPosts.first(where: { $0.badge == "Same Platform" }) {
-            selectedPostCards.append(samePlatformCard)
-            if let authorKey = samePlatformCard.authorKey {
+        func appendFirst(
+            from source: [HomeFeaturedCardItem],
+            matching predicate: (HomeFeaturedCardItem) -> Bool,
+            badgeOverride: String? = nil,
+            allowDuplicateBadge: Bool = false
+        ) {
+            guard selectedPostCards.count < 4 else { return }
+
+            guard let match = source.first(where: { card in
+                predicate(card)
+                    && !selectedPostCards.contains(where: { $0.id == card.id })
+                    && (card.authorKey.map { !usedAuthors.contains($0) } ?? true)
+                    && (allowDuplicateBadge || !usedBadges.contains(badgeOverride ?? card.badge))
+            }) else {
+                return
+            }
+
+            let chosen = badgeOverride.map { match.withBadge($0) } ?? match
+            selectedPostCards.append(chosen)
+            if let authorKey = chosen.authorKey {
                 usedAuthors.insert(authorKey)
             }
-            usedBadges.insert(samePlatformCard.badge)
+            usedBadges.insert(chosen.badge)
         }
 
-        let prioritizedVariety = rankedPosts.filter { card in
-            guard selectedPostCards.count < 3 else { return false }
-            if let authorKey = card.authorKey, usedAuthors.contains(authorKey) {
-                return false
-            }
-            if usedBadges.contains(card.badge) {
-                return false
-            }
-            return true
-        }
+        appendFirst(from: rankedPosts, matching: { $0.badge == "Same Platform" })
+        appendFirst(from: rankedPosts, matching: { $0.badge == "Your Class" })
+        appendFirst(from: rankedPosts, matching: { $0.badge == "Your Style" })
+        appendFirst(from: trendingPosts, matching: { $0.pulseScore > 0 }, badgeOverride: "Trending")
+        appendFirst(from: rankedPosts, matching: { $0.badge == "Following" })
+        appendFirst(from: rankedPosts, matching: { $0.badge == "Spotlight" })
 
-        for card in prioritizedVariety {
-            guard selectedPostCards.count < 3 else { break }
-            selectedPostCards.append(card)
-            if let authorKey = card.authorKey {
-                usedAuthors.insert(authorKey)
-            }
-            usedBadges.insert(card.badge)
-        }
-
-        let fallbackVariety = rankedPosts.filter { card in
-            guard selectedPostCards.count < 3 else { return false }
-            if card.badge == "Same Platform", usedBadges.contains("Same Platform") {
-                return false
-            }
-            if let authorKey = card.authorKey, usedAuthors.contains(authorKey) {
-                return false
-            }
-            return !selectedPostCards.contains(where: { $0.title == card.title && $0.subtitle == card.subtitle })
-        }
-
-        for card in fallbackVariety {
-            guard selectedPostCards.count < 3 else { break }
-            selectedPostCards.append(card)
-            if let authorKey = card.authorKey {
-                usedAuthors.insert(authorKey)
+        if selectedPostCards.count < 4 {
+            for card in rankedPosts where selectedPostCards.count < 4 {
+                appendFirst(from: [card], matching: { _ in true }, allowDuplicateBadge: true)
             }
         }
 
-        cards.append(contentsOf: selectedPostCards)
+        return Array(selectedPostCards.prefix(4))
+    }
 
-        if cards.count < 4 {
-            for car in communityCars {
-                guard cards.count < 4 else { break }
-                let duplicate = cards.contains { $0.title == car.name }
-                if duplicate { continue }
-                cards.append(
-                    HomeFeaturedCardItem(
-                        title: car.name,
-                        subtitle: car.description,
-                        badge: "Spotlight",
-                        fallbackImageName: car.imageName
-                    )
-                )
-            }
-        }
-
-        return cards
+    private func communityPulseScore(for post: CommunityPost) -> Double {
+        let hoursOld = max(Date().timeIntervalSince(post.createdAt) / 3600, 0.0)
+        let engagement = Double(post.likesCount * 3 + post.commentsCount * 5)
+        let freshness = max(0.0, 72.0 - hoursOld) * 0.7
+        let mediaBonus = Double(max(post.photoPaths.count, post.photoPath == nil ? 0 : 1)) * 2.5
+        return engagement + freshness + mediaBonus
     }
 
     var body: some View {
@@ -307,8 +281,8 @@ struct HomeView: View {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 20) {
                                         ForEach(featuredCards) { card in
-                                            NavigationLink {
-                                                CarsView()
+                                            Button {
+                                                openFeaturedCard(card)
                                             } label: {
                                                 HomeFeaturedCard(card: card)
                                             }
@@ -429,6 +403,17 @@ struct HomeView: View {
                     }
                 }
             }
+            .fullScreenCover(item: $selectedFeaturedPost) { post in
+                ExpandedCommunityPostOverlay(
+                    post: post,
+                    currentUserId: currentUserId,
+                    communityVM: communityVM,
+                    socialStore: socialStore
+                ) {
+                    selectedFeaturedPost = nil
+                }
+                .preferredColorScheme(.dark)
+            }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
                     .preferredColorScheme(.dark)
@@ -466,6 +451,15 @@ struct HomeView: View {
 
     private func refreshGarageSnapshot() {
         garageSnapshot = LocalStore.shared.fetchCars(context: modelContext, userKey: currentUserId)
+    }
+
+    private func openFeaturedCard(_ card: HomeFeaturedCardItem) {
+        guard let postID = card.postID,
+              let post = communityVM.posts.first(where: { $0.id == postID }) else {
+            return
+        }
+
+        selectedFeaturedPost = post
     }
 
     private func reloadFeaturedUserCarPhoto() {
@@ -945,7 +939,7 @@ private extension CommunityInboxItemKind {
 }
 
 private struct HomeFeaturedCardItem: Identifiable {
-    let id = UUID()
+    let id: String
     let title: String
     let subtitle: String
     let badge: String
@@ -953,9 +947,13 @@ private struct HomeFeaturedCardItem: Identifiable {
     let remoteImageURL: URL?
     let fallbackImageName: String?
     let score: Int
+    let pulseScore: Double
     let authorKey: String?
+    let postID: UUID?
+    let profileUserID: String?
 
     init(
+        id: String,
         title: String,
         subtitle: String,
         badge: String,
@@ -963,8 +961,12 @@ private struct HomeFeaturedCardItem: Identifiable {
         remoteImageURL: URL? = nil,
         fallbackImageName: String? = nil,
         score: Int = 0,
-        authorKey: String? = nil
+        pulseScore: Double = 0,
+        authorKey: String? = nil,
+        postID: UUID? = nil,
+        profileUserID: String? = nil
     ) {
+        self.id = id
         self.title = title
         self.subtitle = subtitle
         self.badge = badge
@@ -972,7 +974,159 @@ private struct HomeFeaturedCardItem: Identifiable {
         self.remoteImageURL = remoteImageURL
         self.fallbackImageName = fallbackImageName
         self.score = score
+        self.pulseScore = pulseScore
         self.authorKey = authorKey
+        self.postID = postID
+        self.profileUserID = profileUserID
+    }
+
+    func withBadge(_ badge: String) -> HomeFeaturedCardItem {
+        HomeFeaturedCardItem(
+            id: id,
+            title: title,
+            subtitle: subtitle,
+            badge: badge,
+            localImageData: localImageData,
+            remoteImageURL: remoteImageURL,
+            fallbackImageName: fallbackImageName,
+            score: score,
+            pulseScore: pulseScore,
+            authorKey: authorKey,
+            postID: postID,
+            profileUserID: profileUserID
+        )
+    }
+}
+
+private final class HomeFeaturedImageCache {
+    static let shared = HomeFeaturedImageCache()
+
+    private let cache = NSCache<NSURL, UIImage>()
+
+    private init() {
+        cache.countLimit = 64
+        cache.totalCostLimit = 80 * 1024 * 1024
+    }
+
+    func image(for url: URL) -> UIImage? {
+        cache.object(forKey: url as NSURL)
+    }
+
+    func insert(_ image: UIImage, for url: URL) {
+        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? 0
+        cache.setObject(image, forKey: url as NSURL, cost: cost)
+    }
+}
+
+private actor HomeFeaturedImagePipeline {
+    static let shared = HomeFeaturedImagePipeline()
+
+    private var inFlightTasks: [URL: Task<UIImage?, Never>] = [:]
+
+    func loadImage(from url: URL) async -> UIImage? {
+        if let cachedImage = await MainActor.run(body: {
+            HomeFeaturedImageCache.shared.image(for: url)
+        }) {
+            return cachedImage
+        }
+
+        if let existingTask = inFlightTasks[url] {
+            return await existingTask.value
+        }
+
+        let task = Task<UIImage?, Never> {
+            do {
+                var request = URLRequest(url: url)
+                request.cachePolicy = .returnCacheDataElseLoad
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse,
+                      (200..<300).contains(httpResponse.statusCode),
+                      let image = UIImage(data: data) else {
+                    return nil
+                }
+
+                await MainActor.run {
+                    HomeFeaturedImageCache.shared.insert(image, for: url)
+                }
+                return image
+            } catch {
+                return nil
+            }
+        }
+
+        inFlightTasks[url] = task
+        let image = await task.value
+        inFlightTasks[url] = nil
+        return image
+    }
+}
+
+private final class HomeFeaturedImageLoader: ObservableObject {
+    @Published private(set) var image: UIImage? = nil
+    @Published private(set) var didFail = false
+
+    private let url: URL
+    private var hasAttemptedLoad = false
+
+    init(url: URL) {
+        self.url = url
+    }
+
+    func loadIfNeeded() async {
+        guard !hasAttemptedLoad else { return }
+        hasAttemptedLoad = true
+
+        if let cachedImage = HomeFeaturedImageCache.shared.image(for: url) {
+            await MainActor.run {
+                image = cachedImage
+            }
+            return
+        }
+
+        await MainActor.run {
+            didFail = false
+        }
+
+        let loadedImage = await HomeFeaturedImagePipeline.shared.loadImage(from: url)
+        await MainActor.run {
+            image = loadedImage
+            didFail = loadedImage == nil
+        }
+    }
+}
+
+private struct HomeFeaturedRemoteImage<Success: View, Placeholder: View, Failure: View>: View {
+    let success: (Image) -> Success
+    let placeholder: () -> Placeholder
+    let failure: () -> Failure
+
+    @StateObject private var loader: HomeFeaturedImageLoader
+
+    init(
+        url: URL,
+        @ViewBuilder success: @escaping (Image) -> Success,
+        @ViewBuilder placeholder: @escaping () -> Placeholder,
+        @ViewBuilder failure: @escaping () -> Failure
+    ) {
+        self.success = success
+        self.placeholder = placeholder
+        self.failure = failure
+        _loader = StateObject(wrappedValue: HomeFeaturedImageLoader(url: url))
+    }
+
+    var body: some View {
+        Group {
+            if let image = loader.image {
+                success(Image(uiImage: image))
+            } else if loader.didFail {
+                failure()
+            } else {
+                placeholder()
+            }
+        }
+        .task {
+            await loader.loadIfNeeded()
+        }
     }
 }
 
@@ -1052,13 +1206,13 @@ private struct HomeFeaturedCard: View {
             Image(uiImage: uiImage)
                 .resizable()
         } else if let remoteImageURL = card.remoteImageURL {
-            AsyncImage(url: remoteImageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable()
-                default:
-                    fallbackImage
-                }
+            HomeFeaturedRemoteImage(url: remoteImageURL) { image in
+                image
+                    .resizable()
+            } placeholder: {
+                fallbackImage
+            } failure: {
+                fallbackImage
             }
         } else {
             fallbackImage

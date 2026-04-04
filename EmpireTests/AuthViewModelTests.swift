@@ -121,6 +121,23 @@ final class AuthViewModelTests: XCTestCase {
         XCTAssertEqual(auth.beginPasswordRecoveryURLs.count, 1)
     }
 
+    func testHandleIncomingURL_authenticatesWhenSignupCallbackCompletesSession() async {
+        let auth = MockAuthService()
+        auth.completedAuthCallbackUser = BackendUser(id: "confirmed-user", username: "confirmed", email: "confirmed@example.com", avatarPath: nil)
+        let cars = MockCarsService()
+        let vm = await MainActor.run {
+            AuthViewModel(authService: auth, carsService: cars, autoCheckStatus: false)
+        }
+
+        await vm.handleIncomingURL(URL(string: "empireconnect://auth/callback#type=signup")!)
+
+        let state = await MainActor.run { (vm.isAuthenticated, vm.currentUser?.id) }
+        XCTAssertTrue(state.0)
+        XCTAssertEqual(state.1, "confirmed-user")
+        XCTAssertEqual(auth.completedAuthCallbackURLs.count, 1)
+        XCTAssertEqual(cars.fetchCalls, 1)
+    }
+
     func testHandleIncomingURL_presentsPasswordRecoveryForResetPathCallback() async {
         let auth = MockAuthService()
         auth.beginPasswordRecoveryResult = true
@@ -191,6 +208,26 @@ final class AuthViewModelTests: XCTestCase {
         XCTAssertEqual(cars.fetchCalls, 1)
     }
 
+    func testRegister_doesNotAuthenticateWhenEmailConfirmationIsRequired() async {
+        let auth = MockAuthService()
+        auth.registerError = AuthUserFacingError.emailConfirmationRequired
+        let vm = await MainActor.run {
+            AuthViewModel(authService: auth, carsService: MockCarsService(), autoCheckStatus: false)
+        }
+
+        do {
+            try await vm.register(email: "user@example.com", password: "hunter22", username: "saif")
+            XCTFail("Expected email confirmation to be required")
+        } catch AuthUserFacingError.emailConfirmationRequired {
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        let state = await MainActor.run { (vm.isAuthenticated, vm.currentUser) }
+        XCTAssertFalse(state.0)
+        XCTAssertNil(state.1)
+    }
+
     func testRegister_normalizesGmailAndAuthenticatesUser() async throws {
         let auth = MockAuthService()
         auth.registerResult = BackendUser(id: "registered", username: "saif", email: "user@gmail.com", avatarPath: nil)
@@ -232,13 +269,16 @@ private final class MockAuthService: AuthServiceProviding {
     var googleLoginResult = BackendUser(id: "google", username: "googleuser", email: "u@gmail.com", avatarPath: nil)
     var appleLoginResult = BackendUser(id: "apple", username: "appleuser", email: "u@icloud.com", avatarPath: nil)
     var registerResult = BackendUser(id: "register", username: "user", email: "u@gmail.com", avatarPath: nil)
+    var registerError: Error?
     var updatedUsernameResult: BackendUser = .init(id: "id", username: "user", email: "u@example.com", avatarPath: nil)
     var beginPasswordRecoveryResult = true
+    var completedAuthCallbackUser: BackendUser?
 
     var loginCalls: [(email: String, password: String)] = []
     var googleLoginCalls: [(idToken: String, accessToken: String?, nonce: String?)] = []
     var appleLoginCalls: [(idToken: String, nonce: String, suggestedUsername: String?)] = []
     var beginPasswordRecoveryURLs: [URL] = []
+    var completedAuthCallbackURLs: [URL] = []
     var completedPasswordResets: [String] = []
     var passwordResetEmails: [String] = []
     var registerCalls: [(email: String, password: String, username: String)] = []
@@ -266,6 +306,11 @@ private final class MockAuthService: AuthServiceProviding {
         return beginPasswordRecoveryResult
     }
 
+    func completeAuthCallback(from url: URL) async throws -> BackendUser? {
+        completedAuthCallbackURLs.append(url)
+        return completedAuthCallbackUser
+    }
+
     func completePasswordReset(newPassword: String) async throws {
         completedPasswordResets.append(newPassword)
     }
@@ -276,6 +321,9 @@ private final class MockAuthService: AuthServiceProviding {
 
     func register(email: String, password: String, username: String) async throws -> BackendUser {
         registerCalls.append((email, password, username))
+        if let registerError {
+            throw registerError
+        }
         return registerResult
     }
 

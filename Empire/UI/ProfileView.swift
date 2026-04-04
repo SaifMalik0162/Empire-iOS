@@ -164,6 +164,10 @@ struct ProfileView: View {
                                     .allowsHitTesting(false)
                                 )
                             }
+                            .contentShape(Circle())
+                            .onTapGesture {
+                                showManageAccount = true
+                            }
                             .onChange(of: selectedPhotoItem) { oldValue, newValue in
                                 guard let item = newValue else { return }
                                 Task {

@@ -49,25 +49,7 @@ struct CarsView: View {
                 VStack(spacing: 6) {
 
                     if userVehiclesVM.vehicles.isEmpty {
-                        Button {
-                            if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
-                                editingCarID = userVehiclesVM.vehicles[safe: idx]?.id
-                                showVehicleEditor = true
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "plus.circle.fill")
-                                Text("Add your first vehicle")
-                            }
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(Color("EmpireMint"))
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white.opacity(0.06))
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 20)
+                        emptyGarageState
                     } else {
                         userCarousel
                     }
@@ -281,6 +263,13 @@ struct CarsView: View {
 // MARK: - Sections
 private extension CarsView {
 
+    func beginAddingFirstVehicle() {
+        if let idx = userVehiclesVM.addPlaceholderVehicleAndReturnIndex() {
+            editingCarID = userVehiclesVM.vehicles[safe: idx]?.id
+            showVehicleEditor = true
+        }
+    }
+
     var background: some View {
         ZStack {
             LinearGradient(colors: [Color.black, Color.black.opacity(0.95)],
@@ -293,6 +282,43 @@ private extension CarsView {
     }
 
     // MARK: User garage carousel
+
+    var emptyGarageState: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 8) {
+                Text("My Garage")
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
+
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 22)
+
+            GeometryReader { proxy in
+                let cardWidth: CGFloat = min(252, max(224, proxy.size.width - 132))
+                let cardHeight: CGFloat = 286
+
+                Button(action: beginAddingFirstVehicle) {
+                    EmptyGarageCard()
+                        .frame(width: cardWidth, height: cardHeight)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(height: 314)
+            .clipped()
+
+            Circle()
+                .fill(Color("EmpireMint").opacity(0.9))
+                .frame(width: 8, height: 8)
+                .padding(.top, 12)
+                .padding(.bottom, 18)
+                .frame(maxWidth: .infinity)
+        }
+    }
 
     var userCarousel: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -790,6 +816,114 @@ private struct LiquidGlassCarCard: View {
             )
             StatCapsule(label: "WHP", value: "\(car.horsepower)", tint: .cyan)
         }
+    }
+}
+
+private struct EmptyGarageCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                Text("FIRST BUILD")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .tracking(0.9)
+                    .foregroundStyle(Color("EmpireMint").opacity(0.82))
+
+                Spacer()
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center, spacing: 14) {
+                    Image(systemName: "car.side.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(Color("EmpireMint"))
+                        .frame(width: 44, height: 44)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color("EmpireMint").opacity(0.12))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color("EmpireMint").opacity(0.22), lineWidth: 1)
+                        )
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Add your first build")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Create a vehicle card to start your garage.")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.64))
+                            .lineLimit(2)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Text("Start your garage")
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color("EmpireMint"))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color("EmpireMint").opacity(0.46), Color.white.opacity(0.08)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.1), Color.white.opacity(0.025)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.black.opacity(0.14))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(
+                    RadialGradient(
+                        colors: [Color("EmpireMint").opacity(0.14), .clear],
+                        center: .bottomLeading,
+                        startRadius: 16,
+                        endRadius: 190
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color("EmpireMint").opacity(0.34), Color.white.opacity(0.08)],
+                                startPoint: .bottomLeading,
+                                endPoint: .topTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
+        .shadow(color: Color("EmpireMint").opacity(0.16), radius: 16, x: 0, y: 10)
+        .shadow(color: .black.opacity(0.34), radius: 16, x: 0, y: 10)
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 
