@@ -186,10 +186,10 @@ struct SettingsView: View {
                         }
                         settingsSection(title: "About") {
                             SettingsGlassCard {
-                                GlassButtonRow(icon: "link", title: "Website", subtitle: "empireontario.shop", trailingAccessory: (text: "Open", systemImage: "")) {
+                                GlassButtonRow(icon: "link", title: "Website", subtitle: "empireconnect.app", trailingAccessory: (text: "Open", systemImage: "")) {
                                     let gen = UIImpactFeedbackGenerator(style: .light)
                                     gen.impactOccurred()
-                                    if let url = URL(string: "https://empireontario.shop/") {
+                                    if let url = URL(string: "https://empireconnect.app/") {
                                         openURL(url)
                                     }
                                 }

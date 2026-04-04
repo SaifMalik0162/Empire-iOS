@@ -120,6 +120,12 @@ struct EmpireApp: App {
                     await authViewModel.handleIncomingURL(url)
                 }
             }
+            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
+                guard let url = userActivity.webpageURL else { return }
+                if appNavigation.handle(url: url) {
+                    return
+                }
+            }
         }
         .modelContainer(modelContainer)
     }
@@ -180,18 +186,31 @@ enum AppDeepLink: Equatable {
     }
 }
 
+struct PendingDeepLinkRequest: Equatable, Identifiable {
+    let id: UUID
+    let deepLink: AppDeepLink
+
+    init(id: UUID = UUID(), deepLink: AppDeepLink) {
+        self.id = id
+        self.deepLink = deepLink
+    }
+}
+
 @MainActor
 final class AppNavigationModel: ObservableObject {
     static let shared = AppNavigationModel()
 
     @Published var selectedTab: EmpireTab = .home
-    @Published var pendingDeepLink: AppDeepLink? = nil
+    @Published private(set) var pendingDeepLinkRequest: PendingDeepLinkRequest? = nil
+
+    var pendingDeepLink: AppDeepLink? {
+        pendingDeepLinkRequest?.deepLink
+    }
 
     private init() {}
 
     @discardableResult
     func handle(url: URL) -> Bool {
-        guard url.scheme?.lowercased() == SupabaseConfig.appURLScheme.lowercased() else { return false }
         guard let deepLink = deepLink(from: url) else { return false }
         open(deepLink)
         return true
@@ -206,16 +225,30 @@ final class AppNavigationModel: ObservableObject {
 
     func open(_ deepLink: AppDeepLink) {
         selectedTab = deepLink.preferredTab
-        pendingDeepLink = deepLink
+        pendingDeepLinkRequest = PendingDeepLinkRequest(deepLink: deepLink)
     }
 
-    func consume(_ deepLink: AppDeepLink) {
-        if pendingDeepLink == deepLink {
-            pendingDeepLink = nil
+    func consume(requestID: UUID) {
+        if pendingDeepLinkRequest?.id == requestID {
+            pendingDeepLinkRequest = nil
         }
     }
 
     private func deepLink(from url: URL) -> AppDeepLink? {
+        let scheme = (url.scheme ?? "").lowercased()
+
+        if scheme == SupabaseConfig.appURLScheme.lowercased() {
+            return deepLinkFromCustomScheme(url)
+        }
+
+        if scheme == "https" || scheme == "http" {
+            return deepLinkFromWebURL(url)
+        }
+
+        return nil
+    }
+
+    private func deepLinkFromCustomScheme(_ url: URL) -> AppDeepLink? {
         let host = (url.host ?? "").lowercased()
         let pathComponent = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
 
@@ -228,6 +261,31 @@ final class AppNavigationModel: ObservableObject {
             return .profile(pathComponent)
         case "meet":
             guard let id = UUID(uuidString: pathComponent) else { return nil }
+            return .meet(id)
+        default:
+            return nil
+        }
+    }
+
+    private func deepLinkFromWebURL(_ url: URL) -> AppDeepLink? {
+        guard let host = url.host?.lowercased(),
+              host == "empireconnect.app" || host == "www.empireconnect.app" else {
+            return nil
+        }
+
+        let components = url.pathComponents.filter { $0 != "/" }
+        guard let first = components.first?.lowercased() else { return nil }
+        let second = components.dropFirst().first ?? ""
+
+        switch first {
+        case "post", "cars":
+            guard let id = UUID(uuidString: second) else { return nil }
+            return .post(id)
+        case "profile":
+            guard !second.isEmpty else { return nil }
+            return .profile(second)
+        case "meet":
+            guard let id = UUID(uuidString: second) else { return nil }
             return .meet(id)
         default:
             return nil
