@@ -14,10 +14,12 @@ type NotificationEvent = {
 type PushToken = {
   id: string;
   user_id: string;
+  installation_id: string | null;
   device_token: string;
   environment: string;
   bundle_id: string;
   is_active: boolean;
+  last_seen_at: string | null;
 };
 
 const supabase = createClient(
@@ -43,6 +45,27 @@ function apnsHost(environment: string) {
   return environment === "production"
     ? "https://api.push.apple.com"
     : "https://api.sandbox.push.apple.com";
+}
+
+function tokenSortValue(token: PushToken) {
+  return Date.parse(token.last_seen_at ?? "") || 0;
+}
+
+function collapseTokensByInstallation(tokens: PushToken[]) {
+  const latestByInstallation = new Map<string, PushToken>();
+
+  for (const token of tokens) {
+    const installationKey = token.installation_id?.trim()
+      ? `install:${token.installation_id}`
+      : `legacy:${token.device_token}`;
+
+    const existing = latestByInstallation.get(installationKey);
+    if (!existing || tokenSortValue(token) >= tokenSortValue(existing)) {
+      latestByInstallation.set(installationKey, token);
+    }
+  }
+
+  return [...latestByInstallation.values()];
 }
 
 async function deliverEventToToken(event: NotificationEvent, token: PushToken, jwt: string) {
@@ -112,7 +135,7 @@ Deno.serve(async () => {
   const userIds = [...new Set(pendingEvents.map((event) => event.user_id))];
   const { data: tokens, error: tokensError } = await supabase
     .from("user_push_tokens")
-    .select("id, user_id, device_token, environment, bundle_id, is_active")
+    .select("id, user_id, installation_id, device_token, environment, bundle_id, is_active, last_seen_at")
     .in("user_id", userIds)
     .eq("is_active", true);
 
@@ -125,6 +148,10 @@ Deno.serve(async () => {
     const existing = tokensByUserId.get(token.user_id) ?? [];
     existing.push(token);
     tokensByUserId.set(token.user_id, existing);
+  }
+
+  for (const [userId, userTokens] of tokensByUserId.entries()) {
+    tokensByUserId.set(userId, collapseTokensByInstallation(userTokens));
   }
 
   const jwt = await makeApnsJwt();

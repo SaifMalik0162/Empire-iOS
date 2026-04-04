@@ -12,6 +12,8 @@ Apply the migration in `migrations/20260402_notifications_apns.sql` to create:
 - triggers for likes, comments, follows, and meet updates
 - `queue_meet_reminder_events()` for scheduled meet reminder events
 
+Also apply `migrations/20260404_track_push_tokens_by_installation.sql` so each app install keeps a stable push-token record and stale token rotations do not make delivery look successful on the wrong device.
+
 ### Edge Functions
 
 - `send-push`: reads pending `notification_events` and delivers them to APNs
