@@ -360,7 +360,10 @@ struct ExploreFeedView: View {
                 currentUserId: currentUserId,
                 communityVM: vm,
                 avatarURL: vm.avatarURL(for: post, variant: .avatar),
-                socialStore: socialStore
+                socialStore: socialStore,
+                onOpen: {
+                    deepLinkedExpandedPost = post
+                }
             )
             .frame(maxWidth: .infinity)
         }
@@ -1439,6 +1442,7 @@ struct FeedPostCard: View {
     let avatarURL: URL?
     @ObservedObject var socialStore: CommunitySocialStore
     var allowsProfileNavigation = true
+    var onOpen: () -> Void = {}
 
     @State private var showHeartBurst = false
     @State private var heartScale: CGFloat = 0.6
@@ -1447,7 +1451,6 @@ struct FeedPostCard: View {
     @State private var showComments = false
     @State private var showUserPosts = false
     @State private var currentPhotoIndex = 0
-    @State private var photoDragOffset: CGFloat = 0
 
     private var isOwnPost: Bool {
         post.userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -1485,40 +1488,28 @@ struct FeedPostCard: View {
                         GeometryReader { geo in
                             communityPhoto(url: url)
                                 .frame(width: geo.size.width, height: 340)
+                                .onTapGesture(count: 2) {
+                                    doubleTapLike()
+                                }
+                                .onTapGesture {
+                                    onOpen()
+                                }
                         }
                         .frame(height: 340)
                         .clipped()
                     } else {
-                        GeometryReader { geo in
-                            HStack(spacing: 0) {
-                                ForEach(Array(photoURLs.enumerated()), id: \.offset) { pair in
-                                    communityPhoto(url: pair.element)
-                                        .frame(width: geo.size.width, height: 340)
-                                }
+                        FeedPostPhotoCarousel(
+                            photoURLs: photoURLs,
+                            currentIndex: $currentPhotoIndex,
+                            onDoubleTap: {
+                                doubleTapLike()
+                            },
+                            onOpen: {
+                                onOpen()
                             }
-                            .offset(x: -CGFloat(currentPhotoIndex) * geo.size.width + photoDragOffset)
-                            .animation(.spring(response: 0.28, dampingFraction: 0.85), value: currentPhotoIndex)
-                            .contentShape(Rectangle())
-                            .highPriorityGesture(
-                                DragGesture(minimumDistance: 12)
-                                    .onChanged { value in
-                                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                                        photoDragOffset = value.translation.width
-                                    }
-                                    .onEnded { value in
-                                        defer { photoDragOffset = 0 }
-                                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                                        let threshold = geo.size.width * 0.18
-                                        if value.translation.width < -threshold {
-                                            currentPhotoIndex = min(currentPhotoIndex + 1, photoURLs.count - 1)
-                                        } else if value.translation.width > threshold {
-                                            currentPhotoIndex = max(currentPhotoIndex - 1, 0)
-                                        }
-                                    }
-                            )
+                        ) { url in
+                            communityPhoto(url: url)
                         }
-                        .frame(height: 340)
-                        .clipped()
                     }
                 } else {
                     ZStack {
@@ -1534,6 +1525,7 @@ struct FeedPostCard: View {
                 LinearGradient(colors: [.black.opacity(0.0), .black.opacity(0.1), .black.opacity(0.78)],
                                startPoint: .top, endPoint: .bottom)
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .allowsHitTesting(false)
             )
             .overlay(alignment: .topTrailing) {
                 if photoURLs.count > 1 {
@@ -1548,21 +1540,10 @@ struct FeedPostCard: View {
                     .padding(.vertical, 7)
                     .background(Capsule().fill(Color.black.opacity(0.42)))
                     .padding(14)
-                }
-            }
-            .overlay {
-                if photoURLs.count > 1 {
-                    Rectangle()
-                        .fill(Color.clear)
-                        .contentShape(Rectangle())
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 180)
-                        .frame(maxHeight: .infinity, alignment: .center)
-                        .highPriorityGesture(photoSwipeGesture)
+                    .allowsHitTesting(false)
                 }
             }
             .overlay(heartBurst)
-            .onTapGesture(count: 2) { doubleTapLike() }
 
             topOverlay
                 .padding(.horizontal, 16)
@@ -1722,6 +1703,10 @@ struct FeedPostCard: View {
                 }
             }
             .padding(.top, 10)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onOpen()
+            }
 
             if post.challengeID != nil || post.linkedMeetTitle != nil {
                 postProgrammingBadges
@@ -1806,7 +1791,7 @@ struct FeedPostCard: View {
                 }
                 .buttonStyle(.plain)
 
-                if let shareURL = URL(string: "https://empireontario.shop/cars/\(post.id.uuidString)") {
+                if let shareURL = URL(string: "https://empireconnect.app/post/\(post.id.uuidString)") {
                     ShareLink(item: shareURL) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 14))
@@ -1885,24 +1870,6 @@ struct FeedPostCard: View {
         }
     }
 
-    private var photoSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 12)
-            .onChanged { value in
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                photoDragOffset = value.translation.width
-            }
-            .onEnded { value in
-                defer { photoDragOffset = 0 }
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                let threshold: CGFloat = 60
-                if value.translation.width < -threshold {
-                    currentPhotoIndex = min(currentPhotoIndex + 1, photoURLs.count - 1)
-                } else if value.translation.width > threshold {
-                    currentPhotoIndex = max(currentPhotoIndex - 1, 0)
-                }
-            }
-    }
-
     private var heartBurst: some View {
         Group {
             if showHeartBurst {
@@ -1925,6 +1892,58 @@ struct FeedPostCard: View {
             withAnimation(.easeOut(duration: 0.3)) { heartScale = 0.9; heartOpacity = 0 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showHeartBurst = false }
         }
+    }
+}
+
+private struct FeedPostPhotoCarousel<PhotoContent: View>: View {
+    let photoURLs: [URL]
+    @Binding var currentIndex: Int
+    let onDoubleTap: () -> Void
+    let onOpen: () -> Void
+    let content: (URL) -> PhotoContent
+
+    init(
+        photoURLs: [URL],
+        currentIndex: Binding<Int>,
+        onDoubleTap: @escaping () -> Void,
+        onOpen: @escaping () -> Void,
+        @ViewBuilder content: @escaping (URL) -> PhotoContent
+    ) {
+        self.photoURLs = photoURLs
+        self._currentIndex = currentIndex
+        self.onDoubleTap = onDoubleTap
+        self.onOpen = onOpen
+        self.content = content
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let pageWidth = floor(geo.size.width)
+
+            TabView(selection: $currentIndex) {
+                ForEach(Array(photoURLs.enumerated()), id: \.offset) { pair in
+                    ZStack {
+                        Color.black
+                        content(pair.element)
+                    }
+                    .compositingGroup()
+                    .frame(width: pageWidth, height: 340)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        onDoubleTap()
+                    }
+                    .onTapGesture {
+                        onOpen()
+                    }
+                    .tag(pair.offset)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(width: pageWidth, height: 340)
+            .background(Color.black)
+        }
+        .frame(height: 340)
+        .clipped()
     }
 }
 
@@ -3333,7 +3352,7 @@ private struct ExpandedCommunityPostCard: View {
     private func expandedActionView(for item: ExpandedActionItem) -> some View {
         switch item.kind {
         case .share:
-            if let shareURL = URL(string: "https://empireontario.shop/cars/\(post.id.uuidString)") {
+            if let shareURL = URL(string: "https://empireconnect.app/post/\(post.id.uuidString)") {
                 ShareLink(item: shareURL) {
                     expandedActionLabel(icon: item.icon, title: item.title, tint: item.tint)
                 }

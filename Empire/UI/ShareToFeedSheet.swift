@@ -111,7 +111,7 @@ struct ShareToFeedSheet: View {
     // MARK: - No cars
 
     private var introCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 Image(systemName: "person.3.sequence.fill")
                     .font(.system(size: 18, weight: .semibold))
@@ -156,24 +156,43 @@ struct ShareToFeedSheet: View {
                     .font(.caption2).foregroundStyle(.white.opacity(0.4))
             }
 
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 8) {
-                    ForEach(userCars.indices, id: \.self) { idx in
-                        ShareVehicleRow(
-                            car: userCars[idx],
-                            isSelected: idx == selectedCarIndex,
-                            overridePhotoData: idx == selectedCarIndex ? overridePhotoDataList.first : nil
-                        )
-                        .onTapGesture {
+            if userCars.count == 2 {
+                HStack(spacing: 10) {
+                    ForEach(Array(userCars.enumerated()), id: \.element.id) { pair in
+                        let idx = pair.offset
+                        let car = pair.element
+
+                        Button {
+                            guard selectedCarIndex != idx else { return }
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                 selectedCarIndex = idx
                             }
+                        } label: {
+                            ShareVehicleCompactOption(
+                                car: car,
+                                isSelected: idx == selectedCarIndex,
+                                overridePhotoData: idx == selectedCarIndex ? overridePhotoDataList.first : nil
+                            )
                         }
+                        .buttonStyle(.plain)
+                        .frame(maxWidth: .infinity, minHeight: 166, maxHeight: 166, alignment: .topLeading)
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .clipped()
+            } else if userCars.count <= 2 {
+                VStack(spacing: 8) {
+                    carPickerRows
+                }
+            } else {
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 8) {
+                        carPickerRows
+                    }
+                }
+                .frame(height: min(CGFloat(userCars.count) * 82, 205))
             }
-            .frame(height: min(CGFloat(userCars.count) * 82, 205))
 
             if userCars.count > 2 {
                 HStack(spacing: 4) {
@@ -186,6 +205,27 @@ struct ShareToFeedSheet: View {
             }
         }
         .glassCard()
+    }
+
+    @ViewBuilder
+    private var carPickerRows: some View {
+        ForEach(userCars.indices, id: \.self) { idx in
+            Button {
+                guard selectedCarIndex != idx else { return }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    selectedCarIndex = idx
+                }
+            } label: {
+                ShareVehicleRow(
+                    car: userCars[idx],
+                    isSelected: idx == selectedCarIndex,
+                    overridePhotoData: idx == selectedCarIndex ? overridePhotoDataList.first : nil
+                )
+            }
+            .buttonStyle(.plain)
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
     }
 
     // MARK: - Photo override
@@ -675,6 +715,125 @@ struct ShareToFeedSheet: View {
 
 // MARK: - Vehicle row
 
+private struct ShareVehicleCompactOption: View {
+    let car: Car
+    let isSelected: Bool
+    var overridePhotoData: Data?
+
+    private var subtitle: String {
+        let make = (car.make ?? "").trimmingCharacters(in: .whitespaces)
+        let model = (car.model ?? "").trimmingCharacters(in: .whitespaces)
+        let combined = [make, model].filter { !$0.isEmpty }.joined(separator: " ")
+        return combined.isEmpty ? car.description : combined
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Group {
+                if let data = overridePhotoData, let ui = UIImage(data: data) {
+                    Image(uiImage: ui).resizable().scaledToFill()
+                } else if let fileName = car.photoFileName,
+                          let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+                          let data = try? Data(contentsOf: dir.appendingPathComponent(fileName)),
+                          let ui = UIImage(data: data) {
+                    Image(uiImage: ui).resizable().scaledToFill()
+                } else {
+                    Image(car.imageName).resizable().scaledToFill()
+                }
+            }
+            .frame(height: 64)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(car.name)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.58))
+                    .lineLimit(1)
+
+                HStack(spacing: 6) {
+                    if let buildCategory = car.buildCategory {
+                        BuildCategoryBadge(category: buildCategory, size: 14, materialOpacity: 0.14, strokeOpacity: 0.48)
+                    }
+
+                    if let vehicleClass = car.vehicleClass {
+                        VehicleClassBadge(vehicleClass: vehicleClass, size: 14, materialOpacity: 0.14, strokeOpacity: 0.48)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    ShareCompactStatChip(
+                        label: StageSystem.displayLabel(for: car.stage, isJailbreak: car.isJailbreak),
+                        tint: StageSystem.accentColor(for: car.stage, isJailbreak: car.isJailbreak)
+                    )
+                    ShareCompactStatChip(label: "\(car.horsepower) WHP", tint: .cyan)
+                }
+            }
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(isSelected ? Color("EmpireMint") : Color.white.opacity(0.15))
+                    .frame(width: isSelected ? 10 : 8, height: isSelected ? 10 : 8)
+                Text(isSelected ? "Selected" : "Tap to select")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(isSelected ? Color("EmpireMint") : .white.opacity(0.45))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isSelected ? Color("EmpireMint").opacity(0.1) : Color.white.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    isSelected
+                    ? LinearGradient(
+                        colors: [Color("EmpireMint").opacity(0.7), Color("EmpireMint").opacity(0.24)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    : LinearGradient(
+                        colors: [Color.white.opacity(0.16), Color.white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: isSelected ? 1.6 : 1
+                )
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipped()
+        .animation(.spring(response: 0.25, dampingFraction: 0.82), value: isSelected)
+    }
+}
+
+private struct ShareCompactStatChip: View {
+    let label: String
+    let tint: Color
+
+    var body: some View {
+        Text(label.uppercased())
+            .font(.system(size: 8, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(Color.black.opacity(0.2)))
+            .overlay(Capsule().stroke(tint.opacity(0.5), lineWidth: 1))
+            .foregroundStyle(.white.opacity(0.92))
+    }
+}
+
 private struct ShareVehicleRow: View {
     let car: Car
     let isSelected: Bool
@@ -727,6 +886,7 @@ private struct ShareVehicleRow: View {
             }
         }
         .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(isSelected ? Color("EmpireMint").opacity(0.08) : Color.white.opacity(0.04)))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -736,6 +896,7 @@ private struct ShareVehicleRow: View {
                     : LinearGradient(colors: [Color.white.opacity(0.15), Color.white.opacity(0.05)],
                                      startPoint: .topLeading, endPoint: .bottomTrailing),
                     lineWidth: isSelected ? 1.5 : 1))
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
     }
 }

@@ -4,6 +4,13 @@ import SwiftData
 import Combine
 
 struct CarsView: View {
+    private struct ExploreFeedPresentation: Identifiable, Equatable {
+        let id: UUID
+        let requestID: UUID
+        let initialPostID: UUID?
+        let initialProfileUserID: String?
+    }
+
     // MARK: - User's cars
     @StateObject private var userVehiclesVM = UserVehiclesViewModel()
     @Environment(\.modelContext) private var modelContext
@@ -37,9 +44,9 @@ struct CarsView: View {
     @State private var likedCommunity: Set<UUID> = []
     @State private var showSpecsPopup: Bool = false
     @State private var showModsPopup: Bool = false
-    @State private var showExploreFeed: Bool = false
-    @State private var exploreInitialPostID: UUID? = nil
-    @State private var exploreInitialProfileUserID: String? = nil
+    @State private var explorePresentation: ExploreFeedPresentation? = nil
+    @State private var queuedExplorePresentation: ExploreFeedPresentation? = nil
+    @State private var explorePresentationWorkItem: DispatchWorkItem? = nil
 
     var body: some View {
         ZStack {
@@ -139,18 +146,33 @@ struct CarsView: View {
         .fullScreenCover(isPresented: $showLightbox) {
             Color.black.ignoresSafeArea()
         }
-        .fullScreenCover(isPresented: $showExploreFeed) {
+        .fullScreenCover(item: $explorePresentation) { presentation in
             ExploreFeedView(
                 communityCars: [],
                 userCars: userVehiclesVM.vehicles,
-                initialPostID: exploreInitialPostID,
-                initialProfileUserID: exploreInitialProfileUserID,
+                initialPostID: presentation.initialPostID,
+                initialProfileUserID: presentation.initialProfileUserID,
                 likedCommunity: $likedCommunity
             ) {
-                showExploreFeed = false
+                explorePresentation = nil
             }
             .environmentObject(authViewModel)
             .preferredColorScheme(.dark)
+            .onAppear {
+                DispatchQueue.main.async {
+                    guard let pendingRequest = appNavigation.pendingDeepLinkRequest,
+                          pendingRequest.id == presentation.requestID else { return }
+                    switch pendingRequest.deepLink {
+                    case .post(let postID):
+                        guard presentation.initialPostID == postID else { return }
+                    case .profile(let userID):
+                        guard presentation.initialProfileUserID == userID else { return }
+                    case .meet:
+                        return
+                    }
+                    appNavigation.consume(requestID: pendingRequest.id)
+                }
+            }
         }
         .sheet(isPresented: $showVehicleEditor) {
             if let idx = editingVehicleIndex {
@@ -238,12 +260,23 @@ struct CarsView: View {
             }
             if let sel = selectedCarIndex, !userVehiclesVM.vehicles.indices.contains(sel) { selectedCarIndex = nil }
         }
+        .onDisappear {
+            cancelQueuedExplorePresentation()
+        }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             Task {
                 await authViewModel.refreshCarsFromBackendIfAuthenticated()
                 await userVehiclesVM.loadVehicles()
             }
+        }
+        .onChange(of: authViewModel.isLoading) { _, isLoading in
+            guard !isLoading else { return }
+            handlePendingDeepLink()
+        }
+        .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
+            guard isAuthenticated else { return }
+            handlePendingDeepLink()
         }
         .onReceive(NotificationCenter.default.publisher(for: .empireCarsDidSync)) { _ in
             Task { await userVehiclesVM.loadVehicles() }
@@ -252,9 +285,15 @@ struct CarsView: View {
             Task { await communityVM.refresh() }
         }
         .onAppear {
+            DispatchQueue.main.async {
+                handlePendingDeepLink()
+            }
+        }
+        .onChange(of: appNavigation.pendingDeepLinkRequest?.id) { _, _ in
             handlePendingDeepLink()
         }
-        .onChange(of: appNavigation.pendingDeepLink) { _, _ in
+        .onChange(of: appNavigation.selectedTab) { _, newValue in
+            guard newValue == .cars else { return }
             handlePendingDeepLink()
         }
     }
@@ -526,7 +565,12 @@ private extension CarsView {
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     withAnimation(.spring(response: 0.48, dampingFraction: 0.78)) {
-                        showExploreFeed = true
+                        explorePresentation = ExploreFeedPresentation(
+                            id: UUID(),
+                            requestID: UUID(),
+                            initialPostID: nil,
+                            initialProfileUserID: nil
+                        )
                     }
                 } label: {
                     HStack(spacing: 6) {
@@ -645,21 +689,57 @@ private extension CarsView {
 
 private extension CarsView {
     func handlePendingDeepLink() {
-        guard let deepLink = appNavigation.pendingDeepLink else { return }
-        switch deepLink {
+        guard let request = appNavigation.pendingDeepLinkRequest else { return }
+        guard appNavigation.selectedTab == .cars else { return }
+        guard authViewModel.isAuthenticated, !authViewModel.isLoading else { return }
+        switch request.deepLink {
         case .post(let postId):
-            exploreInitialPostID = postId
-            exploreInitialProfileUserID = nil
-            showExploreFeed = true
-            appNavigation.consume(deepLink)
+            presentExploreFeed(initialPostID: postId, initialProfileUserID: nil, requestID: request.id)
         case .profile(let userId):
-            exploreInitialProfileUserID = userId
-            exploreInitialPostID = nil
-            showExploreFeed = true
-            appNavigation.consume(deepLink)
+            presentExploreFeed(initialPostID: nil, initialProfileUserID: userId, requestID: request.id)
         case .meet:
             break
         }
+    }
+
+    func presentExploreFeed(initialPostID: UUID?, initialProfileUserID: String?, requestID: UUID) {
+        let presentation = ExploreFeedPresentation(
+            id: requestID,
+            requestID: requestID,
+            initialPostID: initialPostID,
+            initialProfileUserID: initialProfileUserID
+        )
+        if let current = explorePresentation,
+           current.requestID == presentation.requestID {
+            return
+        }
+        if let queued = queuedExplorePresentation,
+           queued.requestID == presentation.requestID {
+            return
+        }
+
+        if explorePresentation != nil {
+            cancelQueuedExplorePresentation()
+            explorePresentation = nil
+        } else {
+            cancelQueuedExplorePresentation()
+        }
+        queuedExplorePresentation = presentation
+
+        let workItem = DispatchWorkItem {
+            guard queuedExplorePresentation == presentation else { return }
+            queuedExplorePresentation = nil
+            explorePresentationWorkItem = nil
+            explorePresentation = presentation
+        }
+        explorePresentationWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
+    }
+
+    func cancelQueuedExplorePresentation() {
+        explorePresentationWorkItem?.cancel()
+        explorePresentationWorkItem = nil
+        queuedExplorePresentation = nil
     }
 
     var editingVehicleIndex: Int? {

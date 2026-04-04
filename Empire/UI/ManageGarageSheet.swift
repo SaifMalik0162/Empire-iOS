@@ -231,10 +231,23 @@ private struct VehicleRowCard: View {
             )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.car.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
+                HStack(alignment: .center, spacing: 8) {
+                    Text(item.car.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 0)
+
+                    if let buildCategory = item.car.buildCategory {
+                        BuildCategoryBadge(category: buildCategory, size: 16, materialOpacity: 0.14, strokeOpacity: 0.48)
+                    }
+
+                    if let vehicleClass = item.car.vehicleClass {
+                        VehicleClassBadge(vehicleClass: vehicleClass, size: 16, materialOpacity: 0.14, strokeOpacity: 0.48)
+                    }
+                }
+
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.75))
@@ -242,10 +255,11 @@ private struct VehicleRowCard: View {
             }
             Spacer(minLength: 8)
 
-            HStack(spacing: 4) {
+            VStack(alignment: .trailing, spacing: 6) {
                 StatCapsule(label: StageSystem.displayLabel(for: item.car.stage, isJailbreak: item.car.isJailbreak), value: "", tint: StageSystem.accentColor(for: item.car.stage, isJailbreak: item.car.isJailbreak))
                 StatCapsule(label: "WHP", value: "\(item.car.horsepower)", tint: .cyan)
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(12)
         .background(
@@ -314,5 +328,6 @@ private struct StatCapsule: View {
         .overlay(
             Capsule().stroke(tint.opacity(0.6), lineWidth: 1)
         )
+        .fixedSize(horizontal: true, vertical: false)
     }
 }

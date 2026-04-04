@@ -127,7 +127,7 @@ struct MeetsView: View {
         .onAppear {
             focusedMeetID = meetIDFromPendingDeepLink
         }
-        .onChange(of: appNavigation.pendingDeepLink) { _, _ in
+        .onChange(of: appNavigation.pendingDeepLinkRequest?.id) { _, _ in
             focusedMeetID = meetIDFromPendingDeepLink
             didHandleDeepLink = false
         }
@@ -232,19 +232,22 @@ struct MeetsView: View {
     }
 
     private var meetIDFromPendingDeepLink: UUID? {
-        guard case .meet(let meetID) = appNavigation.pendingDeepLink else { return nil }
+        guard case .meet(let meetID) = appNavigation.pendingDeepLinkRequest?.deepLink else { return nil }
         return meetID
     }
 
     private func handlePendingDeepLink(scrollProxy: ScrollViewProxy) {
-        guard let focusedMeetID, !didHandleDeepLink, meets.contains(where: { $0.id == focusedMeetID }) else { return }
+        guard let focusedMeetID,
+              !didHandleDeepLink,
+              meets.contains(where: { $0.id == focusedMeetID }),
+              let requestID = appNavigation.pendingDeepLinkRequest?.id else { return }
         didHandleDeepLink = true
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                 scrollProxy.scrollTo(focusedMeetID, anchor: .center)
             }
         }
-        appNavigation.consume(.meet(focusedMeetID))
+        appNavigation.consume(requestID: requestID)
     }
 }
 

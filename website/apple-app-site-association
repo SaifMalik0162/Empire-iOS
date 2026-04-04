@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "MLF346W74P.com.empireautoclub.empireconnect",
+        "paths": [
+          "/post/*",
+          "/cars/*",
+          "/profile/*",
+          "/meet/*"
+        ]
+      }
+    ]
+  }
+}

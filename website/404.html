@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Not Found | Empire Connect</title>
+  <meta name="theme-color" content="#07110f">
+  <meta name="description" content="The page you were looking for could not be found. Return to Empire Connect home.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    (function () {
+      const path = window.location.pathname.replace(/\/+$/, "") || "/";
+      const sharePrefixes = ["/post/", "/cars/", "/profile/", "/meet/"];
+      const staticRoutes = {
+        "/privacy": "/privacy.html",
+        "/terms": "/terms.html",
+        "/support": "/support.html"
+      };
+
+      if (staticRoutes[path]) {
+        window.location.replace(staticRoutes[path]);
+        return;
+      }
+
+      const matchedSharePrefix = sharePrefixes.find((prefix) => path.startsWith(prefix));
+      if (matchedSharePrefix) {
+        const routeBase = matchedSharePrefix.slice(0, -1);
+        const target = encodeURIComponent(window.location.pathname);
+        window.location.replace(routeBase + "/index.html?target=" + target);
+      }
+    })();
+  </script>
+</head>
+<body class="page-inner">
+  <div class="site-shell">
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <main class="inner-main">
+      <section class="page-hero reveal">
+        <div class="liquid-card page-hero-card">
+          <p class="eyebrow">404</p>
+          <h1>That page isn’t in the garage.</h1>
+          <p>The link may have changed, the page may have moved, or the route may not exist yet.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="index.html">Back Home</a>
+            <a class="button button-secondary" href="support.html">Visit Support</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

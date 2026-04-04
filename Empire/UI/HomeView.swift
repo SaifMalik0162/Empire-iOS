@@ -27,6 +27,10 @@ struct HomeView: View {
     @StateObject private var communityVM = CommunityViewModel()
     @StateObject private var socialStore = CommunitySocialStore()
 
+    private var featuredCardDisplayItems: [HomeFeaturedCardItem] {
+        featuredCards.isEmpty ? HomeFeaturedCardItem.loadingPlaceholders : featuredCards
+    }
+
     private var currentUserId: String {
         UserDefaults.standard.string(forKey: "currentUserId") ?? "default"
     }
@@ -280,13 +284,14 @@ struct HomeView: View {
                             GlassCard(height: 200) {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 20) {
-                                        ForEach(featuredCards) { card in
+                                        ForEach(featuredCardDisplayItems) { card in
                                             Button {
                                                 openFeaturedCard(card)
                                             } label: {
                                                 HomeFeaturedCard(card: card)
                                             }
                                             .buttonStyle(.plain)
+                                            .disabled(card.postID == nil)
                                         }
                                         Spacer(minLength: 0)
                                     }
@@ -996,6 +1001,30 @@ private struct HomeFeaturedCardItem: Identifiable {
             profileUserID: profileUserID
         )
     }
+
+    static let loadingPlaceholders: [HomeFeaturedCardItem] = [
+        HomeFeaturedCardItem(
+            id: "placeholder-featured-1",
+            title: "Community Build",
+            subtitle: "@EmpireDriver",
+            badge: "Spotlight",
+            fallbackImageName: "civic_si_fg2"
+        ),
+        HomeFeaturedCardItem(
+            id: "placeholder-featured-2",
+            title: "Track Setup",
+            subtitle: "@EmpireDriver",
+            badge: "Trending",
+            fallbackImageName: "prelude_bb2"
+        ),
+        HomeFeaturedCardItem(
+            id: "placeholder-featured-3",
+            title: "Garage Favorite",
+            subtitle: "@EmpireDriver",
+            badge: "Same Platform",
+            fallbackImageName: "68_blaze"
+        )
+    ]
 }
 
 private final class HomeFeaturedImageCache {

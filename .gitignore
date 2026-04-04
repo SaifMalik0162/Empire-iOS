@@ -3,3 +3,6 @@ Configs/Secrets.xcconfig
 
 # Local helper file from history rewrite cleanup
 replacements.txt
+
+# Node / Wrangler install artifacts
+node_modules/
