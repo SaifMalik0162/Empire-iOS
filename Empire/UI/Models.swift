@@ -188,36 +188,36 @@ enum CommunityProgrammingChallenge: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .dynoDiary: return "Dyno Diary"
-        case .meetReady: return "Meet-Ready Week"
-        case .underdogClass: return "Underdog Class Spotlight"
-        case .shopStory: return "Shop Story"
+        case .dynoDiary: return "Power Check"
+        case .meetReady: return "Show Ready"
+        case .underdogClass: return "Underdog Spotlight"
+        case .shopStory: return "Build Breakdown"
         }
     }
 
     var subtitle: String {
         switch self {
         case .dynoDiary:
-            return "Show what changed, what it made, or what you learned chasing more power."
+            return "Show what changed, what it made, or what you learned from the latest pull or tune."
         case .meetReady:
-            return "Drop the setup you would bring out this weekend and why it is dialed in."
+            return "Show the setup that feels ready to pull up, post up, and get attention."
         case .underdogClass:
             return "Highlight the builds people overlook and give your class some shine."
         case .shopStory:
-            return "Take people behind the build with the moment, problem, or choice that shaped it."
+            return "Break down the choice, fix, or turning point that really shaped the build."
         }
     }
 
     var composerPrompt: String {
         switch self {
         case .dynoDiary:
-            return "What changed on this setup, and what did the car give back?"
+            return "What changed on this setup, and what did the latest pull or tune give back?"
         case .meetReady:
-            return "What makes this build your next meet-ready setup?"
+            return "What makes this build show ready right now?"
         case .underdogClass:
             return "What makes this class or platform worth paying attention to?"
         case .shopStory:
-            return "What part of this build story would other drivers appreciate most?"
+            return "What decision or turning point in this build would other drivers appreciate most?"
         }
     }
 
@@ -241,10 +241,10 @@ enum CommunityProgrammingChallenge: String, CaseIterable, Identifiable {
 
     var badgeTitle: String {
         switch self {
-        case .dynoDiary: return "Weekly Challenge"
+        case .dynoDiary: return "Power Prompt"
         case .meetReady: return "Weekend Prompt"
-        case .underdogClass: return "Class Challenge"
-        case .shopStory: return "Builder Prompt"
+        case .underdogClass: return "Spotlight Prompt"
+        case .shopStory: return "Build Prompt"
         }
     }
 }
