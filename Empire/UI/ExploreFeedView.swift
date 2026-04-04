@@ -36,6 +36,10 @@ struct ExploreFeedView: View {
 
     private var currentUserId: String { UserDefaults.standard.string(forKey: "currentUserId") ?? "" }
 
+    private var normalizedCurrentUserId: String {
+        currentUserId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
     private var filteredPosts: [CommunityPost] {
         vm.posts.filter { post in
             let matchesSearch: Bool = {
@@ -74,7 +78,22 @@ struct ExploreFeedView: View {
     private var rankedPosts: [CommunityPost] {
         switch selectedFeedMode {
         case .forYou:
-            return filteredPosts.sorted { forYouScore(for: $0) > forYouScore(for: $1) }
+            return filteredPosts.sorted { lhs, rhs in
+                let lhsIsOwnPost = isOwnPost(lhs)
+                let rhsIsOwnPost = isOwnPost(rhs)
+
+                if lhsIsOwnPost != rhsIsOwnPost {
+                    return !lhsIsOwnPost
+                }
+
+                let lhsScore = forYouScore(for: lhs)
+                let rhsScore = forYouScore(for: rhs)
+                if lhsScore != rhsScore {
+                    return lhsScore > rhsScore
+                }
+
+                return lhs.createdAt > rhs.createdAt
+            }
         case .trending:
             return filteredPosts.sorted { trendingScore(for: $0) > trendingScore(for: $1) }
         case .latest:
@@ -673,6 +692,10 @@ struct ExploreFeedView: View {
 
     private func hasAffinity(with post: CommunityPost) -> Bool {
         affinityScore(for: post) >= 18
+    }
+
+    private func isOwnPost(_ post: CommunityPost) -> Bool {
+        post.userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedCurrentUserId
     }
 
     private func normalized(_ value: String?) -> String {

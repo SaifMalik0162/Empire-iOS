@@ -11,6 +11,7 @@ protocol AuthServiceProviding {
     func loginWithGoogle(idToken: String, accessToken: String?, nonce: String?) async throws -> BackendUser
     func loginWithApple(idToken: String, nonce: String, suggestedUsername: String?) async throws -> BackendUser
     func beginPasswordRecovery(from url: URL) async throws -> Bool
+    func completeAuthCallback(from url: URL) async throws -> BackendUser?
     func completePasswordReset(newPassword: String) async throws
     func sendPasswordReset(email: String) async throws
     func register(email: String, password: String, username: String) async throws -> BackendUser
@@ -196,13 +197,25 @@ extension SupabaseCarsService: CarsServiceProviding {}
     func handleIncomingURL(_ url: URL) async {
         do {
             let isRecovery = try await supabaseAuth.beginPasswordRecovery(from: url)
-            guard isRecovery else { return }
-            await MainActor.run {
-                self.isPresentingPasswordRecovery = true
+            if isRecovery {
+                await MainActor.run {
+                    self.isPresentingPasswordRecovery = true
+                }
+                AppTelemetry.shared.track(event: "auth.password_recovery.opened")
+                return
             }
-            AppTelemetry.shared.track(event: "auth.password_recovery.opened")
+
+            if let user = try await supabaseAuth.completeAuthCallback(from: url) {
+                await MainActor.run {
+                    self.updateAuthenticatedState(with: user)
+                    self.shouldPromptAddVehicle = false
+                    self.isPresentingPasswordRecovery = false
+                }
+                await self.syncCarsFromBackend(userId: user.id, force: true)
+                AppTelemetry.shared.track(event: "auth.callback.authenticated", metadata: ["userId": user.id])
+            }
         } catch {
-            AppTelemetry.shared.record(error: error, context: "auth.password_recovery.begin")
+            AppTelemetry.shared.record(error: error, context: "auth.handle_incoming_url")
         }
     }
 
