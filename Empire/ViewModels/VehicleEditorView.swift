@@ -67,9 +67,9 @@ struct VehicleEditorView: View {
     private enum Step {
         case details
         case vehicleClass
-        case buildCategory
         case modsSpecs
         case stage
+        case buildCategory
     }
     @State private var step: Step = .details
 
@@ -177,12 +177,12 @@ struct VehicleEditorView: View {
                                 stepOneView
                             case .vehicleClass:
                                 classStepView
-                            case .buildCategory:
-                                categoryStepView
                             case .modsSpecs:
                                 stepTwoView
                             case .stage:
                                 stepThreeView
+                            case .buildCategory:
+                                categoryStepView
                             }
                         }
                         .padding(.horizontal, 14)
@@ -225,9 +225,14 @@ struct VehicleEditorView: View {
         }
         .onAppear {
             ensureQuarterMileSpecMatchesClass()
+            enforceBuildCategoryEligibility()
         }
         .onChange(of: tempVehicleClass) { _, _ in
             ensureQuarterMileSpecMatchesClass()
+            enforceBuildCategoryEligibility()
+        }
+        .onChange(of: buildCategoryEligibilityKey) { _, _ in
+            enforceBuildCategoryEligibility()
         }
     }
 
@@ -337,14 +342,16 @@ struct VehicleEditorView: View {
     }
 
     private var categoryStepView: some View {
-        VStack(spacing: 24) {
+        let assessment = computeStageAssessment()
+
+        return VStack(spacing: 24) {
             EditorGlassCard {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Build Category")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Color("EmpireMint"))
 
-                    Text("Add the badge that best fits the stance or purpose of the build. Leave it blank if you do not want a category emblem on posts.")
+                    Text("Now that the build is assessed, choose the badge that best fits its purpose. Leave it blank if you do not want a category emblem on posts.")
                         .font(.footnote)
                         .foregroundStyle(.white.opacity(0.74))
                         .fixedSize(horizontal: false, vertical: true)
@@ -364,14 +371,18 @@ struct VehicleEditorView: View {
                         }
 
                         ForEach(BuildCategory.allCases) { category in
+                            let eligibility = buildCategoryEligibility(for: category, assessment: assessment)
                             BuildCategoryOptionCard(
                                 title: category.title,
                                 subtitle: category.subtitle,
                                 category: category,
-                                isSelected: tempBuildCategory == category
+                                isSelected: tempBuildCategory == category,
+                                isEnabled: eligibility.isEnabled,
+                                disabledReason: eligibility.reason
                             )
                             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                             .onTapGesture {
+                                guard eligibility.isEnabled else { return }
                                 withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
                                     tempBuildCategory = category
                                 }
@@ -682,18 +693,19 @@ struct VehicleEditorView: View {
                         .foregroundColor(Color("EmpireMint"))
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Button(action: { step = nextStep(from: step) }) {
-                    Text("Next")
+                Button(action: { saveAndDismiss() }) {
+                    Text("Save")
                         .font(.system(size: 16, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(
                             Capsule()
-                                .fill(Color("EmpireMint"))
+                                .fill(canSave() ? Color("EmpireMint") : Color.gray.opacity(0.5))
                         )
-                        .foregroundColor(.black)
+                        .foregroundColor(canSave() ? .black : Color.white.opacity(0.7))
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                .disabled(!canSave())
             case .modsSpecs:
                 // Step 2: Back and Next side by side
                 Button(action: { step = previousStep(from: step) }) {
@@ -721,7 +733,7 @@ struct VehicleEditorView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             case .stage:
-                // Step 3: Back and Save side by side
+                // Stage review: Back and Next side by side
                 Button(action: { step = previousStep(from: step) }) {
                     Text("Back")
                         .font(.system(size: 16, weight: .semibold))
@@ -734,19 +746,18 @@ struct VehicleEditorView: View {
                         .foregroundColor(Color("EmpireMint"))
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Button(action: { saveAndDismiss() }) {
-                    Text("Save")
+                Button(action: { step = nextStep(from: step) }) {
+                    Text("Next")
                         .font(.system(size: 16, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(
                             Capsule()
-                                .fill(canSave() ? Color("EmpireMint") : Color.gray.opacity(0.5))
+                                .fill(Color("EmpireMint"))
                         )
-                        .foregroundColor(canSave() ? .black : Color.white.opacity(0.7))
+                        .foregroundColor(.black)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .disabled(!canSave())
             }
         }
         .animation(.easeInOut, value: step)
@@ -755,18 +766,18 @@ struct VehicleEditorView: View {
         switch step {
         case .details: return .details
         case .vehicleClass: return .details
-        case .buildCategory: return .vehicleClass
-        case .modsSpecs: return .buildCategory
+        case .modsSpecs: return .vehicleClass
         case .stage: return .modsSpecs
+        case .buildCategory: return .stage
         }
     }
     private func nextStep(from step: Step) -> Step {
         switch step {
         case .details: return .vehicleClass
-        case .vehicleClass: return .buildCategory
-        case .buildCategory: return .modsSpecs
+        case .vehicleClass: return .modsSpecs
         case .modsSpecs: return .stage
-        case .stage: return .stage
+        case .stage: return .buildCategory
+        case .buildCategory: return .buildCategory
         }
     }
 
@@ -786,6 +797,57 @@ struct VehicleEditorView: View {
             selectedMajorMods: selectedMajorModTitles(),
             quarterMile: quarterMileValue
         )
+    }
+
+    private var buildCategoryEligibilityKey: String {
+        let modState = tempMods
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+            .map { "\($0.id.uuidString)|\($0.title)|\($0.isMajor)" }
+            .joined(separator: ",")
+        let selectedCustomModState = selectedModIDs.map(\.uuidString).sorted().joined(separator: ",")
+        let presetState = selectedPresetMods.sorted().joined(separator: ",")
+
+        return [
+            tempVehicleClass?.rawValue ?? "none",
+            "\(tempHorsepower)",
+            quarterMileValue.trimmingCharacters(in: .whitespacesAndNewlines),
+            modState,
+            selectedCustomModState,
+            presetState
+        ].joined(separator: "||")
+    }
+
+    private func buildCategoryEligibility(
+        for category: BuildCategory,
+        assessment: StageAssessment? = nil
+    ) -> (isEnabled: Bool, reason: String?) {
+        let resolvedAssessment = assessment ?? computeStageAssessment()
+
+        switch category {
+        case .performance:
+            let isEnabled = !resolvedAssessment.isJailbreak && resolvedAssessment.stage.rawValue >= BuildStageRank.stage2.rawValue
+            return (isEnabled, isEnabled ? nil : "Requires Stage 2 or higher.")
+        case .trackDrag:
+            guard tempVehicleClass == .dragTrack else {
+                return (false, "Requires Class D / Drag & Track.")
+            }
+
+            let isEnabled = resolvedAssessment.stage.rawValue >= BuildStageRank.stage1.rawValue
+            return (isEnabled, isEnabled ? nil : "Requires a qualified Class D build.")
+        case .staticBuild, .bagged, .vip, .offRoadRally:
+            return (true, nil)
+        }
+    }
+
+    private func eligibleBuildCategory(from category: BuildCategory?) -> BuildCategory? {
+        guard let category else { return nil }
+        return buildCategoryEligibility(for: category).isEnabled ? category : nil
+    }
+
+    private func enforceBuildCategoryEligibility() {
+        guard let tempBuildCategory else { return }
+        guard !buildCategoryEligibility(for: tempBuildCategory).isEnabled else { return }
+        self.tempBuildCategory = nil
     }
 
     private func selectedMajorModTitles() -> [String] {
@@ -879,7 +941,7 @@ struct VehicleEditorView: View {
         }
 
         updated.vehicleClass = tempVehicleClass
-        updated.buildCategory = tempBuildCategory
+        updated.buildCategory = eligibleBuildCategory(from: tempBuildCategory)
         updated.specs = syncedSpecsForSave()
 
         let assessment = computeStageAssessment()

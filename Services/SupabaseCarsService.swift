@@ -47,43 +47,56 @@ final class SupabaseCarsService {
 
     // Fetch all cars for a user and stitch specs/mods
     func fetchCars(for userId: String) async throws -> [Car] {
+        let normalizedUserId = userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
         // 1) Fetch car rows
-        let carsQuery = client
+        let carRows: [SBCarRow] = try await client
             .from("cars")
             .select()
-
-        let carRows: [SBCarRow]
-        if let userUUID = UUID(uuidString: userId) {
-            carRows = try await carsQuery
-                .eq("user_id", value: userUUID)
-                .execute()
-                .value
-        } else {
-            carRows = try await carsQuery
-                .eq("user_id", value: userId)
-                .execute()
-                .value
-        }
+            .eq("user_id", value: normalizedUserId)
+            .execute()
+            .value
 
         if carRows.isEmpty { return [] }
 
         let carIds = carRows.map { $0.id }
+        let carUUIDs = carIds.compactMap(UUID.init(uuidString:))
 
         // 2) Fetch specs for these cars
-        let specRows: [SBSpecRow] = try await client
-            .from("spec_items")
-            .select()
-            .in("car_id", values: carIds)
-            .execute()
-            .value
+        let specRows: [SBSpecRow]
+        if carUUIDs.count == carIds.count, !carUUIDs.isEmpty {
+            specRows = try await client
+                .from("spec_items")
+                .select()
+                .in("car_id", values: carUUIDs)
+                .execute()
+                .value
+        } else {
+            specRows = try await client
+                .from("spec_items")
+                .select()
+                .in("car_id", values: carIds)
+                .execute()
+                .value
+        }
 
         // 3) Fetch mods for these cars
-        let modRows: [SBModRow] = try await client
-            .from("mod_items")
-            .select()
-            .in("car_id", values: carIds)
-            .execute()
-            .value
+        let modRows: [SBModRow]
+        if carUUIDs.count == carIds.count, !carUUIDs.isEmpty {
+            modRows = try await client
+                .from("mod_items")
+                .select()
+                .in("car_id", values: carUUIDs)
+                .execute()
+                .value
+        } else {
+            modRows = try await client
+                .from("mod_items")
+                .select()
+                .in("car_id", values: carIds)
+                .execute()
+                .value
+        }
 
         // 4) Group specs/mods by car_id
         let specsByCar = Dictionary(grouping: specRows, by: { $0.car_id })
