@@ -2,7 +2,15 @@ import SwiftUI
 
 struct HelpSupportView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject var authViewModel: AuthViewModel
+
+    private let websiteURL = URL(string: "https://empireconnect.app/")!
+    private let supportURL = URL(string: "https://empireconnect.app/support/")!
+    private let termsURL = URL(string: "https://empireconnect.app/terms/")!
+    private let privacyURL = URL(string: "https://empireconnect.app/privacy/")!
+    private let supportEmailAddress = "empireconnectapp@gmail.com"
+    private let gmailAppStoreURL = URL(string: "https://apps.apple.com/app/id422689480")!
     
     var body: some View {
         NavigationStack {
@@ -18,9 +26,47 @@ struct HelpSupportView: View {
                             HelpGlassCard {
                                 CompactQuickHelp(
                                     items: [
-                                        .init(icon: "person.2.fill", title: "Contact Support", action: { haptic() }),
-                                        .init(icon: "bubble.left.and.bubble.right.fill", title: "Submit Feedback", action: { haptic() }),
-                                        .init(icon: "ladybug.fill", title: "Report a Bug", action: { haptic() })
+                                        .init(icon: "person.2.fill", title: "Contact Support", action: {
+                                            openGmailCompose(
+                                                subject: "Empire Connect Support Request",
+                                                body: """
+                                                Hi Empire Connect Support,
+
+                                                I need help with:
+
+                                                Device:
+                                                App version:
+                                                Details:
+                                                """
+                                            )
+                                        }),
+                                        .init(icon: "bubble.left.and.bubble.right.fill", title: "Submit Feedback", action: {
+                                            openGmailCompose(
+                                                subject: "Empire Connect Feedback",
+                                                body: """
+                                                Hi Empire Connect Team,
+
+                                                I wanted to share some feedback:
+
+                                                """
+                                            )
+                                        }),
+                                        .init(icon: "ladybug.fill", title: "Report a Bug", action: {
+                                            openGmailCompose(
+                                                subject: "Empire Connect Bug Report",
+                                                body: """
+                                                Hi Empire Connect Team,
+
+                                                I found a bug.
+
+                                                What happened:
+                                                What I expected:
+                                                Steps to reproduce:
+                                                Device:
+                                                App version:
+                                                """
+                                            )
+                                        })
                                     ]
                                 )
                             }
@@ -29,15 +75,25 @@ struct HelpSupportView: View {
                         section(title: "Links") {
                             HelpGlassCard {
                                 HelpRow(icon: "questionmark.circle.fill", title: "FAQ") {
-                                    haptic()
-                                    // Placeholder action: show FAQ or open link
+                                    openWebsite(supportURL)
                                 }
                             }
 
                             HelpGlassCard {
-                                HelpRow(icon: "doc.text.fill", title: "Terms & Privacy") {
-                                    haptic()
-                                    // Placeholder: link to terms & privacy
+                                HelpRow(icon: "doc.text.fill", title: "Terms of Service") {
+                                    openWebsite(termsURL)
+                                }
+                            }
+
+                            HelpGlassCard {
+                                HelpRow(icon: "hand.raised.fill", title: "Privacy Policy") {
+                                    openWebsite(privacyURL)
+                                }
+                            }
+
+                            HelpGlassCard {
+                                HelpWebsiteRow {
+                                    openWebsite(websiteURL)
                                 }
                             }
                         }
@@ -92,6 +148,35 @@ struct HelpSupportView: View {
         let gen = UIImpactFeedbackGenerator(style: .light)
         gen.impactOccurred()
     }
+
+    private func openWebsite(_ url: URL) {
+        haptic()
+        openURL(url)
+    }
+
+    private func openGmailCompose(subject: String, body: String) {
+        haptic()
+
+        var appComponents = URLComponents()
+        appComponents.scheme = "googlegmail"
+        appComponents.host = "co"
+        appComponents.queryItems = [
+            URLQueryItem(name: "subject", value: subject),
+            URLQueryItem(name: "body", value: body),
+            URLQueryItem(name: "to", value: supportEmailAddress)
+        ]
+
+        guard let gmailAppURL = appComponents.url else {
+            openWebsite(supportURL)
+            return
+        }
+
+        openURL(gmailAppURL) { accepted in
+            if !accepted {
+                openURL(gmailAppStoreURL)
+            }
+        }
+    }
 }
 
 private struct HelpGlassCard<Content: View>: View {
@@ -136,6 +221,44 @@ private struct HelpRow: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .foregroundStyle(.white.opacity(0.5))
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(LinearGradient(colors: [Color.white.opacity(0.25), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct HelpWebsiteRow: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 36, height: 36)
+                    .overlay(Image(systemName: "link").foregroundStyle(Color("EmpireMint")))
+                    .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Website")
+                        .foregroundStyle(.white)
+                        .font(.subheadline.weight(.semibold))
+                    Text("empireconnect.app")
+                        .foregroundStyle(.white.opacity(0.7))
+                        .font(.caption)
+                }
+                Spacer()
+                HStack(spacing: 6) {
+                    Text("Open")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().stroke(LinearGradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
             }
             .padding(10)
             .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))

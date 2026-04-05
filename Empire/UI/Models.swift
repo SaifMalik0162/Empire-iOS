@@ -574,7 +574,7 @@ enum BuildCategory: String, CaseIterable, Identifiable, Codable {
 
     var subtitle: String {
         switch self {
-        case .performance: return "Power-first street or track setup."
+        case .performance: return "Performance-oriented build."
         case .staticBuild: return "Lowered on fixed-height suspension."
         case .bagged: return "Air suspension stance-focused setup."
         case .vip: return "Luxury-focused VIP-inspired build."

@@ -18,9 +18,9 @@
       const path = window.location.pathname.replace(/\/+$/, "") || "/";
       const sharePrefixes = ["/post/", "/cars/", "/profile/", "/meet/"];
       const staticRoutes = {
-        "/privacy": "/privacy.html",
-        "/terms": "/terms.html",
-        "/support": "/support.html"
+        "/privacy": "/privacy/",
+        "/terms": "/terms/",
+        "/support": "/support/"
       };
 
       if (staticRoutes[path]) {
@@ -49,8 +49,8 @@
           <h1>That page isn’t in the garage.</h1>
           <p>The link may have changed, the page may have moved, or the route may not exist yet.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="index.html">Back Home</a>
-            <a class="button button-secondary" href="support.html">Visit Support</a>
+            <a class="button button-primary" href="/">Back Home</a>
+            <a class="button button-secondary" href="/support">Visit Support</a>
           </div>
         </div>
       </section>

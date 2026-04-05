@@ -35,6 +35,8 @@ struct BuildCategoryOptionCard: View {
     let subtitle: String
     let category: BuildCategory?
     let isSelected: Bool
+    var isEnabled: Bool = true
+    var disabledReason: String? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -58,19 +60,30 @@ struct BuildCategoryOptionCard: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(isEnabled ? .white : .white.opacity(0.45))
 
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.66))
+                    .foregroundStyle(isEnabled ? .white.opacity(0.66) : .white.opacity(0.36))
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let disabledReason, !isEnabled {
+                    Text(disabledReason)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.orange.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Spacer(minLength: 10)
 
-            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+            Image(systemName: isEnabled ? (isSelected ? "checkmark.circle.fill" : "circle") : "lock.fill")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(isSelected ? (category?.tint ?? Color("EmpireMint")) : .white.opacity(0.28))
+                .foregroundStyle(
+                    isEnabled
+                        ? (isSelected ? (category?.tint ?? Color("EmpireMint")) : .white.opacity(0.28))
+                        : .white.opacity(0.32)
+                )
         }
         .padding(14)
         .background(
@@ -79,7 +92,8 @@ struct BuildCategoryOptionCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke((category?.tint ?? Color("EmpireMint")).opacity(isSelected ? 0.75 : 0.18), lineWidth: 1)
+                .stroke((category?.tint ?? Color("EmpireMint")).opacity(isSelected ? 0.75 : (isEnabled ? 0.18 : 0.08)), lineWidth: 1)
         )
+        .opacity(isEnabled ? 1.0 : 0.72)
     }
 }

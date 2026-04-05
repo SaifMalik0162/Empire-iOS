@@ -222,6 +222,9 @@ struct ExploreFeedView: View {
         .onChange(of: vm.posts.map(\.id)) { _, _ in
             refreshStableRankings()
         }
+        .onChange(of: socialStore.followedUserIDs) { _, _ in
+            refreshStableRankings()
+        }
         .sheet(isPresented: $showShareToFeed) {
             ShareToFeedSheet(userCars: userCars) { _ in }
                 .environmentObject(authViewModel)
@@ -680,6 +683,9 @@ struct ExploreFeedView: View {
     private func highlightReason(for post: CommunityPost) -> String {
         switch selectedFeedMode {
         case .forYou:
+            if socialStore.isFollowing(post.userId) {
+                return "From a driver you follow, with solid momentum."
+            }
             if hasAffinity(with: post) {
                 return "Closest match for your garage."
             }
@@ -703,7 +709,12 @@ struct ExploreFeedView: View {
         trendingScore(for: post)
             + affinityScore(for: post)
             + captionQualityScore(for: post)
+            + followScore(for: post)
             + (post.isLiked ? 12 : 0)
+    }
+
+    private func followScore(for post: CommunityPost) -> Double {
+        socialStore.isFollowing(post.userId) ? 15 : 0
     }
 
     private func affinityScore(for post: CommunityPost) -> Double {
@@ -2205,8 +2216,8 @@ struct CommunityProfilePostsView: View {
                             CommunityGarageCard(
                                 entry: entry,
                                 isCentered: centeredGarageEntryID == entry.id,
-                                onMods: { if entry.hasFullDetails { garageModsEntry = entry } },
-                                onSpecs: { if entry.hasFullDetails { garageSpecsEntry = entry } }
+                                onMods: { garageModsEntry = entry },
+                                onSpecs: { garageSpecsEntry = entry }
                             )
                             .frame(width: 194)
                             .scrollTransition(axis: .horizontal) { content, phase in
@@ -2346,7 +2357,7 @@ struct CommunityProfilePostsView: View {
                 CommunityGarageEntry(
                     car: synthesized,
                     photoURL: vm.photoURL(for: post, variant: .grid),
-                    hasFullDetails: false
+                    hasFullDetails: true
                 )
             )
         }
@@ -2773,9 +2784,9 @@ private struct CommunityGarageCard: View {
                 .padding(.horizontal, 12)
 
             HStack(spacing: 0) {
-                garageMenuButton(icon: "wrench.and.screwdriver", label: "Mods", tint: entry.hasFullDetails ? .white.opacity(0.78) : .white.opacity(0.28), isDisabled: !entry.hasFullDetails, action: onMods)
+                garageMenuButton(icon: "wrench.and.screwdriver", label: "Mods", tint: .white.opacity(0.78), action: onMods)
                 garageDivider
-                garageMenuButton(icon: "dial.low", label: "Specs", tint: entry.hasFullDetails ? .white.opacity(0.78) : .white.opacity(0.28), isDisabled: !entry.hasFullDetails, action: onSpecs)
+                garageMenuButton(icon: "dial.low", label: "Specs", tint: .white.opacity(0.78), action: onSpecs)
             }
             .padding(.vertical, 6)
         }
@@ -2890,7 +2901,6 @@ private struct CommunityGarageCard: View {
         icon: String,
         label: String,
         tint: Color,
-        isDisabled: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -2906,7 +2916,6 @@ private struct CommunityGarageCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(isDisabled)
     }
 }
 
@@ -3053,12 +3062,16 @@ private struct ExpandedCommunityPostCard: View {
 
     @State private var showComments = false
 
+    private var displayedPost: CommunityPost {
+        communityVM.posts.first(where: { $0.id == post.id }) ?? post
+    }
+
     private var stageAccent: Color {
-        StageSystem.accentColor(for: post.stage, isJailbreak: post.isJailbreak)
+        StageSystem.accentColor(for: displayedPost.stage, isJailbreak: displayedPost.isJailbreak)
     }
 
     private var softenedCarName: String {
-        softWrappedText(post.carName)
+        softWrappedText(displayedPost.carName)
     }
 
     private var softenedMakeModelLine: String? {
@@ -3072,10 +3085,10 @@ private struct ExpandedCommunityPostCard: View {
     private var expandedMetaChipItems: [ExpandedMetaChipItem] {
         var items: [ExpandedMetaChipItem] = [
             ExpandedMetaChipItem(label: stageLabel.uppercased(), tint: stageAccent),
-            ExpandedMetaChipItem(label: "\(post.horsepower) WHP", tint: .cyan)
+            ExpandedMetaChipItem(label: "\(displayedPost.horsepower) WHP", tint: .cyan)
         ]
 
-        if let cls = VehicleClass.from(rawValue: post.vehicleClass) {
+        if let cls = VehicleClass.from(rawValue: displayedPost.vehicleClass) {
             items.append(ExpandedMetaChipItem(label: "\(cls.code) \(cls.displayName)", tint: cls.accentColor))
         }
 
@@ -3086,16 +3099,16 @@ private struct ExpandedCommunityPostCard: View {
         [
             ExpandedActionItem(
                 kind: .like,
-                icon: post.isLiked ? "heart.fill" : "heart",
-                title: "\(post.likesCount)",
-                tint: post.isLiked ? Color("EmpireMint") : .white
+                icon: displayedPost.isLiked ? "heart.fill" : "heart",
+                title: "\(displayedPost.likesCount)",
+                tint: displayedPost.isLiked ? Color("EmpireMint") : .white
             ) {
                 Task { await communityVM.toggleLike(postId: post.id) }
             },
             ExpandedActionItem(
                 kind: .comment,
                 icon: "bubble.left",
-                title: "\(post.commentsCount)",
+                title: "\(displayedPost.commentsCount)",
                 tint: .white
             ) {
                 showComments = true
@@ -3162,13 +3175,13 @@ private struct ExpandedCommunityPostCard: View {
                         .frame(width: 42, height: 42)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(post.username ?? "Empire Driver")
+                        Text(displayedPost.username ?? "Empire Driver")
                             .font(.headline.weight(.semibold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
                             .allowsTightening(true)
-                        Text(post.createdAt.relativeFormatted)
+                        Text(displayedPost.createdAt.relativeFormatted)
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.62))
                             .lineLimit(1)
@@ -3202,7 +3215,7 @@ private struct ExpandedCommunityPostCard: View {
                         ForEach(expandedMetaChipItems, id: \.self) { item in
                             expandedChip(label: item.label, tint: item.tint)
                         }
-                        if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                        if let buildCategory = BuildCategory.from(rawValue: displayedPost.buildCategory) {
                             BuildCategoryBadge(category: buildCategory, size: 18, materialOpacity: 0.14, strokeOpacity: 0.5)
                         }
                         Spacer(minLength: 0)
@@ -3220,7 +3233,7 @@ private struct ExpandedCommunityPostCard: View {
                             if expandedMetaChipItems.count > 2, let trailingItem = expandedMetaChipItems.last {
                                 expandedChip(label: trailingItem.label, tint: trailingItem.tint)
                             }
-                            if let buildCategory = BuildCategory.from(rawValue: post.buildCategory) {
+                            if let buildCategory = BuildCategory.from(rawValue: displayedPost.buildCategory) {
                                 BuildCategoryBadge(category: buildCategory, size: 18, materialOpacity: 0.14, strokeOpacity: 0.5)
                             }
                             Spacer(minLength: 0)
@@ -3237,7 +3250,7 @@ private struct ExpandedCommunityPostCard: View {
                 }
                 .frame(width: contentWidth, alignment: .leading)
 
-                if let caption = post.caption, !caption.isEmpty {
+                if let caption = displayedPost.caption, !caption.isEmpty {
                     ExpandablePostCaption(
                         caption: caption,
                         lineLimit: 3,
@@ -3282,7 +3295,7 @@ private struct ExpandedCommunityPostCard: View {
         )
         .shadow(color: .black.opacity(0.32), radius: 14, y: 8)
         .sheet(isPresented: $showComments) {
-            CommentSheetView(post: post, currentUserId: currentUserId, communityVM: communityVM)
+            CommentSheetView(post: displayedPost, currentUserId: currentUserId, communityVM: communityVM)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -3314,11 +3327,11 @@ private struct ExpandedCommunityPostCard: View {
     }
 
     private var stageLabel: String {
-        StageSystem.displayLabel(for: post.stage, isJailbreak: post.isJailbreak)
+        StageSystem.displayLabel(for: displayedPost.stage, isJailbreak: displayedPost.isJailbreak)
     }
 
     private var makeModelLine: String? {
-        let parts: [String] = [post.make, post.model].compactMap { value in
+        let parts: [String] = [displayedPost.make, displayedPost.model].compactMap { value in
             guard let value else { return nil }
             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? nil : trimmed
@@ -3352,7 +3365,7 @@ private struct ExpandedCommunityPostCard: View {
     private func expandedActionView(for item: ExpandedActionItem) -> some View {
         switch item.kind {
         case .share:
-            if let shareURL = URL(string: "https://empireconnect.app/post/\(post.id.uuidString)") {
+            if let shareURL = URL(string: "https://empireconnect.app/post/\(displayedPost.id.uuidString)") {
                 ShareLink(item: shareURL) {
                     expandedActionLabel(icon: item.icon, title: item.title, tint: item.tint)
                 }

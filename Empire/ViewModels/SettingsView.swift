@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var pushNotifications: PushNotificationsManager
     @State private var enableHaptics: Bool = true
@@ -185,15 +184,6 @@ struct SettingsView: View {
                             }
                         }
                         settingsSection(title: "About") {
-                            SettingsGlassCard {
-                                GlassButtonRow(icon: "link", title: "Website", subtitle: "empireconnect.app", trailingAccessory: (text: "Open", systemImage: "")) {
-                                    let gen = UIImpactFeedbackGenerator(style: .light)
-                                    gen.impactOccurred()
-                                    if let url = URL(string: "https://empireconnect.app/") {
-                                        openURL(url)
-                                    }
-                                }
-                            }
                             SettingsGlassCard {
                                 GlassRow(icon: "info.circle.fill", title: "Version", subtitle: appVersion)
                             }
